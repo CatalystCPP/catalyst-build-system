@@ -39,6 +39,7 @@ YAML::Node getDefaultConfiguration() {
     root["manifest"]["tooling"]["LINTER"] = "clang-tidy";
     root["manifest"]["tooling"]["CCFLAGS"] = "";
     root["manifest"]["tooling"]["CXXFLAGS"] = "";
+    root["manifest"]["tooling"]["LDFLAGS"] = "";
     root["manifest"]["dirs"]["include"] = std::vector<std::string>{};
     root["manifest"]["dirs"]["source"] = std::vector<std::string>{};
     root["manifest"]["dirs"]["build"] = "";
@@ -218,7 +219,7 @@ void merge_helper(YAML::Node &composite, const std::string &new_profile_name, co
             merge_scalar(dst, key, src, std::string("manifest.") + key);
 
         merge_section(dst, "tooling", src, [&](YAML::Node tdst, YAML::Node tsrc) {
-            for (const auto &key : {"CC", "CXX", "FMT", "LINTER", "CCFLAGS", "CXXFLAGS"})
+            for (const auto &key : {"CC", "CXX", "FMT", "LINTER", "CCFLAGS", "CXXFLAGS", "LDFLAGS"})
                 merge_scalar(tdst, key, tsrc, std::string("manifest.tooling.") + key);
         });
 

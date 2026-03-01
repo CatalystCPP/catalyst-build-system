@@ -227,7 +227,7 @@ void writeVariables(const catalyst::utils::yaml::Configuration &config,
                                       config.getString("manifest.tooling.CCFLAGS").value_or(""),
                                       config.getString("manifest.name").value_or("name"),
                                       config.getString("manifest.version").value_or("0.0.0"));
-    std::string ldflags = "-Lcatalyst-libs";
+    std::string ldflags = std::format("{} -Lcatalyst-libs", config.getString("manifest.tooling.LDFLAGS").value_or(""));
 
     if (const char *vcpkg_root = std::getenv("VCPKG_ROOT"); vcpkg_root != nullptr) {
 #if defined(_WIN32)
@@ -313,7 +313,7 @@ void writeRules(catalyst::generate::buildwriters::BaseWriter &writer) {
     writer.addComment("Rules for linking");
     writer.addRule("binary_link", "$cxx $in -o $out $ldflags $ldlibs", "LINK $out");
     writer.addRule("static_link", "ar rcs $out $in", "LINK $out");
-    writer.addRule("shared_link", "$cxx -shared $in -o $out", "LINK $out");
+    writer.addRule("shared_link", "$cxx -shared $in -o $out $ldflags $ldlibs", "LINK $out");
 }
 } // namespace
 
