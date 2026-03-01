@@ -11,13 +11,13 @@
 #include <yaml-cpp/node/node.h>
 
 #include "catalyst/hooks.hpp"
-#include "catalyst/utils/log/log.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/build.hpp"
 #include "catalyst/subcommands/fetch.hpp"
 #include "catalyst/subcommands/generate.hpp"
-#include "catalyst/workspace.hpp"
+#include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
+#include "catalyst/workspace.hpp"
 
 namespace catalyst::build {
 namespace fs = std::filesystem;
@@ -129,24 +129,27 @@ bool depMissing(const utils::yaml::Configuration &config) {
 }
 
 std::expected<void, std::string> generateCompileCommands(const fs::path &build_dir, const std::string &generator) {
-    if (generator != "ninja") {
-        if (auto res = catalyst::processExec({"cbe", "-C", build_dir, "--compdb"}); !res)
+    if (generator == "cbe") {
+        if (auto res = catalyst::processExec({"cbe", "-C", build_dir, "-t", "compdb"}); !res)
             return std::unexpected(res.error());
         return {};
     }
-    catalyst::logger.log(LogLevel::INFO, "Generating compile commands database.");
-    auto res =
-        catalyst::processExecStdout({"ninja", "-C", build_dir.string(), "-t", "compdb", "cc_compile", "cxx_compile"});
-    if (!res)
-        return std::unexpected(res.error());
+    if (generator == "ninja") {
+        catalyst::logger.log(LogLevel::INFO, "Generating compile commands database.");
+        auto res = catalyst::processExecStdout(
+            {"ninja", "-C", build_dir.string(), "-t", "compdb", "cc_compile", "cxx_compile"});
+        if (!res)
+            return std::unexpected(res.error());
 
-    fs::path real_compdb_path = build_dir / "compile_commands.json";
-    std::ofstream compdb_file{real_compdb_path};
-    if (compdb_file.is_open())
-        compdb_file << *res << std::flush;
-    else
-        return std::unexpected(std::format("Failed to open {} for writing", real_compdb_path.string()));
-    return {};
+        fs::path real_compdb_path = build_dir / "compile_commands.json";
+        std::ofstream compdb_file{real_compdb_path};
+        if (compdb_file.is_open())
+            compdb_file << *res << std::flush;
+        else
+            return std::unexpected(std::format("Failed to open {} for writing", real_compdb_path.string()));
+        return {};
+    }
+    return {}; // don't fail if we don't know how to generate compile commands for this generator, it's not critical
 }
 
 } // namespace
@@ -179,7 +182,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
                 bool found = false;
                 for (const auto &m : order) {
                     utils::yaml::Configuration c(m.profiles.empty() ? std::vector<std::string>{"common"} : m.profiles,
-                                                m.path);
+                                                 m.path);
                     if (c.getString("manifest.name").value_or("") == parse_args.package) {
                         targets.push_back(m);
                         found = true;
