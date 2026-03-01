@@ -42,6 +42,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     node["manifest"]["tooling"]["CXX"] = parse_args.tooling.cxx;
     node["manifest"]["tooling"]["CCFLAGS"] = parse_args.tooling.ccflags;
     node["manifest"]["tooling"]["CXXFLAGS"] = parse_args.tooling.cxxflags;
+    node["manifest"]["tooling"]["LDFLAGS"] = parse_args.tooling.ldflags;
     node["manifest"]["dirs"]["include"] = parse_args.dirs.include;
     node["manifest"]["dirs"]["source"] = parse_args.dirs.source;
     node["manifest"]["dirs"]["build"] = parse_args.dirs.build;

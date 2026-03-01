@@ -23,7 +23,7 @@ void env(const std::optional<std::unordered_map<std::string, std::string>> &env,
     if (env) {
         options.env.behavior = reproc::env::extend;
         for (const auto &[key, value] : *env) {
-            env_strings.push_back(key + "=" + value);
+            env_strings.push_back((key + "=").append(value));
         }
         for (const auto &s : env_strings) {
             env_ptrs.push_back(s.c_str());
@@ -68,9 +68,9 @@ processExec(std::vector<std::string> &&args,
 }
 
 std::expected<std::string, std::string>
-processExecStdout(std::vector<std::string> &&args,
-                  std::optional<std::string> working_dir,
-                  std::optional<std::unordered_map<std::string, std::string>> env) {
+processExecStdout(const std::vector<std::string> &args,
+                  const std::optional<std::string> &working_dir,
+                  const std::optional<std::unordered_map<std::string, std::string>> &env) {
     if (args.empty()) {
         return std::unexpected("Cannot execute empty command");
     }

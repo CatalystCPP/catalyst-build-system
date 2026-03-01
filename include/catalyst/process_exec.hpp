@@ -13,7 +13,7 @@ processExec(std::vector<std::string> &&args,
             std::optional<std::unordered_map<std::string, std::string>> env = std::nullopt);
 
 std::expected<std::string, std::string>
-processExecStdout(std::vector<std::string> &&args,
-                  std::optional<std::string> working_dir = std::nullopt,
-                  std::optional<std::unordered_map<std::string, std::string>> env = std::nullopt);
+processExecStdout(const std::vector<std::string> &args,
+                  const std::optional<std::string> &working_dir = std::nullopt,
+                  const std::optional<std::unordered_map<std::string, std::string>> &env = std::nullopt);
 } // namespace catalyst

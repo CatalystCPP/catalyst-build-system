@@ -50,6 +50,7 @@ Defines the project's identity, build settings, and directory structure.
 | `CXX` | C++ Compiler | `clang++` |
 | `CCFLAGS` | C Compiler Flags | "" |
 | `CXXFLAGS` | C++ Compiler Flags | "" |
+| `LDFLAGS` | Linker Flags | "" |
 
 ### `manifest.dirs`
 

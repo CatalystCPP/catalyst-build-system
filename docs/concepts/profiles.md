@@ -29,6 +29,7 @@ manifest:
 manifest:
   tooling:
     CXXFLAGS: "-O3 -DNDEBUG"
+    LDFLAGS: "-s"
 ```
 
 ## Composition

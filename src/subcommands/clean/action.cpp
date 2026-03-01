@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <format>
 #include <string>
 #include <tuple>
@@ -6,9 +7,9 @@
 #include <catalyst/subcommands/clean.hpp>
 #include <yaml-cpp/node/node.h>
 
-#include "catalyst/utils/log/log.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/generate.hpp"
+#include "catalyst/utils/log/log.hpp"
 
 namespace catalyst::clean {
 namespace fs = std::filesystem;
@@ -49,7 +50,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     }
 
     auto profiles = parse_args.profiles;
-    if (std::find(profiles.begin(), profiles.end(), "common") == profiles.end()) {
+    if (std::ranges::find(profiles, "common") == profiles.end()) {
         profiles.insert(profiles.begin(), "common");
     }
 
@@ -78,9 +79,10 @@ std::expected<void, std::string> action(const Parse &parse_args) {
                 std::format("Command: ninja -C {} -t clean failed with exit code: {}", build_dir, rtn));
         }
     } else if (generator == "cbe") {
-        if (int rtn = catalyst::processExec({"cbe", "-d", build_dir, "--clean"}).value().get(); rtn != 0) {
+        if (int rtn = catalyst::processExec({"cbe", "-C", build_dir, "-t", "clean"}).value().get(); rtn != 0) {
             catalyst::logger.log(LogLevel::ERROR, "Failed to clean project.");
-            return std::unexpected(std::format("Command: cbe -d {} --clean failed with exit code: {}", build_dir, rtn));
+            return std::unexpected(
+                std::format("Command: cbe -C {} -t clean failed with exit code: {}", build_dir, rtn));
         }
     }
 

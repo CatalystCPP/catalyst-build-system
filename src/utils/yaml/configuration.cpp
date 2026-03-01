@@ -39,6 +39,7 @@ YAML::Node getDefaultConfiguration() {
     root["manifest"]["tooling"]["LINTER"] = "clang-tidy";
     root["manifest"]["tooling"]["CCFLAGS"] = "";
     root["manifest"]["tooling"]["CXXFLAGS"] = "";
+    root["manifest"]["tooling"]["LDFLAGS"] = "";
     root["manifest"]["dirs"]["include"] = std::vector<std::string>{};
     root["manifest"]["dirs"]["source"] = std::vector<std::string>{};
     root["manifest"]["dirs"]["build"] = "";
@@ -105,7 +106,7 @@ std::optional<YAML::Node> traverse(const std::string &key, YAML::Node &&root) {
     return current;
 }
 
-void merge(YAML::Node &composite, const std::string &new_profile_name, const YAML::Node &new_profile) {
+void merge_helper(YAML::Node &composite, const std::string &new_profile_name, const YAML::Node &new_profile) {
     YAML::Node defaults = getDefaultConfiguration();
 
     auto check_conflict = [&](const std::string &dotpath, const std::string &incoming_val) {
@@ -147,7 +148,7 @@ void merge(YAML::Node &composite, const std::string &new_profile_name, const YAM
                                       const std::string &key,
                                       YAML::Node src_parent,
                                       const std::string &dotpath,
-                                      std::function<bool(const std::string &)> validator,
+                                      const std::function<bool(const std::string &)> &validator,
                                       const std::string &fallback_on_null = "") {
         if (!src_parent[key].IsDefined())
             return;
@@ -185,7 +186,7 @@ void merge(YAML::Node &composite, const std::string &new_profile_name, const YAM
     auto merge_section = [&](YAML::Node dst_parent,
                              const std::string &key,
                              YAML::Node src_parent,
-                             std::function<void(YAML::Node, YAML::Node)> body) {
+                             const std::function<void(YAML::Node, YAML::Node)> &body) {
         if (!src_parent[key].IsDefined())
             return;
         if (src_parent[key].IsNull()) {
@@ -218,7 +219,7 @@ void merge(YAML::Node &composite, const std::string &new_profile_name, const YAM
             merge_scalar(dst, key, src, std::string("manifest.") + key);
 
         merge_section(dst, "tooling", src, [&](YAML::Node tdst, YAML::Node tsrc) {
-            for (const auto &key : {"CC", "CXX", "FMT", "LINTER", "CCFLAGS", "CXXFLAGS"})
+            for (const auto &key : {"CC", "CXX", "FMT", "LINTER", "CCFLAGS", "CXXFLAGS", "LDFLAGS"})
                 merge_scalar(tdst, key, tsrc, std::string("manifest.tooling.") + key);
         });
 
@@ -247,11 +248,11 @@ void merge(YAML::Node &composite, const std::string &new_profile_name, const YAM
     });
 }
 
-void merge2(YAML::Node &composite, const std::string &profile_name, const fs::path &root_dir) {
+void merge(YAML::Node &composite, const std::string &profile_name, const fs::path &root_dir) {
     if (fs::exists(root_dir / "CATALYST.yaml")) {
         if (YAML::Node catalyst_yaml = YAML::LoadFile(root_dir / "CATALYST.yaml"); catalyst_yaml[profile_name]) {
             catalyst::logger.log(LogLevel::DEBUG, "Found profile '{}' in CATALYST.yaml", profile_name);
-            merge(composite, profile_name, catalyst_yaml[profile_name]);
+            merge_helper(composite, profile_name, catalyst_yaml[profile_name]);
             return;
         }
     }
@@ -269,7 +270,7 @@ void merge2(YAML::Node &composite, const std::string &profile_name, const fs::pa
         throw std::runtime_error(
             std::format("Profile {} not found in {} or CATALYST.yaml", profile_name, profile_path.string()));
     }
-    merge(composite, profile_name, YAML::LoadFile(profile_path));
+    merge_helper(composite, profile_name, YAML::LoadFile(profile_path));
 }
 
 } // namespace
@@ -291,7 +292,7 @@ Configuration::Configuration(const std::vector<std::string> &profiles, const std
     }
 
     for (const auto &profile_name : profile_names) {
-        merge2(root, profile_name, root_dir);
+        merge(root, profile_name, root_dir);
     }
 
     catalyst::logger.log(LogLevel::DEBUG, "Profile composition finished.");

@@ -17,6 +17,7 @@ Options:
   --cxx TEXT                  the cxx compiler to use
   --ccflags TEXT              c compiler flags
   --cxxflags TEXT             cxx compiler flags
+  --ldflags TEXT              linker flags
   --include-dirs TEXT ...     include directories
   --source-dirs TEXT ...      source directories
   --build-dir TEXT            build directory

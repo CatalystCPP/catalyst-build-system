@@ -35,6 +35,7 @@ std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app) {
     init->add_option("--cxx", ret->tooling.cxx, "the cxx compiler to use")->default_str("clang++");
     init->add_option("--ccflags", ret->tooling.ccflags, "c compiler flags")->default_str("");
     init->add_option("--cxxflags", ret->tooling.cxxflags, "cxx compiler flags")->default_str("");
+    init->add_option("--ldflags", ret->tooling.ldflags, "linker flags")->default_str("");
 
     init->add_option("--include-dirs", ret->dirs.include, "include directories")
         ->default_val(std::vector<std::string>{"include"});
