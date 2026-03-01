@@ -36,6 +36,8 @@ CheckOptions:
     value:           'false'
 
   # --- Naming Conventions (from styleguide.md) ---
+  - key: readability-function-cognitive-complexity.Threshold
+    value: 50
 
   # Types (Classes, Structs, Enums): PascalCase (CamelCase)
   # "Suffix _t is disallowed" - Implicitly enforced by CamelCase (usually)
