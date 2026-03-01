@@ -22,6 +22,7 @@ struct Parse {
         std::string cxx{"clang++"};
         std::string ccflags;
         std::string cxxflags;
+        std::string ldflags;
     } tooling;
     struct {
         std::vector<std::string> include{{"include"}};
