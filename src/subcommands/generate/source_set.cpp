@@ -26,7 +26,8 @@ std::optional<std::unordered_set<std::string>> createIgnorePatterns(const fs::pa
 
     if (!fs::exists(ignore_file)) {
         logger.log(LogLevel::DEBUG, "No .catalystignore file found in: {}", dir.string());
-        return std::nullopt;
+        return {}; // tihs isn't a failure, just means there are no ignore patterns
+                   // to apply since the file doesn't exist
     }
     logger.log(LogLevel::DEBUG, "Found .catalystignore file in: {}", dir.string());
     YAML::Node ignore_config = YAML::LoadFile(ignore_file.string());
