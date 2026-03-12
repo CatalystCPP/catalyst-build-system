@@ -16,6 +16,9 @@ Catalyst provides a suite of subcommands to manage the entire project lifecycle.
 | [`download`](download.md) | Download, build, and install a project from git. |
 | [`fmt`](fmt.md) | Format source code. |
 | [`tidy`](tidy.md) | Run static analysis. |
+| [`pack`](pack.md) | Assemble the local package for distribution. |
+| [`bench`](bench.md) | Execute all benchmarks of a local package. |
+| [`doc`](doc.md) | Build a package's documentation. |
 
 ## Global Options
 

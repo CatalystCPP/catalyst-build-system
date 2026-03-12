@@ -14,6 +14,9 @@
 #include "catalyst/subcommands/run.hpp"
 #include "catalyst/subcommands/test.hpp"
 #include "catalyst/subcommands/tidy.hpp"
+#include "catalyst/subcommands/pack.hpp"
+#include "catalyst/subcommands/bench.hpp"
+#include "catalyst/subcommands/doc.hpp"
 #include "catalyst/workspace.hpp"
 
 namespace catalyst {
@@ -61,6 +64,15 @@ struct CliContext {
 
     CLI::App *tidy_subc{nullptr};
     std::unique_ptr<catalyst::tidy::Parse> tidy_res{nullptr};
+
+    CLI::App *pack_subc{nullptr};
+    std::unique_ptr<catalyst::pack::Parse> pack_res{nullptr};
+
+    CLI::App *bench_subc{nullptr};
+    std::unique_ptr<catalyst::bench::Parse> bench_res{nullptr};
+
+    CLI::App *doc_subc{nullptr};
+    std::unique_ptr<catalyst::doc::Parse> doc_res{nullptr};
 
     CLI::App *add_git_subc{nullptr};
     std::unique_ptr<catalyst::add::git::Parse> add_git_res{nullptr};
