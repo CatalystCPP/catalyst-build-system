@@ -20,3 +20,4 @@ Thumbs.db
 .idea/
 *.swp
 *~
+doxygen_docs
