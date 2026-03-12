@@ -13,6 +13,9 @@ common:
       CCFLAGS: --std=c++23 -Wall -Wextra -Wpedantic
       CXXFLAGS: --std=c++23 -Wall -Wextra -Wpedantic
       FMT: clang-format
+      doc:
+        engine: doxygen
+        out_dir: doxygen_docs
     dirs:
       include:
         - include

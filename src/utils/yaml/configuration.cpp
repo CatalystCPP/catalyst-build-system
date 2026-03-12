@@ -40,6 +40,9 @@ YAML::Node getDefaultConfiguration() {
     root["manifest"]["tooling"]["CCFLAGS"] = "";
     root["manifest"]["tooling"]["CXXFLAGS"] = "";
     root["manifest"]["tooling"]["LDFLAGS"] = "";
+    root["manifest"]["tooling"]["doc"]["engine"] = "doxygen";
+    root["manifest"]["tooling"]["doc"]["config"] = "Doxyfile";
+    root["manifest"]["tooling"]["doc"]["out_dir"] = "docs/";
     root["manifest"]["dirs"]["include"] = std::vector<std::string>{};
     root["manifest"]["dirs"]["source"] = std::vector<std::string>{};
     root["manifest"]["dirs"]["build"] = "";
@@ -221,6 +224,11 @@ void merge_helper(YAML::Node &composite, const std::string &new_profile_name, co
         merge_section(dst, "tooling", src, [&](YAML::Node tdst, YAML::Node tsrc) {
             for (const auto &key : {"CC", "CXX", "FMT", "LINTER", "CCFLAGS", "CXXFLAGS", "LDFLAGS"})
                 merge_scalar(tdst, key, tsrc, std::string("manifest.tooling.") + key);
+            
+            merge_section(tdst, "doc", tsrc, [&](YAML::Node docdst, YAML::Node docsrc) {
+                for (const auto &key : {"engine", "config", "out_dir"})
+                    merge_scalar(docdst, key, docsrc, std::string("manifest.tooling.doc.") + key);
+            });
         });
 
         merge_section(dst, "dirs", src, [&](YAML::Node ddst, YAML::Node dsrc) {
