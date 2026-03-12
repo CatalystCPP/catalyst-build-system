@@ -132,6 +132,16 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         fs::remove(cpack_config_path);
     }
 
+    // 6. Normalize package permissions to 644
+    for (const auto& entry : fs::directory_iterator(target_path)) {
+        if (entry.is_regular_file()) {
+            fs::permissions(entry.path(), 
+                            fs::perms::owner_read | fs::perms::owner_write | 
+                            fs::perms::group_read | fs::perms::others_read, 
+                            fs::perm_options::replace);
+        }
+    }
+
     catalyst::logger.log(LogLevel::DEBUG, "Pack subcommand finished successfully.");
     return {};
 }
