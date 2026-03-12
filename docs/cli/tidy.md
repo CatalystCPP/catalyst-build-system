@@ -7,6 +7,7 @@ Usage: catalyst tidy [OPTIONS]
 Options:
   -h,--help                   Print this help message and exit
   -p,--profiles TEXT ...      
+  --fix                       Automatically fix lint warnings
 ```
 
 ## Details

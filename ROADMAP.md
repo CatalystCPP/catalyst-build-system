@@ -2,7 +2,6 @@
 
 | Subcommand | Status | Description |
 |------------|--------|-------------|
-| `fix` | Planned | Automatically fix lint warning reported by `clang-tidy`. |
 | `pack` | Planned | Assemble the local package for distribution. |
 | `bench` | Planned | Execute all benchmarks of a local package. |
 | `doc` | Planned | Build a package's documentation. |
