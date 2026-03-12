@@ -1,11 +1,24 @@
 #pragma once
 #include <expected>
+#include <filesystem>
 #include <string>
+#include <vector>
 
 #include <CLI/App.hpp>
 
 namespace catalyst::pack {
+enum class Generator : std::uint8_t {
+    TGZ,
+    ZIP,
+    DEB,
+    RPM
+};
+
 struct Parse {
+    std::vector<std::string> profiles{"common"};
+    std::filesystem::path source_path{std::filesystem::current_path()};
+    std::filesystem::path target_path{"build/pack"};
+    std::vector<Generator> generators;
 };
 
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);
