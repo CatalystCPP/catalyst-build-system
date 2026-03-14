@@ -77,6 +77,13 @@ These hooks are specific to individual Catalyst subcommands, allowing you to cus
 | `pre-test` | Runs before the tests are executed.        |
 | `post-test`| Runs after the tests have been executed.   |
 
+#### `bench`
+
+| Hook        | Description                                |
+| ----------- | ------------------------------------------ |
+| `pre-bench` | Runs before the benchmarks are executed.   |
+| `post-bench`| Runs after the benchmarks have been executed.|
+
 
 ### Target-Specific Hooks
 

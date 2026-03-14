@@ -6,4 +6,5 @@ Execute all benchmarks of a local package.
 `catalyst bench [OPTIONS]`
 
 ## Options
-- `-h, --help`: Print help message
+- `-P, --params TEXT ...`: Params to pass to the bench executable.
+- `-h, --help`: Print help message.

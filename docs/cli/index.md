@@ -9,6 +9,7 @@ Catalyst provides a suite of subcommands to manage the entire project lifecycle.
 | [`build`](build.md) | Build the project. |
 | [`run`](run.md) | Run the built executable. |
 | [`test`](test.md) | Run project tests. |
+| [`bench`](bench.md) | Execute project benchmarks. |
 | [`fetch`](fetch.md) | Fetch remote dependencies. |
 | [`generate`](generate.md) | Generate build scripts (Ninja, Make, etc.). |
 | [`install`](install.md) | Install build artifacts. |

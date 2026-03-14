@@ -60,6 +60,7 @@ meta: null  # Removes 'meta' section entirely
 
 - **`common`**: The base profile (`catalyst.yaml`).
 - **`test`**: Automatically used by `catalyst test` (`catalyst_test.yaml`).
+- **bench**:: Automatically used by ``catalyst bench`` (``catalyst_bench.yaml``)
 
 ## Centralized Definition
 
