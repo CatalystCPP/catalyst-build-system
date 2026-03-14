@@ -44,6 +44,7 @@ std::pair<int, bool> parseCli(int argc, char **argv, catalyst::CliContext &ctx) 
     tie(ctx.install_subc, ctx.install_res) = catalyst::install::parse(ctx.app);
     tie(ctx.run_subc, ctx.run_res) = catalyst::run::parse(ctx.app);
     tie(ctx.test_subc, ctx.test_res) = catalyst::test::parse(ctx.app);
+    tie(ctx.bench_subc, ctx.bench_res) = catalyst::bench::parse(ctx.app);
     tie(ctx.tidy_subc, ctx.tidy_res) = catalyst::tidy::parse(ctx.app);
     tie(ctx.pack_subc, ctx.pack_res) = catalyst::pack::parse(ctx.app);
     // tie(ctx.bench_subc, ctx.bench_res) = catalyst::bench::parse(ctx.app);
@@ -117,6 +118,8 @@ int dispatch(const catalyst::CliContext &ctx) {
         return dispatchFN("run", *ctx.run_res, catalyst::run::action);
     if (*ctx.test_subc)
         return dispatchFN("test", *ctx.test_res, catalyst::test::action);
+    if (*ctx.bench_subc)
+        return dispatchFN("bench", *ctx.bench_res, catalyst::bench::action);
     if (*ctx.tidy_subc)
         return dispatchFN("tidy", *ctx.tidy_res, catalyst::tidy::action);
     if (*ctx.pack_subc)

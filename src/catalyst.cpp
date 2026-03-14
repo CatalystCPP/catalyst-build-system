@@ -34,6 +34,8 @@ int main(int argc, char **argv) {
         ctx.fetch_res->workspace = ctx.workspace;
     if (ctx.test_res)
         ctx.test_res->workspace = ctx.workspace;
+    if (ctx.bench_res)
+        ctx.bench_res->workspace = ctx.workspace;
     if (ctx.clean_res)
         ctx.clean_res->workspace = ctx.workspace;
 

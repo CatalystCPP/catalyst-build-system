@@ -87,6 +87,14 @@ std::expected<void, std::string> postTest(const YAML::Node &profile_comp) {
     return executeHook(profile_comp, "post-test");
 }
 
+std::expected<void, std::string> preBench(const YAML::Node &profile_comp) {
+    return executeHook(profile_comp, "pre-bench");
+}
+
+std::expected<void, std::string> postBench(const YAML::Node &profile_comp) {
+    return executeHook(profile_comp, "post-bench");
+}
+
 std::expected<void, std::string> preBuild(const utils::yaml::Configuration &profile_comp) {
     return executeHook(profile_comp.getRoot(), "pre-build");
 }
@@ -137,6 +145,14 @@ std::expected<void, std::string> preTest(const utils::yaml::Configuration &profi
 
 std::expected<void, std::string> postTest(const utils::yaml::Configuration &profile_comp) {
     return executeHook(profile_comp.getRoot(), "post-test");
+}
+
+std::expected<void, std::string> preBench(const utils::yaml::Configuration &profile_comp) {
+    return executeHook(profile_comp.getRoot(), "pre-bench");
+}
+
+std::expected<void, std::string> postBench(const utils::yaml::Configuration &profile_comp) {
+    return executeHook(profile_comp.getRoot(), "post-bench");
 }
 
 std::expected<void, std::string> preLink(const utils::yaml::Configuration &profile_comp) {
