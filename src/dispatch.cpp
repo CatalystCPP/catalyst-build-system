@@ -124,8 +124,6 @@ int dispatch(const catalyst::CliContext &ctx) {
         return dispatchFN("tidy", *ctx.tidy_res, catalyst::tidy::action);
     if (*ctx.pack_subc)
         return dispatchFN("pack", *ctx.pack_res, catalyst::pack::action);
-    // if (*ctx.bench_subc)
-    //     return dispatchFN("bench", *ctx.bench_res, catalyst::bench::action);
     if (*ctx.doc_subc)
         return dispatchFN("doc", *ctx.doc_res, catalyst::doc::action);
     catalyst::logger.log(catalyst::LogLevel::ERROR, "run catalyst --help for info on available commands.");
