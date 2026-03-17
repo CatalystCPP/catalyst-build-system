@@ -38,7 +38,7 @@ std::optional<Workspace> Workspace::load(const fs::path &workspace_file) {
         workspace.root_path = workspace_file.parent_path();
 
         if (!node.IsMap()) {
-            logger.log(LogLevel::ERROR, "WORKSPACE.yaml must be a map");
+            logger.log(LogLevel::WARN, "WORKSPACE.yaml must be a map. Continuing in non-workspace build.");
             return std::nullopt;
         }
 
@@ -69,7 +69,7 @@ std::optional<Workspace> Workspace::load(const fs::path &workspace_file) {
         return workspace;
 
     } catch (const YAML::Exception &e) {
-        logger.log(LogLevel::ERROR, "Failed to parse WORKSPACE.yaml: {}", e.what());
+        logger.log(LogLevel::WARN, "Failed to parse WORKSPACE.yaml: {}. Continuing in non-workspace build.", e.what());
         return std::nullopt;
     }
 }
