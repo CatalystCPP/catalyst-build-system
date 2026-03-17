@@ -12,7 +12,7 @@ namespace catalyst::generate {
 namespace fs = std::filesystem;
 
 std::expected<FindRes, std::string> findLocal(const YAML::Node &dep) {
-    catalyst::logger.log(LogLevel::DEBUG, "Resolving local dependency: {}", dep["name"].as<std::string>());
+    catalyst::logger.debug("Resolving local dependency: {}", dep["name"].as<std::string>());
 
     if (!dep["path"]) {
         return std::unexpected(
@@ -20,7 +20,7 @@ std::expected<FindRes, std::string> findLocal(const YAML::Node &dep) {
     }
 
     fs::path dep_path = dep["path"].as<std::string>();
-    catalyst::logger.log(LogLevel::DEBUG, "Changing directory to: {}", dep_path.string());
+    catalyst::logger.debug("Changing directory to: {}", dep_path.string());
     catalyst::DirectoryChangeGuard dg(dep_path);
 
     std::vector<std::string> profiles{};
@@ -33,7 +33,7 @@ std::expected<FindRes, std::string> findLocal(const YAML::Node &dep) {
 
     if (dep["using"] && dep["using"].IsSequence())
         features = dep["using"].as<std::vector<std::string>>();
-    catalyst::logger.log(LogLevel::DEBUG, "Composing profiles for local dependency.");
+    catalyst::logger.debug("Composing profiles for local dependency.");
     auto pc = catalyst::generate::profileComposition(profiles);
 
     if (!pc) {
@@ -48,7 +48,7 @@ std::expected<FindRes, std::string> findLocal(const YAML::Node &dep) {
     if (auto includes = profile["manifest"]["dirs"]["include"]; includes && includes.IsSequence()) {
         for (const auto &dir : includes.as<std::vector<std::string>>()) {
             auto curr = fs::absolute(dep_path / dir);
-            catalyst::logger.log(LogLevel::DEBUG, "Adding include path: {}", curr.string());
+            catalyst::logger.debug("Adding include path: {}", curr.string());
             include_path += std::format(" -I{}", curr.string());
         }
     }
@@ -58,7 +58,7 @@ std::expected<FindRes, std::string> findLocal(const YAML::Node &dep) {
     if (auto build_dir_node = profile["manifest"]["dirs"]["build"]) {
         auto build_dir = build_dir_node.as<std::string>();
         auto lib_path = fs::absolute(dep_path / build_dir);
-        catalyst::logger.log(LogLevel::DEBUG, "Adding library path: {}", lib_path.string());
+        catalyst::logger.debug("Adding library path: {}", lib_path.string());
         library_path += std::format(" -L{}", lib_path.string());
     }
 
@@ -66,7 +66,7 @@ std::expected<FindRes, std::string> findLocal(const YAML::Node &dep) {
     std::string libs;
     if (auto dep_name_node = profile["manifest"]["name"]) {
         auto dep_name = dep_name_node.as<std::string>();
-        catalyst::logger.log(LogLevel::DEBUG, "Adding library: {}", dep_name);
+        catalyst::logger.debug("Adding library: {}", dep_name);
         libs += std::format(" -l{}", dep_name);
     }
 

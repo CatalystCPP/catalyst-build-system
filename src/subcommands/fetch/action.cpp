@@ -22,7 +22,7 @@ namespace fs = std::filesystem;
 namespace {
 
 std::expected<void, std::string> fetchVcpkg(const std::string &name) {
-    catalyst::logger.log(LogLevel::DEBUG, "Fetching vcpkg dependency: {}", name);
+    catalyst::logger.debug("Fetching vcpkg dependency: {}", name);
     char *vcpkg_root_env = std::getenv("VCPKG_ROOT");
     if (vcpkg_root_env == nullptr) {
         return std::unexpected(
@@ -34,8 +34,8 @@ std::expected<void, std::string> fetchVcpkg(const std::string &name) {
     vcpkg_exe.replace_extension(".exe");
 #endif
     std::string command = std::format("\"{}\" install {}", vcpkg_exe.string(), name);
-    catalyst::logger.log(LogLevel::DEBUG, "Executing command: {}", command);
-    catalyst::logger.log(LogLevel::DEBUG, "Fetching: {} from vcpkg", name);
+    catalyst::logger.debug("Executing command: {}", command);
+    catalyst::logger.debug("Fetching: {} from vcpkg", name);
     if (catalyst::processExec({vcpkg_exe.string(), "install", name}).value().get() != 0) {
         return std::unexpected(std::format("Failed to fetch dependency: {}", name));
     }
@@ -44,8 +44,7 @@ std::expected<void, std::string> fetchVcpkg(const std::string &name) {
 
 std::expected<void, std::string> fetchGit(
     const std::string &build_dir, std::string name, std::string source, std::string version, std::string hash = "") {
-    catalyst::logger.log(
-        LogLevel::DEBUG, "Fetching git dependency: {}@{} (hash: {}) from {}", name, version, hash, source);
+    catalyst::logger.debug("Fetching git dependency: {}@{} (hash: {}) from {}", name, version, hash, source);
     fs::path dep_path = fs::path(build_dir) / "catalyst-libs" / name;
 
     std::string target = hash.empty() ? version : hash;
@@ -86,7 +85,7 @@ std::expected<void, std::string> fetchGit(
 
 std::expected<void, std::string> fetchSystem(const std::string &name) {
     // assuming installed on system
-    catalyst::logger.log(LogLevel::DEBUG, "Skipping fetch for system dependency: {}", name);
+    catalyst::logger.debug("Skipping fetch for system dependency: {}", name);
     return {};
 }
 
@@ -114,7 +113,7 @@ std::expected<void, std::string> fetchLocal(const FetchLocalArgs &fn_args) {
 
     std::string new_visited = visited_env.empty() ? local_path.string() : visited_env + ":" + local_path.string();
 
-    catalyst::logger.log(LogLevel::DEBUG, "Recursively building local dependency: {} at {}", name, local_path.string());
+    catalyst::logger.debug("Recursively building local dependency: {} at {}", name, local_path.string());
     std::println(std::cout, "Building local dependency: {} at {}", name, local_path.string());
 
     std::vector<std::string> args = {"catalyst", "build"};
@@ -151,11 +150,11 @@ struct LockedDep {
 } // namespace
 
 std::expected<void, std::string> action(const Parse &parse_args) {
-    catalyst::logger.log(LogLevel::DEBUG, "Fetch subcommand invoked.");
-    catalyst::logger.log(LogLevel::DEBUG, "Composing profiles.");
+    catalyst::logger.debug("Fetch subcommand invoked.");
+    catalyst::logger.debug("Composing profiles.");
     utils::yaml::Configuration config{parse_args.profiles};
 
-    catalyst::logger.log(LogLevel::DEBUG, "Running pre-fetch hooks.");
+    catalyst::logger.debug("Running pre-fetch hooks.");
     if (auto res = hooks::preFetch(config); !res) {
         return res;
     }
@@ -168,7 +167,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     }
 
     if (fs::exists(lockfile_path)) {
-        catalyst::logger.log(LogLevel::INFO, "Using lockfile at {}", lockfile_path.string());
+        catalyst::logger.info("Using lockfile at {}", lockfile_path.string());
         try {
             YAML::Node lock_node = YAML::LoadFile(lockfile_path.string());
             if (lock_node["dependencies"] && lock_node["dependencies"].IsSequence()) {
@@ -190,7 +189,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
                 }
             }
         } catch (const std::exception &e) {
-            catalyst::logger.log(LogLevel::WARN, "Failed to load lockfile: {}", e.what());
+            catalyst::logger.warn("Failed to load lockfile: {}", e.what());
         }
     }
 
@@ -201,8 +200,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
                 return std::unexpected(std::format("Dependency: {} does not define field: name", ii));
             }
             if (!dep["source"]) {
-                catalyst::logger.log(
-                    LogLevel::ERROR, "Dependency: {} does not define field: source", dep["name"].as<std::string>());
+                catalyst::logger.error("Dependency: {} does not define field: source", dep["name"].as<std::string>());
                 return std::unexpected(
                     std::format("Dependency: {} does not define field: source", dep["name"].as<std::string>()));
             }
@@ -211,8 +209,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
 
             if (parse_args.workspace) {
                 if (auto member = parse_args.workspace->findPackage(name)) {
-                    catalyst::logger.log(LogLevel::INFO,
-                                         "Dependency '{}' found in workspace at '{}'. Linking...",
+                    catalyst::logger.info("Dependency '{}' found in workspace at '{}'. Linking...",
                                          name,
                                          member->path.string());
                     fs::path lib_path = fs::path(build_dir) / "catalyst-libs" / name;
@@ -239,7 +236,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
                 }
             }
 
-            catalyst::logger.log(LogLevel::DEBUG, "Fetching dependency '{}' from '{}'", name, source);
+            catalyst::logger.debug("Fetching dependency '{}' from '{}'", name, source);
 
             // Check if locked
             std::string locked_hash;
@@ -253,7 +250,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
                 locked_version = lockfile_deps[name].version;
                 locked_triplet = lockfile_deps[name].triplet;
                 locked_path = lockfile_deps[name].path;
-                catalyst::logger.log(LogLevel::DEBUG, "Dependency '{}' is locked.", name);
+                catalyst::logger.debug("Dependency '{}' is locked.", name);
             }
 
             if (source == "vcpkg") {
@@ -323,12 +320,12 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         }
     }
 
-    catalyst::logger.log(LogLevel::DEBUG, "Running post-fetch hooks.");
+    catalyst::logger.debug("Running post-fetch hooks.");
     if (auto res = hooks::postFetch(config); !res) {
         return res;
     }
 
-    catalyst::logger.log(LogLevel::DEBUG, "Fetch subcommand finished successfully.");
+    catalyst::logger.debug("Fetch subcommand finished successfully.");
     return {};
 }
 } // namespace catalyst::fetch

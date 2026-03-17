@@ -17,10 +17,10 @@
 
 namespace catalyst::fmt {
 std::expected<void, std::string> action(const Parse &parse_args) {
-    catalyst::logger.log(LogLevel::DEBUG, "Fmt subcommand invoked.");
+    catalyst::logger.debug("Fmt subcommand invoked.");
     const std::vector<std::string> &profiles = parse_args.profiles;
     YAML::Node profile_comp;
-    catalyst::logger.log(LogLevel::DEBUG, "Composing profiles.");
+    catalyst::logger.debug("Composing profiles.");
     auto res = generate::profileComposition(profiles);
     if (!res) {
         return std::unexpected(res.error());
@@ -28,7 +28,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     profile_comp = res.value();
 
     auto formatter = profile_comp["manifest"]["tooling"]["FMT"].as<std::string>();
-    catalyst::logger.log(LogLevel::DEBUG, "Using formatter: {}", formatter);
+    catalyst::logger.debug("Using formatter: {}", formatter);
 
     namespace fs = std::filesystem;
 
@@ -73,12 +73,12 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         if (formatting_error) {
             return;
         }
-        catalyst::logger.log(LogLevel::DEBUG, "Formatting {}", file.string());
+        catalyst::logger.debug("Formatting {}", file.string());
         if (int res = catalyst::processExec({formatter, "-i", file.string()}).value().get(); res) {
             std::lock_guard<std::mutex> lock(error_mutex);
             if (!formatting_error) {
                 error_message = "Error running clang-format on " + file.string();
-                catalyst::logger.log(LogLevel::ERROR, "{}", error_message);
+                catalyst::logger.error("{}", error_message);
                 formatting_error = true;
             }
         }
@@ -88,7 +88,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         return std::unexpected(error_message);
     }
 
-    catalyst::logger.log(LogLevel::DEBUG, "Fmt subcommand finished successfully.");
+    catalyst::logger.debug("Fmt subcommand finished successfully.");
     return {};
 }
 } // namespace catalyst::fmt

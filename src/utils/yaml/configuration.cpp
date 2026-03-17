@@ -52,7 +52,7 @@ YAML::Node getDefaultConfiguration() {
 }
 
 std::string verMax(std::string s1, std::string s2) {
-    catalyst::logger.log(LogLevel::DEBUG, "Comparing versions: {} and {}", s1, s2);
+    catalyst::logger.debug("Comparing versions: {} and {}", s1, s2);
     auto split_ver = [](const std::string &ver) {
         std::vector<int> parts;
         std::istringstream iss(ver);
@@ -73,16 +73,16 @@ std::string verMax(std::string s1, std::string s2) {
 
     for (size_t i = 0, lim = std::min(v1.size(), v2.size()); i < lim; ++i) {
         if (v1[i] > v2[i]) {
-            catalyst::logger.log(LogLevel::DEBUG, "Version {} is greater.", s1);
+            catalyst::logger.debug("Version {} is greater.", s1);
             return s1;
         }
         if (v1[i] < v2[i]) {
-            catalyst::logger.log(LogLevel::DEBUG, "Version {} is greater.", s2);
+            catalyst::logger.debug("Version {} is greater.", s2);
             return s2;
         }
     }
 
-    catalyst::logger.log(LogLevel::DEBUG, "Versions are equal, returning {}.", s1);
+    catalyst::logger.debug("Versions are equal, returning {}.", s1);
     return s1;
 }
 
@@ -123,15 +123,14 @@ void merge_helper(YAML::Node &composite, const std::string &new_profile_name, co
             std::string default_val = resolve(YAML::Clone(defaults), dotpath);
 
             if (current_val != incoming_val && current_val != default_val) {
-                catalyst::logger.log(LogLevel::WARN,
-                                     "Profile '{}' overrides '{}': '{}' -> '{}'",
+                catalyst::logger.warn("Profile '{}' overrides '{}': '{}' -> '{}'",
                                      new_profile_name,
                                      dotpath,
                                      current_val,
                                      incoming_val);
             }
         } catch (...) {
-            catalyst::logger.log(LogLevel::DEBUG, "Could not check conflict for '{}'", dotpath);
+            catalyst::logger.debug("Could not check conflict for '{}'", dotpath);
         }
     };
 
@@ -166,8 +165,7 @@ void merge_helper(YAML::Node &composite, const std::string &new_profile_name, co
                 check_conflict(dotpath, val);
                 dst_parent[key] = val;
             } else {
-                catalyst::logger.log(LogLevel::WARN,
-                                     "Invalid value '{}' for '{}' in profile '{}'. Ignoring.",
+                catalyst::logger.warn("Invalid value '{}' for '{}' in profile '{}'. Ignoring.",
                                      val,
                                      dotpath,
                                      new_profile_name);
@@ -259,7 +257,7 @@ void merge_helper(YAML::Node &composite, const std::string &new_profile_name, co
 void merge(YAML::Node &composite, const std::string &profile_name, const fs::path &root_dir) {
     if (fs::exists(root_dir / "CATALYST.yaml")) {
         if (YAML::Node catalyst_yaml = YAML::LoadFile(root_dir / "CATALYST.yaml"); catalyst_yaml[profile_name]) {
-            catalyst::logger.log(LogLevel::DEBUG, "Found profile '{}' in CATALYST.yaml", profile_name);
+            catalyst::logger.debug("Found profile '{}' in CATALYST.yaml", profile_name);
             merge_helper(composite, profile_name, catalyst_yaml[profile_name]);
             return;
         }
@@ -273,8 +271,7 @@ void merge(YAML::Node &composite, const std::string &profile_name, const fs::pat
         profile_path /= std::format("catalyst_{}.yaml", profile_name);
 
     if (!fs::exists(profile_path)) {
-        catalyst::logger.log(
-            LogLevel::ERROR, "Profile {} not found in {} or CATALYST.yaml", profile_name, profile_path.string());
+        catalyst::logger.error("Profile {} not found in {} or CATALYST.yaml", profile_name, profile_path.string());
         throw std::runtime_error(
             std::format("Profile {} not found in {} or CATALYST.yaml", profile_name, profile_path.string()));
     }
@@ -285,7 +282,7 @@ void merge(YAML::Node &composite, const std::string &profile_name, const fs::pat
 
 Configuration::Configuration(const std::vector<std::string> &profiles, const std::filesystem::path &root_dir) {
     std::vector profile_names = profiles;
-    catalyst::logger.log(LogLevel::DEBUG, "Composing profiles: {}.", profile_names);
+    catalyst::logger.debug("Composing profiles: {}.", profile_names);
 
     root = getDefaultConfiguration();
 
@@ -303,7 +300,7 @@ Configuration::Configuration(const std::vector<std::string> &profiles, const std
         merge(root, profile_name, root_dir);
     }
 
-    catalyst::logger.log(LogLevel::DEBUG, "Profile composition finished.");
+    catalyst::logger.debug("Profile composition finished.");
 }
 
 bool Configuration::has(const std::string &key) const {

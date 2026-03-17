@@ -21,7 +21,7 @@ namespace fs = std::filesystem;
 namespace {
 
 std::expected<std::string, std::string> resolveGitHash(const std::string &url, const std::string &version) {
-    catalyst::logger.log(LogLevel::DEBUG, "Resolving git hash for {}@{}", url, version);
+    catalyst::logger.debug("Resolving git hash for {}@{}", url, version);
 
     std::string ref = version;
     if (version == "latest") {
@@ -86,7 +86,7 @@ void collectDependencies(const utils::yaml::Configuration &config,
 
             // Skip if it's a workspace member
             if (workspace && workspace->findPackage(name)) {
-                catalyst::logger.log(LogLevel::DEBUG, "Skipping workspace dependency: {}", name);
+                catalyst::logger.debug("Skipping workspace dependency: {}", name);
                 continue;
             }
 
@@ -112,13 +112,13 @@ void collectDependencies(const utils::yaml::Configuration &config,
 } // namespace
 
 std::expected<void, std::string> action(const Parse &parse_args) {
-    catalyst::logger.log(LogLevel::DEBUG, "Lock subcommand invoked.");
+    catalyst::logger.debug("Lock subcommand invoked.");
 
     std::unordered_map<std::string, DependencyInfo> locked_deps;
     fs::path lockfile_path = "catalyst.lock";
 
     if (parse_args.workspace) {
-        catalyst::logger.log(LogLevel::INFO, "Resolving dependencies for workspace...");
+        catalyst::logger.info("Resolving dependencies for workspace...");
         lockfile_path = parse_args.workspace->getRoot() / "catalyst.lock";
 
         for (const auto &[name, member] : parse_args.workspace->getMembers()) {
@@ -129,7 +129,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
                 utils::yaml::Configuration config(profiles, member.path);
                 collectDependencies(config, locked_deps, parse_args.workspace);
             } catch (const std::exception &e) {
-                catalyst::logger.log(LogLevel::WARN, "Failed to load configuration for member {}: {}", name, e.what());
+                catalyst::logger.warn("Failed to load configuration for member {}: {}", name, e.what());
             }
         }
     } else {
@@ -150,7 +150,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
                 return std::unexpected(hash_res.error());
             }
             info.hash = hash_res.value();
-            catalyst::logger.log(LogLevel::INFO, "Resolved {} to {}", name, info.hash);
+            catalyst::logger.info("Resolved {} to {}", name, info.hash);
         }
 
         YAML::Node dep_node;

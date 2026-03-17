@@ -11,22 +11,22 @@ namespace catalyst::doc {
 
 template <>
 std::expected<void, std::string> DerivedRunner<DocEngine::Doxygen>::run() {
-    catalyst::logger.log(LogLevel::INFO, "Running Doxygen documentation engine");
+    catalyst::logger.info("Running Doxygen documentation engine");
 
     std::string config_file = config.getString("manifest.tooling.doc.config").value_or("Doxyfile");
     std::string out_dir = config.getString("manifest.tooling.doc.out_dir").value_or("docs/");
-    catalyst::logger.log(LogLevel::DEBUG, "Using Doxygen config file: {}/{}", out_dir, config_file);
+    catalyst::logger.debug("Using Doxygen config file: {}/{}", out_dir, config_file);
 
     if (opts.clean) {
         if (std::filesystem::exists(out_dir)) {
-            catalyst::logger.log(LogLevel::INFO, "Cleaning output directory: {}", out_dir);
+            catalyst::logger.info("Cleaning output directory: {}", out_dir);
             std::filesystem::remove_all(out_dir);
         }
     }
 
     bool created_tmp_config = false;
     if (!std::filesystem::exists(config_file)) {
-        catalyst::logger.log(LogLevel::WARN, "Config file {} not found. Generating temporary configuration.", config_file);
+        catalyst::logger.warn("Config file {} not found. Generating temporary configuration.", config_file);
         // A minimal Doxyfile content could be generated here
         // For simplicity, we create a basic one.
         std::string tmp_config = "INPUT = src/ include/\nOUTPUT_DIRECTORY = " + out_dir + "\n";
@@ -57,7 +57,7 @@ std::expected<void, std::string> DerivedRunner<DocEngine::Doxygen>::run() {
     if (opts.open) {
         std::string index_path = (std::filesystem::path(out_dir) / "html" / "index.html").string();
         if (std::filesystem::exists(index_path)) {
-            catalyst::logger.log(LogLevel::INFO, "Opening {}", index_path);
+            catalyst::logger.info("Opening {}", index_path);
 #ifdef __APPLE__
             catalyst::processExec({"open", index_path}, std::filesystem::current_path().string());
 #elif __linux__
@@ -66,7 +66,7 @@ std::expected<void, std::string> DerivedRunner<DocEngine::Doxygen>::run() {
             catalyst::processExec({"start", index_path}, std::filesystem::current_path().string());
 #endif
         } else {
-            catalyst::logger.log(LogLevel::WARN, "Could not find index.html to open.");
+            catalyst::logger.warn("Could not find index.html to open.");
         }
     }
 

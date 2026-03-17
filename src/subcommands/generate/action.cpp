@@ -35,9 +35,9 @@ void finalTarget(const utils::yaml::Configuration &config,
 } // namespace
 
 std::expected<void, std::string> action(const Parse &parse_args) {
-    catalyst::logger.log(LogLevel::DEBUG, "Generate subcommand invoked.");
+    catalyst::logger.debug("Generate subcommand invoked.");
 
-    catalyst::logger.log(LogLevel::DEBUG, "Composing profiles.");
+    catalyst::logger.debug("Composing profiles.");
     utils::yaml::Configuration config;
 
     try {
@@ -46,7 +46,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         return std::unexpected(err.what());
     }
 
-    catalyst::logger.log(LogLevel::DEBUG, "Running pre-generate hooks.");
+    catalyst::logger.debug("Running pre-generate hooks.");
     if (auto res = hooks::preGenerate(config); !res) {
         return res;
     }
@@ -63,7 +63,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     for (const auto &dir : relative_source_dirs)
         absolute_source_dirs.push_back((current_dir / dir).string());
 
-    catalyst::logger.log(LogLevel::DEBUG, "Building source set.");
+    catalyst::logger.debug("Building source set.");
     auto source_set_res = buildSourceSet(absolute_source_dirs, parse_args.profiles);
     if (!source_set_res) {
         return std::unexpected(source_set_res.error());
@@ -74,7 +74,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     fs::path build_dir = config.getString("manifest.dirs.build").value();
     fs::path obj_dir = build_dir / "obj";
 
-    catalyst::logger.log(LogLevel::DEBUG, "Creating object directory: {}", obj_dir.string());
+    catalyst::logger.debug("Creating object directory: {}", obj_dir.string());
     fs::create_directories(obj_dir);
     if (!fs::exists(obj_dir) || !fs::is_directory(obj_dir)) {
         return std::unexpected("Failed to create object directory: " + obj_dir.string());
@@ -95,7 +95,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     }
 
     const fs::path buildfile_path = build_dir / build_filename;
-    catalyst::logger.log(LogLevel::DEBUG, "Writing build file to: {}", buildfile_path.string());
+    catalyst::logger.debug("Writing build file to: {}", buildfile_path.string());
     std::ofstream buildfile{buildfile_path};
 
     if (!buildfile) {
@@ -121,26 +121,25 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         generate_build(writer);
     }
 
-    catalyst::logger.log(
-        LogLevel::DEBUG, "Writing profile composition to: {}", (build_dir / "profile_composition.yaml").string());
+    catalyst::logger.debug("Writing profile composition to: {}", (build_dir / "profile_composition.yaml").string());
     std::ofstream profile_comp_file{build_dir / "profile_composition.yaml"};
     if (!profile_comp_file) {
         return std::unexpected("Failed to open profile_composition.yaml for writing in " + build_dir.string());
     }
     profile_comp_file << config.getRoot();
 
-    catalyst::logger.log(LogLevel::DEBUG, "Running post-generate hooks.");
+    catalyst::logger.debug("Running post-generate hooks.");
     if (auto res = hooks::postGenerate(config); !res) {
         return res;
     }
-    catalyst::logger.log(LogLevel::DEBUG, "Generate subcommand finished successfully.");
+    catalyst::logger.debug("Generate subcommand finished successfully.");
     return {};
 }
 
 namespace {
 std::vector<std::string> intermediateTargets(catalyst::generate::buildwriters::BaseWriter &writer,
                                              const std::unordered_set<std::filesystem::path> &source_set) {
-    catalyst::logger.log(LogLevel::DEBUG, "Generate subcommand invoked.");
+    catalyst::logger.debug("Generate subcommand invoked.");
     fs::path current_dir = fs::current_path();
     writer.addComment("Source File Compilation");
     std::vector<std::string> object_files;
@@ -161,7 +160,7 @@ std::vector<std::string> intermediateTargets(catalyst::generate::buildwriters::B
 void finalTarget(const utils::yaml::Configuration &config,
                  const auto &object_files,
                  catalyst::generate::buildwriters::BaseWriter &writer) {
-    catalyst::logger.log(LogLevel::DEBUG, "Generating final target.");
+    catalyst::logger.debug("Generating final target.");
     // Build edge for the final target
     std::string type = config.getString("manifest.type").value_or("BINARY");
     std::string target_prefix;
@@ -198,7 +197,7 @@ void finalTarget(const utils::yaml::Configuration &config,
 
     std::string target_name = config.getString("manifest.name").value_or("name");
     fs::path target_path{target_prefix + target_name + target_suffix};
-    catalyst::logger.log(LogLevel::DEBUG, "Final target name: {}", target_path.string());
+    catalyst::logger.debug("Final target name: {}", target_path.string());
     writer.addComment("Build edge for the final target");
     writer.addBuild({target_path.string()}, link_rule, object_files);
 
@@ -211,7 +210,7 @@ void writeVariables(const catalyst::utils::yaml::Configuration &config,
                     catalyst::generate::buildwriters::BaseWriter &writer,
                     const std::vector<std::string> &enabled_features) {
 
-    catalyst::logger.log(LogLevel::DEBUG, "Writing variables to build file.");
+    catalyst::logger.debug("Writing variables to build file.");
     std::string build_dir_str = config.getString("manifest.dirs.build").value_or("build");
 
     std::string cxxflags =
@@ -237,7 +236,7 @@ void writeVariables(const catalyst::utils::yaml::Configuration &config,
         ccflags += std::format(" -I{}", (fs::path(vcpkg_root) / "installed" / triplet / "include").string());
         ldflags += std::format(" -L{}", (fs::path(vcpkg_root) / "installed" / triplet / "lib").string());
     } else {
-        logger.log(LogLevel::WARN, "VCPKG_ROOT environment variable is not defined.");
+        logger.warn("VCPKG_ROOT environment variable is not defined.");
     }
 
     if (const auto &features_node = config.getRoot()["features"]; features_node && features_node.IsSequence()) {
@@ -281,7 +280,7 @@ void writeVariables(const catalyst::utils::yaml::Configuration &config,
     for (const auto &dep : config.getRoot()["dependencies"]) {
         auto find_dep_res = findDep(build_dir_str, dep);
         if (!find_dep_res) {
-            catalyst::logger.log(LogLevel::WARN, "Partial failure in dependency resolution: {}", find_dep_res.error());
+            catalyst::logger.warn("Partial failure in dependency resolution: {}", find_dep_res.error());
             continue;
         }
         auto [lib_path, inc_path, libs] = find_dep_res.value();
@@ -301,7 +300,7 @@ void writeVariables(const catalyst::utils::yaml::Configuration &config,
 }
 
 void writeRules(catalyst::generate::buildwriters::BaseWriter &writer) {
-    catalyst::logger.log(LogLevel::DEBUG, "Writing rules to build file.");
+    catalyst::logger.debug("Writing rules to build file.");
     writer.addComment("Rules for compiling");
     writer.addRule("cxx_compile", "$cxx $cxxflags -MMD -MF $out.d -c $in -o $out", "CXX $out", "$out.d", "gcc");
     writer.addRule("cc_compile", "$cc $cflags -MMD -MF $out.d -c $in -o $out", "CC $out", "$out.d", "gcc");

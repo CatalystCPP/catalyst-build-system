@@ -19,7 +19,7 @@ namespace catalyst::run {
 
 namespace {
 std::string commandStr(const fs::path &executable, const std::vector<std::string> &params) {
-    catalyst::logger.log(LogLevel::DEBUG, "Constructing command string.");
+    catalyst::logger.debug("Constructing command string.");
     std::string command = executable;
     for (const auto &param : params) {
         command += " " + param;
@@ -29,14 +29,14 @@ std::string commandStr(const fs::path &executable, const std::vector<std::string
 } // namespace
 
 std::expected<void, std::string> action(const Parse &args) {
-    catalyst::logger.log(LogLevel::DEBUG, "Run subcommand invoked.");
+    catalyst::logger.debug("Run subcommand invoked.");
     std::vector<std::string> profiles;
     if (args.profile != "common") {
         profiles.emplace_back("common");
     }
     profiles.push_back(args.profile);
 
-    catalyst::logger.log(LogLevel::DEBUG, "Composing profiles.");
+    catalyst::logger.debug("Composing profiles.");
     YAML::Node profile_comp;
     std::expected<YAML::Node, std::string> res = generate::profileComposition(profiles);
     if (!res) {
@@ -44,7 +44,7 @@ std::expected<void, std::string> action(const Parse &args) {
     }
     profile_comp = res.value();
 
-    catalyst::logger.log(LogLevel::DEBUG, "Running pre-run hooks.");
+    catalyst::logger.debug("Running pre-run hooks.");
     if (std::expected<void, std::string> res = hooks::preRun(profile_comp); !res) {
         return res;
     }
@@ -95,7 +95,7 @@ std::expected<void, std::string> action(const Parse &args) {
     setenv("LD_LIBRARY_PATH", lib_path_res.value().c_str(), 1);
 #endif
 
-    catalyst::logger.log(LogLevel::DEBUG, "Executing command: {}", command);
+    catalyst::logger.debug("Executing command: {}", command);
 
     std::vector<std::string> exec_args;
     exec_args.push_back(exe_path.string());
@@ -106,12 +106,12 @@ std::expected<void, std::string> action(const Parse &args) {
             std::format("Target executable: {} exited with failure code: {}", exe_path.string(), res));
     }
 
-    catalyst::logger.log(LogLevel::DEBUG, "Running post-run hooks.");
+    catalyst::logger.debug("Running post-run hooks.");
     if (std::expected<void, std::string> res = hooks::postRun(profile_comp); !res) {
         return res;
     }
 
-    catalyst::logger.log(LogLevel::DEBUG, "Run subcommand finished successfully.");
+    catalyst::logger.debug("Run subcommand finished successfully.");
     return {};
 }
 

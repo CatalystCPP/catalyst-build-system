@@ -14,7 +14,7 @@ namespace catalyst::ide_sync {
 namespace fs = std::filesystem;
 
 std::expected<void, std::string> action(const Parse &parse_args) {
-    catalyst::logger.log(LogLevel::DEBUG, "IDE sync subcommand invoked.");
+    catalyst::logger.debug("IDE sync subcommand invoked.");
 
     const fs::path root_dir = fs::current_path();
 
@@ -43,7 +43,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     if (auto res = invokeIDEConfigEmitters(init_parse); !res)
         return std::unexpected(res.error());
 
-    catalyst::logger.log(LogLevel::DEBUG, "IDE sync subcommand finished successfully.");
+    catalyst::logger.debug("IDE sync subcommand finished successfully.");
     return {};
 }
 

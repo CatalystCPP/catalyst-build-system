@@ -11,7 +11,7 @@ std::optional<FindRes> findSystemFromPkgConfig(const std::string &dep_name);
 
 std::expected<FindRes, std::string> findSystem(const YAML::Node &dep) {
     auto dep_name = dep["name"].as<std::string>();
-    catalyst::logger.log(LogLevel::DEBUG, "Resolving system dependency: {}", dep_name);
+    catalyst::logger.debug("Resolving system dependency: {}", dep_name);
 
     std::string linkage; // assume shared
     if (dep["linkage"] && dep["linkage"].IsScalar()) {
@@ -58,8 +58,7 @@ std::expected<FindRes, std::string> findSystem(const YAML::Node &dep) {
         trim(lib_path_val);
         trim(libs_val);
 
-        catalyst::logger.log(
-            LogLevel::DEBUG, "Resolved via pkg-config: cflags='{}' L='{}' l='{}'", cflags_val, lib_path_val, libs_val);
+        catalyst::logger.debug("Resolved via pkg-config: cflags='{}' L='{}' l='{}'", cflags_val, lib_path_val, libs_val);
 
         if (!has_explicit_include)
             inc_path += " " + cflags_val;
@@ -71,7 +70,7 @@ std::expected<FindRes, std::string> findSystem(const YAML::Node &dep) {
         return FindRes{.lib_path = lib_path, .inc_path = inc_path, .libs = libs};
     }
 
-    catalyst::logger.log(LogLevel::DEBUG, "pkg-config failed for {}, falling back to default paths.", dep_name);
+    catalyst::logger.debug("pkg-config failed for {}, falling back to default paths.", dep_name);
 
     // Fallback defaults
     if (!has_explicit_include) {
@@ -117,8 +116,7 @@ std::optional<FindRes> findSystemFromPkgConfig(const std::string &dep_name) {
         trim(L_val);
         trim(l_val);
 
-        catalyst::logger.log(
-            LogLevel::DEBUG, "Resolved via pkg-config: cflags='{}' L='{}' l='{}'", cflags_val, L_val, l_val);
+        catalyst::logger.debug("Resolved via pkg-config: cflags='{}' L='{}' l='{}'", cflags_val, L_val, l_val);
 
         return FindRes{.lib_path = L_val, .inc_path = cflags_val, .libs = l_val};
     }

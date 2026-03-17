@@ -20,7 +20,7 @@ namespace catalyst::test {
 
 namespace {
 std::string commandStr(const fs::path &executable, const std::vector<std::string> &params) {
-    catalyst::logger.log(LogLevel::DEBUG, "Constructing command string.");
+    catalyst::logger.debug("Constructing command string.");
     std::string command = executable;
     for (const auto &param : params) {
         command += " " + param;
@@ -30,7 +30,7 @@ std::string commandStr(const fs::path &executable, const std::vector<std::string
 } // namespace
 
 std::expected<void, std::string> action(const Parse &args) {
-    catalyst::logger.log(LogLevel::DEBUG, "Test subcommand invoked.");
+    catalyst::logger.debug("Test subcommand invoked.");
 
     if (args.workspace) {
         fs::path current = fs::current_path();
@@ -42,19 +42,19 @@ std::expected<void, std::string> action(const Parse &args) {
         }
 
         if (is_root) {
-            catalyst::logger.log(LogLevel::INFO, "Running tests for all workspace members.");
+            catalyst::logger.info("Running tests for all workspace members.");
             bool any_failed = false;
             std::string failed_members;
 
             for (const auto &[name, member] : args.workspace->getMembers()) {
-                catalyst::logger.log(LogLevel::INFO, "Testing member: {}", name);
+                catalyst::logger.info("Testing member: {}", name);
                 fs::current_path(member.path);
 
                 Parse member_args = args;
                 member_args.workspace = std::nullopt; // Prevent recursion loop
 
                 if (auto res = action(member_args); !res) {
-                    catalyst::logger.log(LogLevel::ERROR, "Test failed for member: {}", name);
+                    catalyst::logger.error("Test failed for member: {}", name);
                     any_failed = true;
                     failed_members += name + " ";
                 }
@@ -69,7 +69,7 @@ std::expected<void, std::string> action(const Parse &args) {
 
     std::vector<std::string> profiles{"common", "test"};
 
-    catalyst::logger.log(LogLevel::DEBUG, "Composing profiles.");
+    catalyst::logger.debug("Composing profiles.");
     YAML::Node profile_comp;
     auto res = generate::profileComposition(profiles);
     if (!res) {
@@ -77,7 +77,7 @@ std::expected<void, std::string> action(const Parse &args) {
     }
     profile_comp = res.value();
 
-    catalyst::logger.log(LogLevel::DEBUG, "Running pre-test hooks.");
+    catalyst::logger.debug("Running pre-test hooks.");
     if (auto res = hooks::preTest(profile_comp); !res) {
         return res;
     }
@@ -112,7 +112,7 @@ std::expected<void, std::string> action(const Parse &args) {
 
     fs::path exe_path = fs::absolute(fs::path(std::format("{}/{}", build_dir, exe)));
     std::string command = commandStr(exe_path, args.params);
-    catalyst::logger.log(LogLevel::DEBUG, "Executing command: {}", command);
+    catalyst::logger.debug("Executing command: {}", command);
 
     std::vector<std::string> exec_args;
     exec_args.push_back(exe_path.string());
@@ -123,12 +123,12 @@ std::expected<void, std::string> action(const Parse &args) {
             std::format("Target executable: {} exited with failure code: {}", exe_path.string(), res));
     }
 
-    catalyst::logger.log(LogLevel::DEBUG, "Running post-test hooks.");
+    catalyst::logger.debug("Running post-test hooks.");
     if (auto res = hooks::postTest(profile_comp); !res) {
         return res;
     }
 
-    catalyst::logger.log(LogLevel::DEBUG, "Test subcommand finished successfully.");
+    catalyst::logger.debug("Test subcommand finished successfully.");
     return {};
 }
 

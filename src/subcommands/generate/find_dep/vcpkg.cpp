@@ -27,7 +27,7 @@ std::expected<FindRes, std::string> findVcpkg(const YAML::Node &dep) {
     }
 
     std::string dep_name = dep["name"].as<std::string>();
-    catalyst::logger.log(LogLevel::DEBUG, "Resolving vcpkg dependency: {}", dep_name);
+    catalyst::logger.debug("Resolving vcpkg dependency: {}", dep_name);
 
     // Construct the path to the library directory within the specific package folder
     // $VCPKG_ROOT/packages/<package>_<triplet>/lib
@@ -41,7 +41,7 @@ std::expected<FindRes, std::string> findVcpkg(const YAML::Node &dep) {
     fs::path pc_file = pkg_config_dir / std::format("{}.pc", dep_name);
 
     if (fs::exists(pc_file)) {
-        catalyst::logger.log(LogLevel::DEBUG, "Found pkg-config file for {}: {}", dep_name, pc_file.string());
+        catalyst::logger.debug("Found pkg-config file for {}: {}", dep_name, pc_file.string());
 
         std::unordered_map<std::string, std::string> env;
         if (const char *path_env = std::getenv("PATH")) {
@@ -62,22 +62,21 @@ std::expected<FindRes, std::string> findVcpkg(const YAML::Node &dep) {
             if (auto last = l_val.find_last_not_of(" \t\n"); last != std::string::npos)
                 l_val.erase(last + 1);
 
-            catalyst::logger.log(LogLevel::DEBUG, "Resolved via pkg-config: L='{}' l='{}'", L_val, l_val);
+            catalyst::logger.debug("Resolved via pkg-config: L='{}' l='{}'", L_val, l_val);
             return FindRes{.lib_path = L_val,
                            .inc_path = "", // already set in write_variables
                            .libs = l_val};
         } else {
-            catalyst::logger.log(LogLevel::WARN, "pkg-config failed for {}, falling back.", dep_name);
+            catalyst::logger.warn("pkg-config failed for {}, falling back.", dep_name);
         }
     }
-    catalyst::logger.log(LogLevel::DEBUG, "Did not find pkg-config file for {}: {}", dep_name, pc_file.string());
+    catalyst::logger.debug("Did not find pkg-config file for {}: {}", dep_name, pc_file.string());
 
     std::string library_path, libs;
 
     if (linkage == "static" || linkage == "shared") {
         if (!fs::exists(lib_path) || !fs::is_directory(lib_path)) {
-            catalyst::logger.log(LogLevel::WARN,
-                                 "Could not find library directory for vcpkg package '{}' at: {}",
+            catalyst::logger.warn("Could not find library directory for vcpkg package '{}' at: {}",
                                  dep_name,
                                  lib_path.string());
             libs += std::format(" -l{}", dep_name);
@@ -85,7 +84,7 @@ std::expected<FindRes, std::string> findVcpkg(const YAML::Node &dep) {
     }
 
     library_path += std::format(" -L{}", lib_path.string());
-    catalyst::logger.log(LogLevel::DEBUG, "Adding library path: {}", lib_path.string());
+    catalyst::logger.debug("Adding library path: {}", lib_path.string());
 
     if (linkage == "static" || linkage == "shared") {
 // Define the library file extensions based on the operating system.
@@ -112,7 +111,7 @@ std::expected<FindRes, std::string> findVcpkg(const YAML::Node &dep) {
                             stem = stem.substr(3);
                         }
                         libs += std::format(" -l{}", stem);
-                        catalyst::logger.log(LogLevel::DEBUG, "Found and added library: {}", stem);
+                        catalyst::logger.debug("Found and added library: {}", stem);
                         break; // Found a matching extension, move to the next file
                     }
                 }

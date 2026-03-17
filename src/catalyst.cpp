@@ -20,7 +20,7 @@ std::string concatArgv(int argc, char **argv) {
 
 int main(int argc, char **argv) {
     std::string args_str = concatArgv(argc, argv);
-    catalyst::logger.log(catalyst::LogLevel::DEBUG, "{}", args_str);
+    catalyst::logger.debug("{}", args_str);
 
     catalyst::CliContext ctx;
     ctx.workspace = catalyst::Workspace::findRoot();
