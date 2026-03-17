@@ -1,103 +1,206 @@
 #compdef catalyst
 
 _catalyst() {
-    local context state line
+    local context state state_descr line
     typeset -A opt_args
 
-    local -a subcommands
-    subcommands=(
-        'add:add a dependency'
-        'build:build a dependency'
-        'clean:clean a dependency'
-        'configure:set a configuration variable'
-        'fetch:fetch all dependencies for a profile'
-        'fmt:format the project files'
-        'generate:generate a build script'
-        'init:initialize a profile'
-        'run:run a dependency'
-        'test:test the project'
-        'tidy:run linting'
-    )
+    _arguments -C \
+        '1: :->cmds' \
+        '*:: :->args'
 
-    if (( CURRENT == 2 )); then
-        _describe 'subcommand' subcommands
-        return
-    fi
-
-    case $words[2] in
-        add)
-            _catalyst_add
+    case $state in
+        cmds)
+            local -a subcommands
+            subcommands=(
+                'add:add a dependency'
+                'bench:execute benchmarks'
+                'build:build the project'
+                'clean:clean artifacts'
+                'doc:build documentation'
+                'download:install a configured package from git'
+                'fetch:fetch dependencies'
+                'fmt:format source files'
+                'generate:generate a build file'
+                'ide_sync:sync IDE configuration files'
+                'init:initialize a profile'
+                'install:install the build artifacts'
+                'lock:resolve and pin dependencies'
+                'pack:assemble the local package for distribution'
+                'run:run a built executable'
+                'test:run the test executable'
+                'tidy:run linting'
+            )
+            _describe -t commands 'catalyst command' subcommands
             ;;
-        build)
-            _catalyst_build
-            ;;
-        clean)
-            _catalyst_clean
-            ;;
-        configure)
-            _catalyst_configure
-            ;;
-        fetch)
-            _catalyst_fetch
-            ;;
-        fmt)
-            # No options for fmt
-            ;;
-        generate)
-            _catalyst_generate
-            ;;
-        init)
-            _catalyst_init
-            ;;
-        run)
-            _catalyst_run
-            ;;
-        test)
-            _catalyst_test
-            ;;
-        tidy)
-            _catalyst_tidy
+        args)
+            case $line[1] in
+                add)
+                    _catalyst_add
+                    ;;
+                bench)
+                    _catalyst_bench
+                    ;;
+                build)
+                    _catalyst_build
+                    ;;
+                clean)
+                    _catalyst_clean
+                    ;;
+                doc)
+                    _catalyst_doc
+                    ;;
+                download)
+                    _catalyst_download
+                    ;;
+                fetch)
+                    _catalyst_fetch
+                    ;;
+                fmt)
+                    # no flags
+                    ;;
+                generate)
+                    _catalyst_generate
+                    ;;
+                ide_sync)
+                    _catalyst_ide_sync
+                    ;;
+                init)
+                    _catalyst_init
+                    ;;
+                install)
+                    _catalyst_install
+                    ;;
+                lock)
+                    _catalyst_lock
+                    ;;
+                pack)
+                    _catalyst_pack
+                    ;;
+                run)
+                    _catalyst_run
+                    ;;
+                test)
+                    _catalyst_test
+                    ;;
+                tidy)
+                    _catalyst_tidy
+                    ;;
+            esac
             ;;
     esac
 }
 
 _catalyst_add() {
+    local context state state_descr line
+    typeset -A opt_args
+
+    _arguments -C \
+        '1: :->cmds' \
+        '*:: :->args'
+
+    case $state in
+        cmds)
+            local -a add_subcommands
+            add_subcommands=(
+                'git:add a remote git dependency'
+                'local:add a local dependency'
+                'system:add a system dependency'
+                'vcpkg:add a vcpkg dependency'
+            )
+            _describe -t commands 'add subcommand' add_subcommands
+            ;;
+        args)
+            case $line[1] in
+                git)
+                    _arguments \
+                        '(-n --name)'{-n,--name}'[name]:name:' \
+                        '(-v --version)'{-v,--version}'[version]:version:' \
+                        '(-f --features)'{-f,--features}'[features]:features:' \
+                        '(-p --profiles)'{-p,--profiles}'[profiles]:profiles:' \
+                        '1:remote:'
+                    ;;
+                local)
+                    _arguments \
+                        '(-f --features)'{-f,--features}'[features]:features:' \
+                        '(-p --profiles)'{-p,--profiles}'[profiles]:profiles:' \
+                        '1:name:' \
+                        '2:path:_directories'
+                    ;;
+                system)
+                    _arguments \
+                        '(-l --lib)'{-l,--lib}'[lib]:lib:' \
+                        '(-i --inc)'{-i,--inc}'[inc]:inc:' \
+                        '(-p --profiles)'{-p,--profiles}'[profiles]:profiles:' \
+                        '1:name:'
+                    ;;
+                vcpkg)
+                    _arguments \
+                        '(-t --triplet)'{-t,--triplet}'[triplet]:triplet:' \
+                        '(-v --version)'{-v,--version}'[version]:version:' \
+                        '(-f --features)'{-f,--features}'[features]:features:' \
+                        '(-p --profiles)'{-p,--profiles}'[profiles]:profiles:' \
+                        '1:name:'
+                    ;;
+            esac
+            ;;
+    esac
+}
+
+_catalyst_bench() {
     _arguments \
-        '(-v --version)'{-v,--version}'[version]:version:' \
-        '(-s --src)'{-s,--src}'[source]:source:_files' \
-        '(-p --profiles)'{-p,--profiles}'[profiles]:profiles:' \
-        '(-f --features)'{-f,--features}'[features]:features:' \
-        '*:dependency name:'
+        '(-P --params)'{-P,--params}'[params]:params:'
 }
 
 _catalyst_build() {
     _arguments \
-        '(-p --profile)'{-p,--profile}'[profile]:profile:' \
-        '(-P --params)'{-P,--params}'[params]:params:' \
-        '*:target:'
+        '(-r --regen)'{-r,--regen}'[regenerate the build file]' \
+        '(-b --force-rebuild)'{-b,--force-rebuild}'[recompile dependencies]' \
+        '--force-refetch[refetch dependencies]' \
+        '(--workspace --all)'{--workspace,--all}'[build all members in the workspace]' \
+        '(-P --package)'{-P,--package}'[package]:package:' \
+        '(-p --profiles)'{-p,--profiles}'[profiles]:profiles:' \
+        '(-f --features)'{-f,--features}'[features]:features:' \
+        '--backend[backend]:backend:(ninja gmake cbe)'
 }
 
 _catalyst_clean() {
     _arguments \
-        '(-p --profile)'{-p,--profile}'[profile]:profile:' \
-        '*:target:'
+        '(-p --profile)'{-p,--profile}'[profile]:profile:'
 }
 
-_catalyst_configure() {
+_catalyst_doc() {
     _arguments \
-        '1:variable:' \
-        '2:value:'
+        '(-e --engine)'{-e,--engine}'[engine]:engine:(doxygen clang-doc jocasta)' \
+        '--open[open documentation in browser]' \
+        '--clean[clean output directory before generation]'
+}
+
+_catalyst_download() {
+    _arguments \
+        '(-p --profiles)'{-p,--profiles}'[profiles]:profiles:' \
+        '(-f --features)'{-f,--features}'[features]:features:' \
+        '(-t --target)'{-t,--target}'[target]:target:_directories' \
+        '1:remote:' \
+        '2:branch:'
 }
 
 _catalyst_fetch() {
     _arguments \
-        '--profiles[profiles]:profiles:'
+        '(-p --profiles)'{-p,--profiles}'[profiles]:profiles:'
 }
 
 _catalyst_generate() {
     _arguments \
         '(-p --profiles)'{-p,--profiles}'[profiles]:profiles:' \
-        '(-f --features)'{-f,--features}'[features]:features:'
+        '(-f --features)'{-f,--features}'[features]:features:' \
+        '(-b --backend)'{-b,--backend}'[backend]:backend:(ninja gmake cbe)'
+}
+
+_catalyst_ide_sync() {
+    _arguments \
+        '(-p --profiles)'{-p,--profiles}'[profiles]:profiles:' \
+        '--ides[ides]:ides:' \
+        '(-f --force-ide)'{-f,--force-ide}'[force emitting IDE config]'
 }
 
 _catalyst_init() {
@@ -108,14 +211,37 @@ _catalyst_init() {
         '(-v --version)'{-v,--version}'[version]:version:' \
         '(-d --description)'{-d,--description}'[description]:description:' \
         '--provides[provides]:provides:' \
-        '--cc[c_compiler]:c_compiler:_command_names -e' \
-        '--cxx[cxx_compiler]:cxx_compiler:_command_names -e' \
-        '--ccflags[c_compiler_flags]:c_compiler_flags:' \
-        '--cxxflags[cxx_compiler_flags]:cxx_compiler_flags:' \
-        '--include-dirs[include_dirs]:include_dirs:_directories' \
-        '--source-dirs[source_dirs]:source_dirs:_directories' \
-        '--build-dir[build_dir]:build_dir:_directories' \
-        '(-p --profile)'{-p,--profile}'[profile]:profile:'
+        '--cc[c compiler]:c_compiler:_command_names -e' \
+        '--cxx[cxx compiler]:cxx_compiler:_command_names -e' \
+        '--ccflags[c compiler flags]:c_compiler_flags:' \
+        '--cxxflags[cxx compiler flags]:cxx_compiler_flags:' \
+        '--ldflags[linker flags]:linker_flags:' \
+        '--include-dirs[include dirs]:include_dirs:_directories' \
+        '--source-dirs[source dirs]:source_dirs:_directories' \
+        '--build-dir[build dir]:build_dir:_directories' \
+        '--ides[ides]:ides:' \
+        '(-p --profile)'{-p,--profile}'[profile]:profile:' \
+        '(-f --force-ide)'{-f,--force-ide}'[force emitting IDE config]'
+}
+
+_catalyst_install() {
+    _arguments \
+        '(-p --profiles)'{-p,--profiles}'[profiles]:profiles:' \
+        '(-s --source)'{-s,--source}'[source]:source:_directories' \
+        '(-t --target)'{-t,--target}'[target]:target:_directories'
+}
+
+_catalyst_lock() {
+    _arguments \
+        '(-p --profiles)'{-p,--profiles}'[profiles]:profiles:'
+}
+
+_catalyst_pack() {
+    _arguments \
+        '(-p --profiles)'{-p,--profiles}'[profiles]:profiles:' \
+        '(-s --source)'{-s,--source}'[source]:source:_directories' \
+        '(-t --target)'{-t,--target}'[target]:target:_directories' \
+        '(-G --generators)'{-G,--generators}'[generators]:generators:'
 }
 
 _catalyst_run() {
@@ -133,7 +259,8 @@ _catalyst_test() {
 
 _catalyst_tidy() {
     _arguments \
-        '(-p --profiles)'{-p,--profiles}'[profiles]:profiles:'
+        '(-p --profiles)'{-p,--profiles}'[profiles]:profiles:' \
+        '--fix[automatically fix lint warnings]'
 }
 
 _catalyst "$@"
