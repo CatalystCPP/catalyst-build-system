@@ -45,7 +45,7 @@ std::vector<WorkspaceMember> buildOrderTopSort(const Workspace &ws) {
             utils::yaml::Configuration config(profiles, member.path);
             auto name_opt = config.getString("manifest.name");
             if (!name_opt) {
-                catalyst::logger.log(LogLevel::WARN, "Member {} has no manifest.name", key);
+                catalyst::logger.warn("Member {} has no manifest.name", key);
                 continue;
             }
             const std::string &name = *name_opt;
@@ -65,7 +65,7 @@ std::vector<WorkspaceMember> buildOrderTopSort(const Workspace &ws) {
             packages[name] = info;
 
         } catch (const std::exception &e) {
-            catalyst::logger.log(LogLevel::ERROR, "Failed to load config for member {}: {}", key, e.what());
+            catalyst::logger.error("Failed to load config for member {}: {}", key, e.what());
         }
     }
 
@@ -77,7 +77,7 @@ std::vector<WorkspaceMember> buildOrderTopSort(const Workspace &ws) {
         if (visited.contains(pkg_name))
             return;
         if (visiting.contains(pkg_name)) {
-            catalyst::logger.log(LogLevel::WARN, "Circular dependency detected involving {}", pkg_name);
+            catalyst::logger.warn("Circular dependency detected involving {}", pkg_name);
             return;
         }
         visiting.insert(pkg_name);
@@ -108,10 +108,10 @@ std::vector<WorkspaceMember> buildOrderTopSort(const Workspace &ws) {
 }
 
 bool depMissing(const utils::yaml::Configuration &config) {
-    catalyst::logger.log(LogLevel::DEBUG, "Checking for missing dependencies.");
+    catalyst::logger.debug("Checking for missing dependencies.");
     fs::path build_dir = config.getString("manifest.dirs.build").value_or("build");
     if (!config.has("dependencies")) {
-        catalyst::logger.log(LogLevel::DEBUG, "No dependencies declared, skipping check.");
+        catalyst::logger.debug("No dependencies declared, skipping check.");
         return false;
     }
     // TODO: needs to be updated to respect actual dependency types
@@ -120,7 +120,7 @@ bool depMissing(const utils::yaml::Configuration &config) {
         if (auto type = dep["source"].as<std::string>(); type == "git") {
             bool missing = !fs::exists(build_dir / "catalyst-libs" / dep["name"].as<std::string>());
             if (missing) {
-                catalyst::logger.log(LogLevel::WARN, "Missing dependency: {}", dep["name"].as<std::string>());
+                catalyst::logger.warn("Missing dependency: {}", dep["name"].as<std::string>());
             }
             return missing;
         }
@@ -135,7 +135,7 @@ std::expected<void, std::string> generateCompileCommands(const fs::path &build_d
         return {};
     }
     if (generator == "ninja") {
-        catalyst::logger.log(LogLevel::INFO, "Generating compile commands database.");
+        catalyst::logger.info("Generating compile commands database.");
         auto res = catalyst::processExecStdout(
             {"ninja", "-C", build_dir.string(), "-t", "compdb", "cc_compile", "cxx_compile"});
         if (!res)
@@ -155,7 +155,7 @@ std::expected<void, std::string> generateCompileCommands(const fs::path &build_d
 } // namespace
 
 std::expected<void, std::string> action(const Parse &parse_args) {
-    catalyst::logger.log(LogLevel::DEBUG, "Build subcommand invoked.");
+    catalyst::logger.debug("Build subcommand invoked.");
 
     if (parse_args.workspace) {
         fs::path current = fs::current_path();
@@ -167,7 +167,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         }
 
         if (parse_args.workspace_build || is_root || !parse_args.package.empty()) {
-            catalyst::logger.log(LogLevel::INFO, "Resolving workspace build order.");
+            catalyst::logger.info("Resolving workspace build order.");
             auto order = buildOrderTopSort(*parse_args.workspace);
 
             std::vector<WorkspaceMember> targets;
@@ -196,7 +196,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
             }
 
             for (const auto &member : targets) {
-                catalyst::logger.log(LogLevel::INFO, "Building workspace member: {}", member.name);
+                catalyst::logger.info("Building workspace member: {}", member.name);
                 fs::current_path(member.path);
 
                 Parse member_args = parse_args;
@@ -220,14 +220,14 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         }
     }
 
-    catalyst::logger.log(LogLevel::DEBUG, "Composing profiles.");
+    catalyst::logger.debug("Composing profiles.");
     utils::yaml::Configuration config{parse_args.profiles};
 
-    catalyst::logger.log(LogLevel::INFO, "Running pre-build hooks.");
+    catalyst::logger.info("Running pre-build hooks.");
     if (auto res = hooks::preBuild(config); !res) {
-        catalyst::logger.log(LogLevel::ERROR, "Pre-build hook failed: {}", res.error());
+        catalyst::logger.error("Pre-build hook failed: {}", res.error());
         if (auto hook_res = hooks::onBuildFailure(config); !hook_res) {
-            catalyst::logger.log(LogLevel::ERROR, "on_build_failure hook failed: {}", hook_res.error());
+            catalyst::logger.error("on_build_failure hook failed: {}", hook_res.error());
             return std::unexpected(res.error() +
                                    "\nAdditionally, the on_build_failure hook failed with error: " + hook_res.error());
         }
@@ -239,14 +239,14 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     std::string build_filename = (generator == "ninja") ? "build.ninja" : "catalyst.build";
 
     if (!fs::exists(build_dir / build_filename) || parse_args.regen) {
-        catalyst::logger.log(LogLevel::INFO, "Generating build files.");
+        catalyst::logger.info("Generating build files.");
         auto res = catalyst::generate::action({.profiles = parse_args.profiles,
                                                .enabled_features = parse_args.enabled_features,
                                                .backend = parse_args.backend});
         if (!res) {
-            catalyst::logger.log(LogLevel::ERROR, "Failed to generate build files: {}", res.error());
+            catalyst::logger.error("Failed to generate build files: {}", res.error());
             if (auto hook_res = hooks::onBuildFailure(config); !hook_res) {
-                catalyst::logger.log(LogLevel::ERROR, "on_build_failure hook failed: {}", hook_res.error());
+                catalyst::logger.error("on_build_failure hook failed: {}", hook_res.error());
                 return std::unexpected(
                     res.error() + "\nAdditionally, the on_build_failure hook failed with error: " + hook_res.error());
             }
@@ -257,15 +257,15 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     // TODO: check if all deps exist or we've been asked to refetch them
     if (!fs::exists(build_dir / "catalyst-libs") || parse_args.force_refetch || depMissing(config)) {
         if (parse_args.force_refetch) {
-            catalyst::logger.log(LogLevel::INFO, "Forcefully refetching dependencies.");
+            catalyst::logger.info("Forcefully refetching dependencies.");
             fs::remove_all(fs::path{build_dir / "catalyst-libs"}); // cleanup
         }
-        catalyst::logger.log(LogLevel::INFO, "Fetching dependencies.");
+        catalyst::logger.info("Fetching dependencies.");
         if (auto res = catalyst::fetch::action({.profiles = parse_args.profiles, .workspace = parse_args.workspace});
             !res) {
-            catalyst::logger.log(LogLevel::ERROR, "Failed to fetch dependencies: {}", res.error());
+            catalyst::logger.error("Failed to fetch dependencies: {}", res.error());
             if (auto hook_res = hooks::onBuildFailure(config); !hook_res) {
-                catalyst::logger.log(LogLevel::ERROR, "on_build_failure hook failed: {}", hook_res.error());
+                catalyst::logger.error("on_build_failure hook failed: {}", hook_res.error());
                 return std::unexpected(
                     res.error() + "\nAdditionally, the on_build_failure hook failed with error: " + hook_res.error());
             }
@@ -273,13 +273,13 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         }
     }
 
-    catalyst::logger.log(LogLevel::INFO, "Building project.");
+    catalyst::logger.info("Building project.");
     std::vector<std::string> build_command = {generator, "-C", build_dir};
 
     if (int res = catalyst::processExec(std::move(build_command)).value().get(); res != 0) {
-        catalyst::logger.log(LogLevel::ERROR, "Failed to build project.");
+        catalyst::logger.error("Failed to build project.");
         if (auto hook_res = hooks::onBuildFailure(config); !hook_res) {
-            catalyst::logger.log(LogLevel::ERROR, "on_build_failure hook failed: {}", hook_res.error());
+            catalyst::logger.error("on_build_failure hook failed: {}", hook_res.error());
             return std::unexpected(
                 "Failed to build project.\nAdditionally, the on_build_failure hook failed with error: " +
                 hook_res.error());
@@ -287,28 +287,28 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         return std::unexpected(std::format("Build process failed. {} exited with code: {}", generator, res));
     }
 
-    catalyst::logger.log(LogLevel::INFO, "Generating compile commands.");
+    catalyst::logger.info("Generating compile commands.");
     if (auto res = generateCompileCommands(build_dir, generator); !res) {
-        catalyst::logger.log(LogLevel::ERROR, "Failed to generate compile commands: {}", res.error());
+        catalyst::logger.error("Failed to generate compile commands: {}", res.error());
         if (auto hook_res = hooks::onBuildFailure(config); !hook_res) {
-            catalyst::logger.log(LogLevel::ERROR, "on_build_failure hook failed: {}", hook_res.error());
+            catalyst::logger.error("on_build_failure hook failed: {}", hook_res.error());
             return std::unexpected(res.error() +
                                    "\nAdditionally, the on_build_failure hook failed with error: " + hook_res.error());
         }
         return res;
     }
 
-    catalyst::logger.log(LogLevel::INFO, "Running post-build hooks.");
+    catalyst::logger.info("Running post-build hooks.");
     if (auto res = hooks::postBuild(config); !res) {
-        catalyst::logger.log(LogLevel::ERROR, "Post-build hook failed: {}", res.error());
+        catalyst::logger.error("Post-build hook failed: {}", res.error());
         if (auto hook_res = hooks::onBuildFailure(config); !hook_res) {
-            catalyst::logger.log(LogLevel::ERROR, "on_build_failure hook failed: {}", hook_res.error());
+            catalyst::logger.error("on_build_failure hook failed: {}", hook_res.error());
             return std::unexpected(res.error() +
                                    "\nAdditionally, the on_build_failure hook failed with error: " + hook_res.error());
         }
         return res;
     }
-    catalyst::logger.log(LogLevel::INFO, "Build subcommand finished successfully.");
+    catalyst::logger.info("Build subcommand finished successfully.");
     return {};
 }
 
