@@ -31,14 +31,11 @@ int main(int argc, char **argv) {
     auto assign_ws_if = [&ctx](auto &res) {
         if (res)
             res->workspace = ctx.workspace;
+        return static_cast<bool>(res);
     };
 
-    assign_ws_if(ctx.bench_res);
-    assign_ws_if(ctx.build_res);
-    assign_ws_if(ctx.clean_res);
-    assign_ws_if(ctx.fetch_res);
-    assign_ws_if(ctx.lock_res);
-    assign_ws_if(ctx.test_res);
+    assign_ws_if(ctx.bench_res) || assign_ws_if(ctx.build_res) || assign_ws_if(ctx.clean_res) ||
+        assign_ws_if(ctx.fetch_res) || assign_ws_if(ctx.lock_res) || assign_ws_if(ctx.test_res);
 
     if (ctx.show_version) {
         std::println("{}", catalyst::CATALYST_VERSION);

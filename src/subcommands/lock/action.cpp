@@ -22,7 +22,7 @@ namespace {
 
 std::expected<std::string, std::string> resolveGitHash(const std::string &url, const std::string &version) {
     catalyst::logger.log(LogLevel::DEBUG, "Resolving git hash for {}@{}", url, version);
-    
+
     std::string ref = version;
     if (version == "latest") {
         ref = "HEAD";
@@ -53,7 +53,8 @@ std::expected<std::string, std::string> resolveGitHash(const std::string &url, c
     if (tab_pos == std::string::npos) {
         size_t space_pos = output.find(' ');
         if (space_pos == std::string::npos) {
-            return output.substr(0, 40); // Best effort
+            constexpr int BEST_EFFORT_LEN = 40;
+            return output.substr(0, BEST_EFFORT_LEN); // Best effort
         }
         return output.substr(0, space_pos);
     }
@@ -74,7 +75,7 @@ struct DependencyInfo {
     }
 };
 
-void collectDependencies(const utils::yaml::Configuration &config, 
+void collectDependencies(const utils::yaml::Configuration &config,
                          std::unordered_map<std::string, DependencyInfo> &locked_deps,
                          const std::optional<Workspace> &workspace) {
     if (auto deps = config.getRoot()["dependencies"]; deps && deps.IsSequence()) {
@@ -82,7 +83,7 @@ void collectDependencies(const utils::yaml::Configuration &config,
             if (!dep["name"] || !dep["source"]) continue;
 
             auto name = dep["name"].as<std::string>();
-            
+
             // Skip if it's a workspace member
             if (workspace && workspace->findPackage(name)) {
                 catalyst::logger.log(LogLevel::DEBUG, "Skipping workspace dependency: {}", name);
@@ -92,7 +93,7 @@ void collectDependencies(const utils::yaml::Configuration &config,
             DependencyInfo info;
             info.name = name;
             info.source = dep["source"].as<std::string>();
-            
+
             if (info.source == "git") {
                 info.url = dep["url"] ? dep["url"].as<std::string>() : dep["source"].as<std::string>();
                 info.version = dep["version"] ? dep["version"].as<std::string>() : "latest";
@@ -112,18 +113,18 @@ void collectDependencies(const utils::yaml::Configuration &config,
 
 std::expected<void, std::string> action(const Parse &parse_args) {
     catalyst::logger.log(LogLevel::DEBUG, "Lock subcommand invoked.");
-    
+
     std::unordered_map<std::string, DependencyInfo> locked_deps;
     fs::path lockfile_path = "catalyst.lock";
 
     if (parse_args.workspace) {
         catalyst::logger.log(LogLevel::INFO, "Resolving dependencies for workspace...");
         lockfile_path = parse_args.workspace->getRoot() / "catalyst.lock";
-        
+
         for (const auto &[name, member] : parse_args.workspace->getMembers()) {
             std::vector<std::string> profiles = member.profiles;
             if (profiles.empty()) profiles = {"common"};
-            
+
             try {
                 utils::yaml::Configuration config(profiles, member.path);
                 collectDependencies(config, locked_deps, parse_args.workspace);
@@ -140,7 +141,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
 
     YAML::Node lock_node;
     lock_node["lockfile_version"] = "1.0.0";
-    
+
     for (auto &[name, info] : locked_deps) {
         if (info.source == "git") {
             std::println(std::cout, "Resolving {}...", name);
@@ -160,7 +161,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         if (!info.hash.empty()) dep_node["hash"] = info.hash;
         if (!info.triplet.empty()) dep_node["triplet"] = info.triplet;
         if (!info.path.empty()) dep_node["path"] = info.path;
-        
+
         lock_node["dependencies"].push_back(dep_node);
     }
 
@@ -169,7 +170,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         return std::unexpected(std::format("Failed to open {} for writing.", lockfile_path.string()));
     }
     fout << lock_node;
-    
+
     std::println(std::cout, "Generated lockfile at {}", lockfile_path.string());
     return {};
 }

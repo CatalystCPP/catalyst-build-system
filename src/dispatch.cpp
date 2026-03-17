@@ -48,7 +48,6 @@ std::pair<int, bool> parseCli(int argc, char **argv, catalyst::CliContext &ctx) 
     tie(ctx.bench_subc, ctx.bench_res) = catalyst::bench::parse(ctx.app);
     tie(ctx.tidy_subc, ctx.tidy_res) = catalyst::tidy::parse(ctx.app);
     tie(ctx.pack_subc, ctx.pack_res) = catalyst::pack::parse(ctx.app);
-    // tie(ctx.bench_subc, ctx.bench_res) = catalyst::bench::parse(ctx.app);
     tie(ctx.doc_subc, ctx.doc_res) = catalyst::doc::parse(ctx.app);
     tie(ctx.add_git_subc, ctx.add_git_res) = catalyst::add::git::parse(*ctx.add_subc);
     tie(ctx.add_system_subc, ctx.add_system_res) = catalyst::add::system::parse(*ctx.add_subc);
