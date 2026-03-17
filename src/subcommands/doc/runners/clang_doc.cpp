@@ -11,13 +11,13 @@ namespace catalyst::doc {
 
 template <>
 std::expected<void, std::string> DerivedRunner<DocEngine::ClangDoc>::run() {
-    catalyst::logger.log(LogLevel::INFO, "Running clang-doc documentation engine");
+    catalyst::logger.info("Running clang-doc documentation engine");
 
     std::string out_dir = config.getString("manifest.tooling.doc.out_dir").value_or("docs/");
 
     if (opts.clean) {
         if (std::filesystem::exists(out_dir)) {
-            catalyst::logger.log(LogLevel::INFO, "Cleaning output directory: {}", out_dir);
+            catalyst::logger.info("Cleaning output directory: {}", out_dir);
             std::filesystem::remove_all(out_dir);
         }
     }
@@ -36,7 +36,7 @@ std::expected<void, std::string> DerivedRunner<DocEngine::ClangDoc>::run() {
     if (opts.open) {
         std::string index_path = (std::filesystem::path(out_dir) / "index.md").string();
         if (std::filesystem::exists(index_path)) {
-            catalyst::logger.log(LogLevel::INFO, "Opening {}", index_path);
+            catalyst::logger.info("Opening {}", index_path);
     #ifdef __APPLE__
             catalyst::processExec({"open", index_path}, std::filesystem::current_path().string());
     #elif __linux__
@@ -45,7 +45,7 @@ std::expected<void, std::string> DerivedRunner<DocEngine::ClangDoc>::run() {
             catalyst::processExec({"start", index_path}, std::filesystem::current_path().string());
     #endif
         } else {
-            catalyst::logger.log(LogLevel::WARN, "Could not find index.html to open.");
+            catalyst::logger.warn("Could not find index.html to open.");
         }
     }
 

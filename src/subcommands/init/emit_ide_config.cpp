@@ -4,9 +4,9 @@
 #include <fstream>
 #include <string>
 
+#include "catalyst/subcommands/init.hpp"
 #include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/os/os_defs.hpp"
-#include "catalyst/subcommands/init.hpp"
 
 namespace catalyst::init {
 
@@ -16,7 +16,7 @@ namespace {
 std::expected<std::ofstream, std::string> createFile(const fs::path &file_path, bool force) {
     if (fs::exists(file_path) && !force) {
         const std::string filename{file_path.filename().string()};
-        catalyst::logger.log(LogLevel::ERROR, "{} already exists. Use --force-ide to overwrite.", filename);
+        catalyst::logger.warn("{} already exists.\nUse --force-ide to overwrite.", filename);
         return std::unexpected(std::format("{} already exists", filename));
     }
     std::ofstream out{file_path};
@@ -41,15 +41,14 @@ std::expected<void, std::string> invokeIDEConfigEmitters(const Parse &parse_args
                 continue;
         }
         if (auto res = emit_fn(parse_args); !res) {
-            catalyst::logger.log(LogLevel::ERROR, "Failed to emit IDE configuration: {}", res.error());
-            return std::unexpected(res.error());
+            return std::unexpected(std::format("Failed to emit IDE configuration. Error: {}", res.error()));
         }
     }
     return {};
 }
 
 template <> std::expected<void, std::string> emitIDEConfig<Parse::IdeType::vsc>(const Parse &parse_args) {
-    catalyst::logger.log(LogLevel::INFO, "Generating VS Code IDE configuration");
+    catalyst::logger.info("Generating VS Code IDE configuration");
 
     catalyst::utils::os::OSInfo os_info{};
     std::string os_str{"linux"};
@@ -195,7 +194,7 @@ template <> std::expected<void, std::string> emitIDEConfig<Parse::IdeType::vsc>(
 }
 
 template <> std::expected<void, std::string> emitIDEConfig<Parse::IdeType::clion>(const Parse &parse_args) {
-    catalyst::logger.log(LogLevel::INFO, "Generating CLion IDE configuration");
+    catalyst::logger.info("Generating CLion IDE configuration");
 
     catalyst::utils::os::OSInfo os_info{};
     std::string exe_ext{""};

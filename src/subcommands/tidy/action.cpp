@@ -31,7 +31,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     auto linter = profile_comp["manifest"]["tooling"]["LINTER"].as<std::string>();
     // call the linter on the source_set (we can expect clang-tidy like arg syntax) and go on about our day
 
-    catalyst::logger.log(LogLevel::DEBUG, "Building source set.");
+    catalyst::logger.debug("Building source set.");
 
     namespace fs = std::filesystem;
 
@@ -46,14 +46,12 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     std::unordered_set<std::filesystem::path> source_set;
     auto source_set_res = generate::buildSourceSet(absolute_source_dirs, parse_args.profiles);
     if (!source_set_res) {
-        catalyst::logger.log(LogLevel::ERROR, "Failed to build source set: {}", source_set_res.error());
         return std::unexpected(source_set_res.error());
     }
     source_set = *source_set_res;
 
     unsigned int num_threads = std::thread::hardware_concurrency();
-    catalyst::logger.log(
-        LogLevel::DEBUG, "Running linter on {} files using {} threads.", source_set.size(), num_threads);
+    catalyst::logger.debug("Running linter on {} files using {} threads.", source_set.size(), num_threads);
 
     std::queue<fs::path, std::deque<fs::path>> work_queue(std::deque<fs::path>(source_set.begin(), source_set.end()));
     std::atomic<bool> has_errors = false;
@@ -82,8 +80,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
                 linter_args.push_back(file_to_process.string());
                 if (int res = catalyst::processExec(std::move(linter_args)).value().get(); res != 0) {
                     err_log_mt.lock();
-                    catalyst::logger.log(
-                        LogLevel::ERROR, "Linter failed for {}: exit code {}", file_to_process.string(), res);
+                    catalyst::logger.error("Linter failed for {}: exit code {}", file_to_process.string(), res);
                     has_errors = true;
                     err_log_mt.unlock();
                 }
@@ -99,7 +96,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         return std::unexpected("Linter finished with errors.");
     }
 
-    catalyst::logger.log(LogLevel::DEBUG, "Tidy subcommand finished successfully.");
+    catalyst::logger.debug("Tidy subcommand finished successfully.");
     return {};
 }
 } // namespace catalyst::tidy

@@ -20,9 +20,9 @@ namespace catalyst {
 
 namespace {
 template <typename ParseRes_T> int dispatchFN(const char *subc_name, const ParseRes_T &parse_res, auto fn) {
-    catalyst::logger.log(catalyst::LogLevel::DEBUG, "Executing {} subcommand", subc_name);
+    catalyst::logger.debug("Executing {} subcommand", subc_name);
     if (std::expected<void, std::string> res = fn(parse_res); !res) {
-        catalyst::logger.log(catalyst::LogLevel::ERROR, "{}", res.error());
+        catalyst::logger.error("{}", res.error());
         return 1;
     }
     return 0;
@@ -71,8 +71,7 @@ std::pair<int, bool> parseCli(int argc, char **argv, catalyst::CliContext &ctx) 
         if (std::none_of(argv, argv + argc, [](const char *arg) {
                 return string_view{arg} == "--help" || string_view{arg} == "-h";
             })) {
-            catalyst::logger.log(
-                catalyst::LogLevel::ERROR, "Failed to parse provided arguments: {}", concatArgv(argc, argv));
+            catalyst::logger.error("Failed to parse provided arguments: {}", concatArgv(argc, argv));
             return {ctx.app.exit(e), true};
         }
         return {ctx.app.exit(e), true};
@@ -128,7 +127,7 @@ int dispatch(const catalyst::CliContext &ctx) {
         return dispatchFN("pack", *ctx.pack_res, catalyst::pack::action);
     if (*ctx.doc_subc)
         return dispatchFN("doc", *ctx.doc_res, catalyst::doc::action);
-    catalyst::logger.log(catalyst::LogLevel::ERROR, "run catalyst --help for info on available commands.");
+    catalyst::logger.info("run catalyst --help for info on available commands.");
     return 1;
 }
 } // namespace catalyst

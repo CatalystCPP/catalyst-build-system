@@ -16,9 +16,9 @@ namespace catalyst::hooks {
 
 namespace {
 std::expected<void, std::string> executeHook(const YAML::Node &profile_comp, const std::string &hook_name) {
-    catalyst::logger.log(LogLevel::DEBUG, "Executing hook: {}", hook_name);
+    catalyst::logger.debug("Executing hook: {}", hook_name);
     if (!profile_comp["hooks"] || !profile_comp["hooks"][hook_name]) {
-        catalyst::logger.log(LogLevel::DEBUG, "No hook defined for: {}", hook_name);
+        catalyst::logger.debug("No hook defined for: {}", hook_name);
         return {}; // No hook defined, so we do nothing.
     }
 
@@ -35,30 +35,27 @@ std::expected<void, std::string> executeHook(const YAML::Node &profile_comp, con
         for (const auto &item : hook_node) {
             if (item["command"]) {
                 auto command = item["command"].as<std::string>();
-                catalyst::logger.log(LogLevel::DEBUG, "[Catalyst Hook: {}] Running command: {}", hook_name, command);
+                catalyst::logger.debug("[Catalyst Hook: {}] Running command: {}", hook_name, command);
                 if (catalyst::processExec(shell_cmd(command)).value().get() != 0) {
-                    catalyst::logger.log(LogLevel::ERROR, "Hook '{}' command failed: {}", hook_name, command);
                     return std::unexpected(std::format("Hook '{}' command failed: {}", hook_name, command));
                 }
             } else if (item["script"]) {
                 auto script = item["script"].as<std::string>();
-                catalyst::logger.log(LogLevel::DEBUG, "[Catalyst Hook: {}] Running script: {}", hook_name, script);
+                catalyst::logger.debug("[Catalyst Hook: {}] Running script: {}", hook_name, script);
                 if (catalyst::processExec(shell_cmd(script)).value().get() != 0) {
-                    catalyst::logger.log(LogLevel::ERROR, "Hook '{}' script failed: {}", hook_name, script);
                     return std::unexpected(std::format("Hook '{}' script failed: {}", hook_name, script));
                 }
             }
         }
     } else if (hook_node.IsScalar()) {
         auto command = hook_node.as<std::string>();
-        catalyst::logger.log(LogLevel::DEBUG, "[Catalyst Hook: {}] Running command: {}", hook_name, command);
+        catalyst::logger.debug("[Catalyst Hook: {}] Running command: {}", hook_name, command);
         if (catalyst::processExec(shell_cmd(command)).value().get() != 0) {
-            catalyst::logger.log(LogLevel::ERROR, "Hook '{}' command failed: {}", hook_name, command);
             return std::unexpected("Hook '" + hook_name + "' command failed: " + command);
         }
     }
 
-    catalyst::logger.log(LogLevel::DEBUG, "Hook finished successfully: {}", hook_name);
+    catalyst::logger.debug("Hook finished successfully: {}", hook_name);
     return {};
 }
 } // namespace

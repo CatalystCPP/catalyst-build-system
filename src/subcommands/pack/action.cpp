@@ -16,7 +16,7 @@ namespace catalyst::pack {
 namespace fs = std::filesystem;
 
 std::expected<void, std::string> action(const Parse &parse_args) {
-    catalyst::logger.log(LogLevel::DEBUG, "Pack subcommand invoked.");
+    catalyst::logger.debug("Pack subcommand invoked.");
 
     fs::path source_path = fs::absolute(parse_args.source_path);
     fs::path target_path = fs::absolute(parse_args.target_path);
@@ -25,10 +25,10 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         return std::unexpected(std::format("Source directory '{}' does not exist.", source_path.string()));
     }
 
-    catalyst::logger.log(LogLevel::DEBUG, "Changing working directory to: {}", source_path.string());
+    catalyst::logger.debug("Changing working directory to: {}", source_path.string());
     catalyst::DirectoryChangeGuard dg(source_path);
 
-    catalyst::logger.log(LogLevel::DEBUG, "Composing profiles.");
+    catalyst::logger.debug("Composing profiles.");
     utils::yaml::Configuration config;
     try {
         config = utils::yaml::Configuration(parse_args.profiles);
@@ -55,7 +55,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     install_args.source_path = source_path;
     install_args.target_path = staging_dir;
 
-    catalyst::logger.log(LogLevel::DEBUG, "Staging artifacts to: {}", staging_dir.string());
+    catalyst::logger.debug("Staging artifacts to: {}", staging_dir.string());
     if (auto res = catalyst::install::action(install_args); !res) {
         return std::unexpected(std::format("Failed to stage artifacts for packing: {}", res.error()));
     }
@@ -114,7 +114,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         return std::unexpected(std::format("Failed to create target directory: {}", e.what()));
     }
 
-    catalyst::logger.log(LogLevel::INFO, "Running cpack to assemble package in {}", target_path.string());
+    catalyst::logger.info("Running cpack to assemble package in {}", target_path.string());
     if (auto res = catalyst::processExec(std::move(cpack_cmd)); !res) {
         return std::unexpected(std::format("Failed to execute cpack: {}", res.error()));
     } else {
@@ -124,7 +124,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     }
 
     // 5. Cleanup
-    catalyst::logger.log(LogLevel::DEBUG, "Cleaning up staging directory: {}", staging_dir.string());
+    catalyst::logger.debug("Cleaning up staging directory: {}", staging_dir.string());
     if (fs::exists(staging_dir)) {
         fs::remove_all(staging_dir);
     }
@@ -142,7 +142,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         }
     }
 
-    catalyst::logger.log(LogLevel::DEBUG, "Pack subcommand finished successfully.");
+    catalyst::logger.debug("Pack subcommand finished successfully.");
     return {};
 }
 

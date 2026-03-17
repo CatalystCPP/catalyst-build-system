@@ -40,7 +40,7 @@ std::string ld_filter(std::string &ldflags) {
 
 // NOTE: used for run::action. Needs to be updated to use find_*.
 std::expected<std::string, std::string> libPath(const YAML::Node &profile) {
-    catalyst::logger.log(LogLevel::DEBUG, "Calculating LD_LIBRARY_PATH.");
+    catalyst::logger.debug("Calculating LD_LIBRARY_PATH.");
     fs::path current_dir = fs::current_path();
     fs::path build_dir{profile["manifest"]["dirs"]["build"].as<std::string>()};
     std::string ldflags = "-Lcatalyst-libs";
@@ -55,14 +55,13 @@ std::expected<std::string, std::string> libPath(const YAML::Node &profile) {
 #endif
         ldflags += std::format(" -L{}", (fs::path(vcpkg_root) / "installed" / triplet / "lib").string());
     } else {
-        logger.log(LogLevel::WARN, "VCPKG_ROOT environment variable is not defined.");
+        logger.warn("VCPKG_ROOT environment variable is not defined.");
     }
 
     if (auto deps = profile["dependencies"]; deps && deps.IsSequence()) {
         for (const auto &dep : deps) {
             if (auto res = findDep(build_dir.string(), dep); !res) {
-                catalyst::logger.log(
-                    LogLevel::ERROR, "Failed to resolve dependency {}: {}", dep["name"].as<std::string>(), res.error());
+                catalyst::logger.error("Failed to resolve dependency {}: {}", dep["name"].as<std::string>(), res.error());
             } else {
                 ldflags += " " + res.value().lib_path;
             }

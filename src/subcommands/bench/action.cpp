@@ -20,7 +20,7 @@ namespace catalyst::bench {
 
 namespace {
 std::string commandStr(const fs::path &executable, const std::vector<std::string> &params) {
-    catalyst::logger.log(LogLevel::DEBUG, "Constructing command string.");
+    catalyst::logger.debug("Constructing command string.");
     std::string command = executable;
     for (const auto &param : params) {
         command += " " + param;
@@ -30,7 +30,7 @@ std::string commandStr(const fs::path &executable, const std::vector<std::string
 } // namespace
 
 std::expected<void, std::string> action(const Parse &args) {
-    catalyst::logger.log(LogLevel::DEBUG, "Bench subcommand invoked.");
+    catalyst::logger.debug("Bench subcommand invoked.");
 
     if (args.workspace) {
         fs::path current = fs::current_path();
@@ -42,19 +42,19 @@ std::expected<void, std::string> action(const Parse &args) {
         }
 
         if (is_root) {
-            catalyst::logger.log(LogLevel::INFO, "Running benchmarks for all workspace members.");
+            catalyst::logger.info("Running benchmarks for all workspace members.");
             bool any_failed = false;
             std::string failed_members;
 
             for (const auto &[name, member] : args.workspace->getMembers()) {
-                catalyst::logger.log(LogLevel::INFO, "Benchmarking member: {}", name);
+                catalyst::logger.info("Benchmarking member: {}", name);
                 fs::current_path(member.path);
 
                 Parse member_args = args;
                 member_args.workspace = std::nullopt; // Prevent recursion loop
 
                 if (auto res = action(member_args); !res) {
-                    catalyst::logger.log(LogLevel::ERROR, "Benchmark failed for member: {}", name);
+                    catalyst::logger.error("Benchmark failed for member: {}", name);
                     any_failed = true;
                     failed_members += name + " ";
                 }
@@ -69,18 +69,16 @@ std::expected<void, std::string> action(const Parse &args) {
 
     std::vector<std::string> profiles{"common", "bench"};
 
-    catalyst::logger.log(LogLevel::DEBUG, "Composing profiles.");
+    catalyst::logger.debug("Composing profiles.");
     YAML::Node profile_comp;
     auto res = generate::profileComposition(profiles);
     if (!res) {
-        catalyst::logger.log(LogLevel::ERROR, "Failed to compose profiles: {}", res.error());
-        return std::unexpected(res.error());
+        return std::unexpected(std::format("Faield to compose profiles: {}", res.error()));
     }
     profile_comp = res.value();
 
-    catalyst::logger.log(LogLevel::DEBUG, "Running pre-bench hooks.");
+    catalyst::logger.debug("Running pre-bench hooks.");
     if (auto res = hooks::preBench(profile_comp); !res) {
-        catalyst::logger.log(LogLevel::ERROR, "Pre-bench hook failed: {}", res.error());
         return res;
     }
 
@@ -95,13 +93,11 @@ std::expected<void, std::string> action(const Parse &args) {
     str_to_lower(target_type);
 
     if (!profile_comp["manifest"]["type"].IsDefined() || target_type != "binary") {
-        catalyst::logger.log(LogLevel::ERROR, "Profile does not build a binary target.");
-        return std::unexpected("profile does not build a binary target");
+        return std::unexpected("common+benchmark does not build a binary target");
     }
 
     if (!profile_comp["manifest"]["dirs"]["build"]) {
-        catalyst::logger.log(LogLevel::ERROR, "Build directory is not defined.");
-        return std::unexpected("build directory is not defined");
+        return std::unexpected("build directory is not defined in common+benchmark");
     }
     build_dir = profile_comp["manifest"]["dirs"]["build"].as<std::string>();
 
@@ -110,8 +106,7 @@ std::expected<void, std::string> action(const Parse &args) {
     } else if (profile_comp["manifest"]["name"] && profile_comp["manifest"]["name"].as<std::string>() != "") {
         exe = profile_comp["manifest"]["name"].as<std::string>();
     } else {
-        catalyst::logger.log(LogLevel::ERROR, "Unable to determine executable name.");
-        return std::unexpected("unable to figure out executable name. "
+        return std::unexpected("Unable to determine executable name. "
                                "manifest.name and manifest.provides are undefined");
     }
 
@@ -130,25 +125,23 @@ std::expected<void, std::string> action(const Parse &args) {
     setenv("LD_LIBRARY_PATH", lib_path_res.value().c_str(), 1);
 #endif
 
-    catalyst::logger.log(LogLevel::DEBUG, "Executing command: {}", command);
+    catalyst::logger.debug("Executing command: {}", command);
 
     std::vector<std::string> exec_args;
     exec_args.push_back(exe_path.string());
     exec_args.insert(exec_args.end(), args.params.begin(), args.params.end());
 
     if (int res = catalyst::processExec(std::move(exec_args)).value().get(); res) {
-        catalyst::logger.log(LogLevel::ERROR, "Command exited with code: {}", res);
         return std::unexpected(
             std::format("Target executable: {} exited with failure code: {}", exe_path.string(), res));
     }
 
-    catalyst::logger.log(LogLevel::DEBUG, "Running post-bench hooks.");
+    catalyst::logger.debug("Running post-bench hooks.");
     if (auto res = hooks::postBench(profile_comp); !res) {
-        catalyst::logger.log(LogLevel::ERROR, "Post-bench hook failed: {}", res.error());
         return res;
     }
 
-    catalyst::logger.log(LogLevel::DEBUG, "Bench subcommand finished successfully.");
+    catalyst::logger.debug("Bench subcommand finished successfully.");
     return {};
 }
 

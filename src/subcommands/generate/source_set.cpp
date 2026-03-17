@@ -25,17 +25,17 @@ std::optional<std::unordered_set<std::string>> createIgnorePatterns(const fs::pa
     std::unordered_set<std::string> ignore_patterns;
 
     if (!fs::exists(ignore_file)) {
-        logger.log(LogLevel::DEBUG, "No .catalystignore file found in: {}", dir.string());
+        logger.debug("No .catalystignore file found in: {}", dir.string());
         return {}; // tihs isn't a failure, just means there are no ignore patterns
                    // to apply since the file doesn't exist
     }
-    logger.log(LogLevel::DEBUG, "Found .catalystignore file in: {}", dir.string());
+    logger.debug("Found .catalystignore file in: {}", dir.string());
     YAML::Node ignore_config = YAML::LoadFile(ignore_file.string());
     for (const auto &profile : profiles) {
         if (ignore_config[profile]) {
             for (const auto &ignore_pattern : ignore_config[profile]) {
                 auto pattern = ignore_pattern.as<std::string>();
-                logger.log(LogLevel::DEBUG, "Ignoring pattern: {}", pattern);
+                logger.debug("Ignoring pattern: {}", pattern);
                 ignore_patterns.insert(pattern);
             }
         }
@@ -47,7 +47,7 @@ std::expected<std::unordered_set<fs::path>, std::string> buildSourceSet(const fs
                                                                         const std::vector<std::string> &profiles) {
     using catalyst::LogLevel, catalyst::logger;
 
-    logger.log(LogLevel::DEBUG, "Processing source directory: {}", dir.string());
+    logger.debug("Processing source directory: {}", dir.string());
 
     if (!fs::exists(dir) || !fs::is_directory(dir)) {
         return std::unexpected(std::format("Source directory not found or is not a directory: {}", dir.string()));
@@ -66,7 +66,7 @@ std::expected<std::unordered_set<fs::path>, std::string> buildSourceSet(const fs
         std::vector<std::regex> ret_vec;
         ret_vec.reserve(ignore_patterns.size());
         for (const auto &ignore_pattern : ignore_patterns) {
-            logger.log(LogLevel::DEBUG, "Compiled ignore pattern: {}", ignore_pattern);
+            logger.debug("Compiled ignore pattern: {}", ignore_pattern);
             ret_vec.emplace_back(ignore_pattern);
         }
         return ret_vec;
@@ -77,7 +77,7 @@ std::expected<std::unordered_set<fs::path>, std::string> buildSourceSet(const fs
             bool ignored = false;
             for (const auto &ignore_regex : ignore_regexes) {
                 if (std::regex_match(entry.path().filename().string(), ignore_regex)) {
-                    logger.log(LogLevel::DEBUG, "Ignoring file: {}", entry.path().string());
+                    logger.debug("Ignoring file: {}", entry.path().string());
                     ignored = true;
                     break;
                 }
@@ -87,7 +87,7 @@ std::expected<std::unordered_set<fs::path>, std::string> buildSourceSet(const fs
                 const std::string extension = path.extension().string();
                 if (extension == ".cpp" || extension == ".cxx" || extension == ".cc" || extension == ".c" ||
                     extension == ".cu" || extension == ".cupp") {
-                    logger.log(LogLevel::DEBUG, "Adding file to source set: {}", path.string());
+                    logger.debug("Adding file to source set: {}", path.string());
                     source_set.insert(path);
                 }
             }
@@ -101,7 +101,7 @@ std::expected<std::unordered_set<fs::path>, std::string> buildSourceSet(const fs
 namespace catalyst::generate {
 std::expected<std::unordered_set<fs::path>, std::string> buildSourceSet(const std::vector<std::string> &source_dirs,
                                                                         const std::vector<std::string> &profiles) {
-    catalyst::logger.log(LogLevel::DEBUG, "Building source set.");
+    catalyst::logger.debug("Building source set.");
     namespace sv = std::views;
     auto paths = source_dirs | sv::transform([](const std::string &str) { return fs::path{str}; }) |
                  std::ranges::to<std::vector>();
@@ -110,16 +110,12 @@ std::expected<std::unordered_set<fs::path>, std::string> buildSourceSet(const st
     for (const auto &dir : paths) {
         auto source_set_ex = ::buildSourceSet(dir, profiles);
         if (!source_set_ex) {
-            catalyst::logger.log(LogLevel::ERROR,
-                                 "Failed to build source set for directory {}: {}",
-                                 dir.string(),
-                                 source_set_ex.error());
-            return std::unexpected(source_set_ex.error());
+            return std::unexpected(std::format("Failed to build source set for directory: {}. Error: {}", dir.string(), source_set_ex.error()));
         }
         source_set.insert(source_set_ex->begin(), source_set_ex->end());
     }
 
-    catalyst::logger.log(LogLevel::DEBUG, "Source set built successfully.");
+    catalyst::logger.debug("Source set built successfully.");
     return source_set;
 }
 } // namespace catalyst::generate

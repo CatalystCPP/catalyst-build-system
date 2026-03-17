@@ -10,7 +10,7 @@
 
 namespace catalyst::utils::yaml {
 std::expected<void, std::string> profileWriteBack(const std::string &profile_name, const YAML::Node &node) {
-    catalyst::logger.log(LogLevel::DEBUG, "Writing profile to file: {}", profile_name);
+    catalyst::logger.debug("Writing profile to file: {}", profile_name);
     namespace fs = std::filesystem;
     fs::path profile_path;
     if (profile_name == "common")
@@ -18,9 +18,9 @@ std::expected<void, std::string> profileWriteBack(const std::string &profile_nam
     else
         profile_path = std::format("catalyst_{}.yaml", profile_name);
 
-    catalyst::logger.log(LogLevel::DEBUG, "Profile path: {}", profile_path.string());
+    catalyst::logger.debug("Profile path: {}", profile_path.string());
     if (!fs::exists(profile_path)) {
-        catalyst::logger.log(LogLevel::DEBUG, "Creating new profile file: {}", profile_path.string());
+        catalyst::logger.debug("Creating new profile file: {}", profile_path.string());
     }
 
     std::ofstream profile_file{profile_path};
@@ -29,7 +29,7 @@ std::expected<void, std::string> profileWriteBack(const std::string &profile_nam
     // NOLINTBEGIN(performance-avoid-endl)
     profile_file << emmiter.c_str() << std::endl;
     // NOLINTEND(performance-avoid-endl)
-    catalyst::logger.log(LogLevel::DEBUG, "Profile file written successfully.");
+    catalyst::logger.debug("Profile file written successfully.");
     return {};
 }
 } // namespace catalyst::utils::yaml

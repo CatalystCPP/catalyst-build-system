@@ -18,8 +18,8 @@
 namespace catalyst::generate {
 // NOTE: eventually get rid of all calls to profile_composition
 std::expected<YAML::Node, std::string> profileComposition(const std::vector<std::string> &p) {
-    catalyst::logger.log(LogLevel::DEBUG, "Composing profiles.");
-    catalyst::logger.log(LogLevel::DEBUG, "Profile composition finished.");
+    catalyst::logger.debug("Composing profiles.");
+    catalyst::logger.debug("Profile composition finished.");
     try {
         return YAML::Clone(utils::yaml::Configuration{p}.getRoot());
     } catch (std::exception &err) {

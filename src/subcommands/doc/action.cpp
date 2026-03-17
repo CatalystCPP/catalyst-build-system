@@ -9,7 +9,7 @@
 namespace catalyst::doc {
 
 std::expected<void, std::string> action(const Parse &parse_args) {
-    catalyst::logger.log(LogLevel::DEBUG, "Doc subcommand invoked.");
+    catalyst::logger.debug("Doc subcommand invoked.");
 
     catalyst::utils::yaml::Configuration config;
     try {

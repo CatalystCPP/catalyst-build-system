@@ -16,7 +16,7 @@ namespace catalyst::init {
 namespace fs = std::filesystem;
 
 std::expected<void, std::string> action(const Parse &parse_args) {
-    catalyst::logger.log(LogLevel::DEBUG, "Init subcommand invoked.");
+    catalyst::logger.debug("Init subcommand invoked.");
     // TODO: change directory to parse_args->path;
     YAML::Node node;
     node["meta"]["min_ver"] = catalyst::CATALYST_VERSION;
@@ -49,19 +49,19 @@ std::expected<void, std::string> action(const Parse &parse_args) {
 
     for (auto dir : parse_args.dirs.include) {
         if (!fs::exists(parse_args.path / dir)) {
-            catalyst::logger.log(LogLevel::INFO, "Creating include directory: {}", (parse_args.path / dir).string());
+            catalyst::logger.info("Creating include directory: {}", (parse_args.path / dir).string());
             fs::create_directories(parse_args.path / dir);
         }
     }
 
     for (auto dir : parse_args.dirs.source) {
         if (!fs::exists(parse_args.path / dir)) {
-            catalyst::logger.log(LogLevel::INFO, "Creating source directory: {}", (parse_args.path / dir).string());
+            catalyst::logger.info("Creating source directory: {}", (parse_args.path / dir).string());
             fs::create_directories(parse_args.path / dir);
         }
         auto ignore_path = fs::path(dir) / ".catalystignore";
         if (!fs::exists(ignore_path)) {
-            catalyst::logger.log(LogLevel::INFO, "Creating .catalystignore file in: {}", dir);
+            catalyst::logger.info("Creating .catalystignore file in: {}", dir);
             std::ofstream{ignore_path};
         }
     }
@@ -84,8 +84,7 @@ int main(int argc, char **argv) {
 )";
     }
     if (!fs::exists(parse_args.path / parse_args.dirs.build)) {
-        catalyst::logger.log(
-            LogLevel::INFO, "Creating build directory: {}", (parse_args.path / parse_args.dirs.build).string());
+        catalyst::logger.info("Creating build directory: {}", (parse_args.path / parse_args.dirs.build).string());
         fs::create_directories(parse_args.path / parse_args.dirs.build);
     }
 
@@ -96,14 +95,14 @@ int main(int argc, char **argv) {
         profile_path = parse_args.path / std::format("catalyst_{}.yaml", parse_args.profile);
 
     if (!fs::exists(profile_path)) {
-        catalyst::logger.log(LogLevel::DEBUG, "Creating new profile file: {}", profile_path.string());
+        catalyst::logger.debug("Creating new profile file: {}", profile_path.string());
     }
 
     std::ofstream profile_file = std::ofstream(profile_path);
     YAML::Emitter emmiter;
     emmiter << node;
     profile_file << emmiter.c_str() << std::endl;
-    catalyst::logger.log(LogLevel::DEBUG, "Init subcommand finished successfully.");
+    catalyst::logger.debug("Init subcommand finished successfully.");
 
     if (auto res = invokeIDEConfigEmitters(parse_args); !res) {
         return std::unexpected(res.error());

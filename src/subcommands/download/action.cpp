@@ -35,14 +35,14 @@ std::string randomString(size_t length) {
 } // namespace
 
 std::expected<void, std::string> action(const Parse &args) {
-    catalyst::logger.log(LogLevel::DEBUG, "Download subcommand invoked.");
+    catalyst::logger.debug("Download subcommand invoked.");
 
     constexpr size_t TEMP_DIR_NAME_LEN = 8UZ;
     auto absolute_target_path = fs::absolute(args.target_path);
     auto temp_dir = fs::temp_directory_path() / std::format("catalyst_dl_{}", randomString(TEMP_DIR_NAME_LEN));
 
     // step 1: clone
-    catalyst::logger.log(LogLevel::INFO, "Cloning {} into temporary directory {}", args.git_remote, temp_dir.string());
+    catalyst::logger.info("Cloning {} into temporary directory {}", args.git_remote, temp_dir.string());
 
     std::vector<std::string> clone_cmd = {"git", "clone"};
     if (!args.git_branch.empty()) {
@@ -61,8 +61,7 @@ std::expected<void, std::string> action(const Parse &args) {
 
     catalyst::DirectoryChangeGuard scoped_dir(temp_dir);
 
-    catalyst::logger.log(LogLevel::INFO,
-                         "Building downloaded project with profiles: {} and features: {}",
+    catalyst::logger.info("Building downloaded project with profiles: {} and features: {}",
                          std::format("{}", args.profiles),
                          std::format("{}", args.enabled_features));
     catalyst::build::Parse build_args{
@@ -81,7 +80,7 @@ std::expected<void, std::string> action(const Parse &args) {
         return std::unexpected(std::format("Build failed: {}", res.error()));
     }
 
-    catalyst::logger.log(LogLevel::INFO, "Installing project to {}...", absolute_target_path.string());
+    catalyst::logger.info("Installing project to {}...", absolute_target_path.string());
     if (auto res = catalyst::install::action({
             .source_path = temp_dir,
             .target_path = absolute_target_path,
@@ -91,7 +90,7 @@ std::expected<void, std::string> action(const Parse &args) {
         return res;
     }
 
-    catalyst::logger.log(LogLevel::INFO, "Successfully downloaded and installed {}.", args.git_remote);
+    catalyst::logger.info("Successfully downloaded and installed {}.", args.git_remote);
     return {};
 }
 } // namespace catalyst::download

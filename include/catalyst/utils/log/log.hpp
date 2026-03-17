@@ -35,9 +35,24 @@ public:
     LogT(LogT &&) = delete;
     LogT &operator=(LogT &&) = delete;
 
-    template <typename... Args_T> void log(LogLevel level, std::format_string<Args_T...> fmt, Args_T &&...args) const {
-        std::string message = std::format(fmt, std::forward<Args_T>(args)...);
-        logImpl(level, message);
+    template <typename... ArgsT_T> void debug(std::format_string<ArgsT_T...> fmt, ArgsT_T &&...args) const {
+        std::string message = std::format(fmt, std::forward<ArgsT_T>(args)...);
+        logImpl(LogLevel::DEBUG, message);
+    }
+
+    template <typename... ArgsT_T> void info(std::format_string<ArgsT_T...> fmt, ArgsT_T &&...args) const {
+        std::string message = std::format(fmt, std::forward<ArgsT_T>(args)...);
+        logImpl(LogLevel::INFO, message);
+    }
+
+    template <typename... ArgsT_T> void warn(std::format_string<ArgsT_T...> fmt, ArgsT_T &&...args) const {
+        std::string message = std::format(fmt, std::forward<ArgsT_T>(args)...);
+        logImpl(LogLevel::WARN, message);
+    }
+
+    template <typename... ArgsT_T> void error(std::format_string<ArgsT_T...> fmt, ArgsT_T &&...args) const {
+        std::string message = std::format(fmt, std::forward<ArgsT_T>(args)...);
+        logImpl(LogLevel::ERROR, message);
     }
 
     bool isOpen() const;

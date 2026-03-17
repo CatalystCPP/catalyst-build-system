@@ -12,7 +12,7 @@ namespace catalyst::install {
 namespace fs = std::filesystem;
 
 std::expected<void, std::string> action(const Parse &parse_args) {
-    catalyst::logger.log(LogLevel::DEBUG, "Install subcommand invoked.");
+    catalyst::logger.debug("Install subcommand invoked.");
 
     // Handle source and target paths
     fs::path source_path = fs::absolute(parse_args.source_path);
@@ -22,10 +22,10 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         return std::unexpected(std::format("Source directory '{}' does not exist.", source_path.string()));
     }
 
-    catalyst::logger.log(LogLevel::DEBUG, "Changing working directory to: {}", source_path.string());
+    catalyst::logger.debug("Changing working directory to: {}", source_path.string());
     catalyst::DirectoryChangeGuard dg(source_path);
 
-    catalyst::logger.log(LogLevel::DEBUG, "Composing profiles.");
+    catalyst::logger.debug("Composing profiles.");
     utils::yaml::Configuration config;
     try {
         config = utils::yaml::Configuration(parse_args.profiles);
@@ -42,7 +42,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
                         source_path.string()));
     }
 
-    catalyst::logger.log(LogLevel::INFO, "Installing to: {}", install_path.string());
+    catalyst::logger.info("Installing to: {}", install_path.string());
 
     try {
         fs::create_directories(install_path);
@@ -93,7 +93,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
                              const std::string &filename) -> std::expected<void, std::string> {
         fs::path dest = dest_dir / filename;
         if (fs::exists(source)) {
-            catalyst::logger.log(LogLevel::INFO, "Installing artifact: {} -> {}", source.string(), dest.string());
+            catalyst::logger.info("Installing artifact: {} -> {}", source.string(), dest.string());
             try {
                 fs::create_directories(dest_dir);
                 fs::copy_file(source, dest, fs::copy_options::overwrite_existing);
@@ -101,8 +101,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
                 return std::unexpected(std::format("Failed to install artifact: {}", e.what()));
             }
         } else {
-            catalyst::logger.log(
-                LogLevel::WARN, "Artifact '{}' not found in build directory. Skipping.", source.string());
+            catalyst::logger.warn("Artifact '{}' not found in build directory. Skipping.", source.string());
         }
         return {};
     };
@@ -131,8 +130,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         for (const auto &inc_dir : *include_dirs) {
             fs::path source_inc = fs::path(inc_dir); // Relative to current path (which is source_path)
             if (fs::exists(source_inc) && fs::is_directory(source_inc)) {
-                catalyst::logger.log(LogLevel::INFO,
-                                     "Installing headers from: {} -> {}",
+                catalyst::logger.info("Installing headers from: {} -> {}",
                                      source_inc.string(),
                                      dest_include_dir.string());
                 try {
@@ -154,7 +152,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         }
     }
 
-    catalyst::logger.log(LogLevel::DEBUG, "Install subcommand finished successfully.");
+    catalyst::logger.debug("Install subcommand finished successfully.");
     return {};
 }
 

@@ -18,7 +18,7 @@ std::optional<Workspace> Workspace::findRoot(const fs::path &start_path) {
     while (true) {
         fs::path config_path = current / "WORKSPACE.yaml";
         if (fs::exists(config_path)) {
-            logger.log(LogLevel::DEBUG, "Found workspace root at: {}", current.string());
+            logger.debug("Found workspace root at: {}", current.string());
             return load(config_path);
         }
 
@@ -38,7 +38,7 @@ std::optional<Workspace> Workspace::load(const fs::path &workspace_file) {
         workspace.root_path = workspace_file.parent_path();
 
         if (!node.IsMap()) {
-            logger.log(LogLevel::ERROR, "WORKSPACE.yaml must be a map");
+            logger.warn("WORKSPACE.yaml must be a map. Continuing in non-workspace build.");
             return std::nullopt;
         }
 
@@ -59,7 +59,7 @@ std::optional<Workspace> Workspace::load(const fs::path &workspace_file) {
                 if (value["profiles"].IsSequence()) {
                     member.profiles = value["profiles"].as<std::vector<std::string>>();
                 } else {
-                    logger.log(LogLevel::WARN, "Member '{}' profiles is not a sequence, ignoring.", key);
+                    logger.warn("Member '{}' profiles is not a sequence, ignoring.", key);
                 }
             }
 
@@ -69,7 +69,7 @@ std::optional<Workspace> Workspace::load(const fs::path &workspace_file) {
         return workspace;
 
     } catch (const YAML::Exception &e) {
-        logger.log(LogLevel::ERROR, "Failed to parse WORKSPACE.yaml: {}", e.what());
+        logger.warn("Failed to parse WORKSPACE.yaml: {}. Continuing in non-workspace build.", e.what());
         return std::nullopt;
     }
 }
