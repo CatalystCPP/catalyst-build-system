@@ -74,6 +74,7 @@ dependencies:
 | `catalyst init` | Create a new project |
 | `catalyst build` | Build the project |
 | `catalyst run` | Run the binary |
+| `catalyst lock` | Pin dependencies |
 | `catalyst add` | Add a dependency |
 
 For a full list, see the **[CLI Reference](docs/cli/index.md)**.

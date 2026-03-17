@@ -56,6 +56,12 @@ a `WORKSPACE.yaml` file.
 When resolving dependencies, Catalyst can look up packages within the active workspace. This allows members to depend
 on each other without needing to specify hardcoded relative paths or publish to a remote registry during development.
 
+## Consolidated Lockfiles
+
+In a workspace, running [`catalyst lock`](../cli/lock.md) will generate a single `catalyst.lock` at the workspace root. This consolidated lockfile contains the resolved and pinned dependencies for **all** workspace members defined in `WORKSPACE.yaml`.
+
+This ensures that version consistency is maintained across the entire workspace, and any external dependencies used by multiple members are pinned to the same version.
+
 ## Use Cases
 
 - Monorepos: Manage all your microservices or library sets in one place.

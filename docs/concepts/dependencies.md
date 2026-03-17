@@ -81,3 +81,14 @@ You can use the [`catalyst add`](../cli/add.md) command to append dependencies t
 catalyst add git https://github.com/fmtlib/fmt.git -v 10.0.0
 catalyst add vcpkg nlohmann-json -t x64-linux
 ```
+
+## Reproducible Builds with Lockfiles
+
+Catalyst supports pinning dependency versions to ensure that everyone working on a project uses the exact same revisions.
+
+By running [`catalyst lock`](../cli/lock.md), you generate a `catalyst.lock` file. This file pins:
+- **Git** dependencies to specific 40-character commit hashes.
+- **Vcpkg** dependencies to their current versions and triplets.
+- **Local/System** dependencies to their paths.
+
+When a `catalyst.lock` is present, `catalyst fetch` and `catalyst build` will prioritize its contents over the loose version constraints in `catalyst.yaml`.
