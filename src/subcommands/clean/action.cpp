@@ -58,14 +58,12 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     YAML::Node profile_comp;
     auto res = generate::profileComposition(profiles);
     if (!res) {
-        catalyst::logger.log(LogLevel::ERROR, "Failed to compose profiles: {}", res.error());
         return std::unexpected(res.error());
     }
     profile_comp = res.value();
 
     catalyst::logger.log(LogLevel::DEBUG, "Running pre-clean hooks.");
     if (auto res = hooks::preClean(profile_comp); !res) {
-        catalyst::logger.log(LogLevel::ERROR, "Pre-clean hook failed: {}", res.error());
         return res;
     }
 
@@ -74,13 +72,11 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     catalyst::logger.log(LogLevel::DEBUG, "Cleaning build directory: {}", build_dir);
     if (generator == "ninja") {
         if (int rtn = catalyst::processExec({"ninja", "-C", build_dir, "-t", "clean"}).value().get(); rtn != 0) {
-            catalyst::logger.log(LogLevel::ERROR, "Failed to clean project.");
             return std::unexpected(
                 std::format("Command: ninja -C {} -t clean failed with exit code: {}", build_dir, rtn));
         }
     } else if (generator == "cbe") {
         if (int rtn = catalyst::processExec({"cbe", "-C", build_dir, "-t", "clean"}).value().get(); rtn != 0) {
-            catalyst::logger.log(LogLevel::ERROR, "Failed to clean project.");
             return std::unexpected(
                 std::format("Command: cbe -C {} -t clean failed with exit code: {}", build_dir, rtn));
         }
@@ -88,7 +84,6 @@ std::expected<void, std::string> action(const Parse &parse_args) {
 
     catalyst::logger.log(LogLevel::DEBUG, "Running post-clean hooks.");
     if (auto res = hooks::postClean(profile_comp); !res) {
-        catalyst::logger.log(LogLevel::ERROR, "Post-clean hook failed: {}", res.error());
         return res;
     }
 

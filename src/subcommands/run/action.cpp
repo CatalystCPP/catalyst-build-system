@@ -40,14 +40,12 @@ std::expected<void, std::string> action(const Parse &args) {
     YAML::Node profile_comp;
     std::expected<YAML::Node, std::string> res = generate::profileComposition(profiles);
     if (!res) {
-        catalyst::logger.log(LogLevel::ERROR, "Failed to compose profiles: {}", res.error());
         return std::unexpected(res.error());
     }
     profile_comp = res.value();
 
     catalyst::logger.log(LogLevel::DEBUG, "Running pre-run hooks.");
     if (std::expected<void, std::string> res = hooks::preRun(profile_comp); !res) {
-        catalyst::logger.log(LogLevel::ERROR, "Pre-run hook failed: {}", res.error());
         return res;
     }
 
@@ -63,7 +61,6 @@ std::expected<void, std::string> action(const Parse &args) {
 
     if (!profile_comp["manifest"]["type"].IsDefined() || target_type != "binary") {
         if (!profile_comp["manifest"]["type"].IsDefined()) {
-            catalyst::logger.log(LogLevel::ERROR, "Profile: {} does not define field: 'manifest.type'.", args.profile);
             return std::unexpected(std::format("Profile: {} does not define field: 'manifest.type'.", args.profile));
         }
         return std::unexpected(std::format(
@@ -71,7 +68,6 @@ std::expected<void, std::string> action(const Parse &args) {
     }
 
     if (!profile_comp["manifest"]["dirs"]["build"]) {
-        catalyst::logger.log(LogLevel::ERROR, "Build directory is not defined in profile: {}.", args.profile);
         return std::unexpected(std::format("Build directory is not defined in profile: {}.", args.profile));
     }
     build_dir = profile_comp["manifest"]["dirs"]["build"].as<std::string>();
@@ -81,7 +77,6 @@ std::expected<void, std::string> action(const Parse &args) {
     } else if (profile_comp["manifest"]["name"] && profile_comp["manifest"]["name"].as<std::string>() != "") {
         exe = profile_comp["manifest"]["name"].as<std::string>();
     } else {
-        catalyst::logger.log(LogLevel::ERROR, "Unable to determine executable name.");
         return std::unexpected("Unable to figure out executable name."
                                "manifest.name and manifest.provides are undefined");
     }
@@ -107,14 +102,12 @@ std::expected<void, std::string> action(const Parse &args) {
     exec_args.insert(exec_args.end(), args.params.begin(), args.params.end());
 
     if (int res = catalyst::processExec(std::move(exec_args)).value().get(); res) {
-        catalyst::logger.log(LogLevel::ERROR, "Target exited with code: {}", res);
         return std::unexpected(
             std::format("Target executable: {} exited with failure code: {}", exe_path.string(), res));
     }
 
     catalyst::logger.log(LogLevel::DEBUG, "Running post-run hooks.");
     if (std::expected<void, std::string> res = hooks::postRun(profile_comp); !res) {
-        catalyst::logger.log(LogLevel::ERROR, "Post-run hook failed: {}", res.error());
         return res;
     }
 

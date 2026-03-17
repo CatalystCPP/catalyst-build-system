@@ -13,7 +13,6 @@ namespace {
 std::expected<void, std::string> addToProfile(const std::string &profile, const catalyst::add::git::Parse &args) {
     auto res = catalyst::utils::yaml::loadProfileFile(profile);
     if (!res) {
-        catalyst::logger.log(catalyst::LogLevel::ERROR, "{}", res.error());
         return std::unexpected(res.error());
     }
     YAML::Node profile_node = res.value();

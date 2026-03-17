@@ -10,10 +10,10 @@
 
 #include <yaml-cpp/yaml.h>
 
-#include "catalyst/utils/log/log.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/fmt.hpp"
 #include "catalyst/subcommands/generate.hpp"
+#include "catalyst/utils/log/log.hpp"
 
 namespace catalyst::fmt {
 std::expected<void, std::string> action(const Parse &parse_args) {
@@ -23,7 +23,6 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     catalyst::logger.log(LogLevel::DEBUG, "Composing profiles.");
     auto res = generate::profileComposition(profiles);
     if (!res) {
-        catalyst::logger.log(LogLevel::ERROR, "Failed to compose profiles: {}", res.error());
         return std::unexpected(res.error());
     }
     profile_comp = res.value();

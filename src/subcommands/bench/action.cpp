@@ -73,14 +73,12 @@ std::expected<void, std::string> action(const Parse &args) {
     YAML::Node profile_comp;
     auto res = generate::profileComposition(profiles);
     if (!res) {
-        catalyst::logger.log(LogLevel::ERROR, "Failed to compose profiles: {}", res.error());
-        return std::unexpected(res.error());
+        return std::unexpected(std::format("Faield to compose profiles: {}", res.error()));
     }
     profile_comp = res.value();
 
     catalyst::logger.log(LogLevel::DEBUG, "Running pre-bench hooks.");
     if (auto res = hooks::preBench(profile_comp); !res) {
-        catalyst::logger.log(LogLevel::ERROR, "Pre-bench hook failed: {}", res.error());
         return res;
     }
 
@@ -95,13 +93,11 @@ std::expected<void, std::string> action(const Parse &args) {
     str_to_lower(target_type);
 
     if (!profile_comp["manifest"]["type"].IsDefined() || target_type != "binary") {
-        catalyst::logger.log(LogLevel::ERROR, "Profile does not build a binary target.");
-        return std::unexpected("profile does not build a binary target");
+        return std::unexpected("common+benchmark does not build a binary target");
     }
 
     if (!profile_comp["manifest"]["dirs"]["build"]) {
-        catalyst::logger.log(LogLevel::ERROR, "Build directory is not defined.");
-        return std::unexpected("build directory is not defined");
+        return std::unexpected("build directory is not defined in common+benchmark");
     }
     build_dir = profile_comp["manifest"]["dirs"]["build"].as<std::string>();
 
@@ -110,8 +106,7 @@ std::expected<void, std::string> action(const Parse &args) {
     } else if (profile_comp["manifest"]["name"] && profile_comp["manifest"]["name"].as<std::string>() != "") {
         exe = profile_comp["manifest"]["name"].as<std::string>();
     } else {
-        catalyst::logger.log(LogLevel::ERROR, "Unable to determine executable name.");
-        return std::unexpected("unable to figure out executable name. "
+        return std::unexpected("Unable to determine executable name. "
                                "manifest.name and manifest.provides are undefined");
     }
 
@@ -137,14 +132,12 @@ std::expected<void, std::string> action(const Parse &args) {
     exec_args.insert(exec_args.end(), args.params.begin(), args.params.end());
 
     if (int res = catalyst::processExec(std::move(exec_args)).value().get(); res) {
-        catalyst::logger.log(LogLevel::ERROR, "Command exited with code: {}", res);
         return std::unexpected(
             std::format("Target executable: {} exited with failure code: {}", exe_path.string(), res));
     }
 
     catalyst::logger.log(LogLevel::DEBUG, "Running post-bench hooks.");
     if (auto res = hooks::postBench(profile_comp); !res) {
-        catalyst::logger.log(LogLevel::ERROR, "Post-bench hook failed: {}", res.error());
         return res;
     }
 

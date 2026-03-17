@@ -46,7 +46,6 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     std::unordered_set<std::filesystem::path> source_set;
     auto source_set_res = generate::buildSourceSet(absolute_source_dirs, parse_args.profiles);
     if (!source_set_res) {
-        catalyst::logger.log(LogLevel::ERROR, "Failed to build source set: {}", source_set_res.error());
         return std::unexpected(source_set_res.error());
     }
     source_set = *source_set_res;

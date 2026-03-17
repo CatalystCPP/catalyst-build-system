@@ -25,7 +25,6 @@ std::expected<void, std::string> fetchVcpkg(const std::string &name) {
     catalyst::logger.log(LogLevel::DEBUG, "Fetching vcpkg dependency: {}", name);
     char *vcpkg_root_env = std::getenv("VCPKG_ROOT");
     if (vcpkg_root_env == nullptr) {
-        catalyst::logger.log(LogLevel::ERROR, "VCPKG_ROOT environment variable not set.");
         return std::unexpected(
             "VCPKG_ROOT environment variable not set. Please set it to your vcpkg installation directory.");
     }
@@ -38,7 +37,6 @@ std::expected<void, std::string> fetchVcpkg(const std::string &name) {
     catalyst::logger.log(LogLevel::DEBUG, "Executing command: {}", command);
     catalyst::logger.log(LogLevel::DEBUG, "Fetching: {} from vcpkg", name);
     if (catalyst::processExec({vcpkg_exe.string(), "install", name}).value().get() != 0) {
-        catalyst::logger.log(LogLevel::ERROR, "Failed to fetch dependency: {}", name);
         return std::unexpected(std::format("Failed to fetch dependency: {}", name));
     }
     return {};
@@ -66,7 +64,6 @@ std::expected<void, std::string> fetchGit(
             args.push_back(dep_path.string());
         }
         if (catalyst::processExec(std::move(args)).value().get() != 0) {
-            catalyst::logger.log(LogLevel::ERROR, "Failed to fetch dependency: {}", name);
             return std::unexpected(std::format("Failed to fetch dependency: {}", name));
         }
     } else {
@@ -75,13 +72,11 @@ std::expected<void, std::string> fetchGit(
         // Actually, let's try to be efficient:
         args = {"git", "clone", source, dep_path.string()};
         if (catalyst::processExec(std::move(args)).value().get() != 0) {
-            catalyst::logger.log(LogLevel::ERROR, "Failed to clone dependency: {}", name);
             return std::unexpected(std::format("Failed to clone dependency: {}", name));
         }
 
         args = {"git", "-C", dep_path.string(), "checkout", hash};
         if (catalyst::processExec(std::move(args)).value().get() != 0) {
-            catalyst::logger.log(LogLevel::ERROR, "Failed to checkout hash {} for dependency: {}", hash, name);
             return std::unexpected(std::format("Failed to checkout hash {} for dependency: {}", hash, name));
         }
     }
@@ -162,7 +157,6 @@ std::expected<void, std::string> action(const Parse &parse_args) {
 
     catalyst::logger.log(LogLevel::DEBUG, "Running pre-fetch hooks.");
     if (auto res = hooks::preFetch(config); !res) {
-        catalyst::logger.log(LogLevel::ERROR, "Pre-fetch hook failed: {}", res.error());
         return res;
     }
 
@@ -204,7 +198,6 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     if (auto deps = config.getRoot()["dependencies"]; deps && deps.IsSequence()) {
         for (int ii = 0; auto dep : deps) {
             if (!dep["name"]) {
-                catalyst::logger.log(LogLevel::ERROR, "Dependency: {} does not define field: name", ii);
                 return std::unexpected(std::format("Dependency: {} does not define field: name", ii));
             }
             if (!dep["source"]) {
@@ -240,7 +233,6 @@ std::expected<void, std::string> action(const Parse &parse_args) {
                             fs::create_directory_symlink(member->path, lib_path);
                         }
                     } catch (const std::exception &e) {
-                        catalyst::logger.log(LogLevel::ERROR, "Failed to link workspace dependency: {}", e.what());
                         return std::unexpected(e.what());
                     }
                     continue;
@@ -333,7 +325,6 @@ std::expected<void, std::string> action(const Parse &parse_args) {
 
     catalyst::logger.log(LogLevel::DEBUG, "Running post-fetch hooks.");
     if (auto res = hooks::postFetch(config); !res) {
-        catalyst::logger.log(LogLevel::ERROR, "Post-fetch hook failed: {}", res.error());
         return res;
     }
 

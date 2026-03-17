@@ -48,7 +48,6 @@ std::expected<void, std::string> action(const Parse &parse_args) {
 
     catalyst::logger.log(LogLevel::DEBUG, "Running pre-generate hooks.");
     if (auto res = hooks::preGenerate(config); !res) {
-        catalyst::logger.log(LogLevel::ERROR, "Pre-generate hook failed: {}", res.error());
         return res;
     }
 
@@ -67,7 +66,6 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     catalyst::logger.log(LogLevel::DEBUG, "Building source set.");
     auto source_set_res = buildSourceSet(absolute_source_dirs, parse_args.profiles);
     if (!source_set_res) {
-        catalyst::logger.log(LogLevel::ERROR, "Failed to build source set: {}", source_set_res.error());
         return std::unexpected(source_set_res.error());
     }
 
@@ -79,7 +77,6 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     catalyst::logger.log(LogLevel::DEBUG, "Creating object directory: {}", obj_dir.string());
     fs::create_directories(obj_dir);
     if (!fs::exists(obj_dir) || !fs::is_directory(obj_dir)) {
-        catalyst::logger.log(LogLevel::ERROR, "Failed to create object directory: {}", obj_dir.string());
         return std::unexpected("Failed to create object directory: " + obj_dir.string());
     }
 
@@ -134,7 +131,6 @@ std::expected<void, std::string> action(const Parse &parse_args) {
 
     catalyst::logger.log(LogLevel::DEBUG, "Running post-generate hooks.");
     if (auto res = hooks::postGenerate(config); !res) {
-        catalyst::logger.log(LogLevel::ERROR, "Post-generate hook failed: {}", res.error());
         return res;
     }
     catalyst::logger.log(LogLevel::DEBUG, "Generate subcommand finished successfully.");
@@ -285,7 +281,7 @@ void writeVariables(const catalyst::utils::yaml::Configuration &config,
     for (const auto &dep : config.getRoot()["dependencies"]) {
         auto find_dep_res = findDep(build_dir_str, dep);
         if (!find_dep_res) {
-            catalyst::logger.log(LogLevel::ERROR, "{}", find_dep_res.error());
+            catalyst::logger.log(LogLevel::WARN, "Partial failure in dependency resolution: {}", find_dep_res.error());
             continue;
         }
         auto [lib_path, inc_path, libs] = find_dep_res.value();

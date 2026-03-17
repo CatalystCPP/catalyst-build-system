@@ -37,14 +37,12 @@ std::expected<void, std::string> executeHook(const YAML::Node &profile_comp, con
                 auto command = item["command"].as<std::string>();
                 catalyst::logger.log(LogLevel::DEBUG, "[Catalyst Hook: {}] Running command: {}", hook_name, command);
                 if (catalyst::processExec(shell_cmd(command)).value().get() != 0) {
-                    catalyst::logger.log(LogLevel::ERROR, "Hook '{}' command failed: {}", hook_name, command);
                     return std::unexpected(std::format("Hook '{}' command failed: {}", hook_name, command));
                 }
             } else if (item["script"]) {
                 auto script = item["script"].as<std::string>();
                 catalyst::logger.log(LogLevel::DEBUG, "[Catalyst Hook: {}] Running script: {}", hook_name, script);
                 if (catalyst::processExec(shell_cmd(script)).value().get() != 0) {
-                    catalyst::logger.log(LogLevel::ERROR, "Hook '{}' script failed: {}", hook_name, script);
                     return std::unexpected(std::format("Hook '{}' script failed: {}", hook_name, script));
                 }
             }
@@ -53,7 +51,6 @@ std::expected<void, std::string> executeHook(const YAML::Node &profile_comp, con
         auto command = hook_node.as<std::string>();
         catalyst::logger.log(LogLevel::DEBUG, "[Catalyst Hook: {}] Running command: {}", hook_name, command);
         if (catalyst::processExec(shell_cmd(command)).value().get() != 0) {
-            catalyst::logger.log(LogLevel::ERROR, "Hook '{}' command failed: {}", hook_name, command);
             return std::unexpected("Hook '" + hook_name + "' command failed: " + command);
         }
     }

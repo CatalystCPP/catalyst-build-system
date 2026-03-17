@@ -110,11 +110,7 @@ std::expected<std::unordered_set<fs::path>, std::string> buildSourceSet(const st
     for (const auto &dir : paths) {
         auto source_set_ex = ::buildSourceSet(dir, profiles);
         if (!source_set_ex) {
-            catalyst::logger.log(LogLevel::ERROR,
-                                 "Failed to build source set for directory {}: {}",
-                                 dir.string(),
-                                 source_set_ex.error());
-            return std::unexpected(source_set_ex.error());
+            return std::unexpected(std::format("Failed to build source set for directory: {}. Error: {}", dir.string(), source_set_ex.error()));
         }
         source_set.insert(source_set_ex->begin(), source_set_ex->end());
     }

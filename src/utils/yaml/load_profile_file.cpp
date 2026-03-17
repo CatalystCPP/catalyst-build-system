@@ -23,8 +23,7 @@ std::expected<YAML::Node, std::string> loadProfileFile(const std::string &profil
 
     catalyst::logger.log(LogLevel::DEBUG, "Profile path: {}", profile_path.string());
     if (!fs::exists(profile_path)) {
-        catalyst::logger.log(LogLevel::ERROR, "Profile file not found: {}", profile_path.string());
-        return std::unexpected(std::format("profile file: {} not found", profile_path.string()));
+        return std::unexpected(std::format("Profile file: {} for {} not found", profile_path.string(), profile));
     }
 
     try {
@@ -32,8 +31,7 @@ std::expected<YAML::Node, std::string> loadProfileFile(const std::string &profil
         catalyst::logger.log(LogLevel::DEBUG, "Profile file loaded successfully.");
         return ret;
     } catch (YAML::Exception &err) {
-        catalyst::logger.log(LogLevel::ERROR, "Failed to parse YAML file: {}", err.what());
-        return std::unexpected(err.what());
+        return std::unexpected(std::format("Failed to parse YAML file: {}", err.what()));
     }
 }
 } // namespace catalyst::utils::yaml
