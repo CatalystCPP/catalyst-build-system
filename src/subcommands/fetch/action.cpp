@@ -7,13 +7,14 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include <yaml-cpp/yaml.h>
 
 #include "catalyst/hooks.hpp"
-#include "catalyst/utils/log/log.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/fetch.hpp"
+#include "catalyst/utils/log/log.hpp"
 
 namespace catalyst::fetch {
 namespace fs = std::filesystem;
@@ -43,29 +44,48 @@ std::expected<void, std::string> fetchVcpkg(const std::string &name) {
     return {};
 }
 
-std::expected<void, std::string>
-fetchGit(std::string build_dir, std::string name, std::string source, std::string version) {
-    catalyst::logger.log(LogLevel::DEBUG, "Fetching git dependency: {}@{} from {}", name, version, source);
+std::expected<void, std::string> fetchGit(
+    const std::string &build_dir, std::string name, std::string source, std::string version, std::string hash = "") {
+    catalyst::logger.log(
+        LogLevel::DEBUG, "Fetching git dependency: {}@{} (hash: {}) from {}", name, version, hash, source);
     fs::path dep_path = fs::path(build_dir) / "catalyst-libs" / name;
-    std::println(std::cout, "Fetching: {}@{} from {}", name, version, source);
-    std::string command;
-    std::vector<std::string> args = {"git", "clone", "--depth", "1"};
-    if (version == "latest") {
-        command = std::format("git clone --depth 1 {} {}", source, dep_path.string());
-        args.push_back(source);
-        args.push_back(dep_path.string());
+
+    std::string target = hash.empty() ? version : hash;
+    std::println(std::cout, "Fetching: {}@{} from {}", name, target, source);
+
+    std::vector<std::string> args;
+    if (hash.empty()) {
+        args = {"git", "clone", "--depth", "1"};
+        if (version == "latest") {
+            args.push_back(source);
+            args.push_back(dep_path.string());
+        } else {
+            args.emplace_back("--branch");
+            args.push_back(version);
+            args.push_back(source);
+            args.push_back(dep_path.string());
+        }
+        if (catalyst::processExec(std::move(args)).value().get() != 0) {
+            catalyst::logger.log(LogLevel::ERROR, "Failed to fetch dependency: {}", name);
+            return std::unexpected(std::format("Failed to fetch dependency: {}", name));
+        }
     } else {
-        command = std::format("git clone --depth 1 --branch {} {} {}", version, source, dep_path.string());
-        args.push_back("--branch");
-        args.push_back(version);
-        args.push_back(source);
-        args.push_back(dep_path.string());
+        // If we have a hash, we clone and then checkout the hash.
+        // We can still try --depth 1 if we're lucky, but it's safer to clone and checkout.
+        // Actually, let's try to be efficient:
+        args = {"git", "clone", source, dep_path.string()};
+        if (catalyst::processExec(std::move(args)).value().get() != 0) {
+            catalyst::logger.log(LogLevel::ERROR, "Failed to clone dependency: {}", name);
+            return std::unexpected(std::format("Failed to clone dependency: {}", name));
+        }
+
+        args = {"git", "-C", dep_path.string(), "checkout", hash};
+        if (catalyst::processExec(std::move(args)).value().get() != 0) {
+            catalyst::logger.log(LogLevel::ERROR, "Failed to checkout hash {} for dependency: {}", hash, name);
+            return std::unexpected(std::format("Failed to checkout hash {} for dependency: {}", hash, name));
+        }
     }
-    catalyst::logger.log(LogLevel::DEBUG, "Executing command: {}", command);
-    if (catalyst::processExec(std::move(args)).value().get() != 0) {
-        catalyst::logger.log(LogLevel::ERROR, "Failed to fetch dependency: {}", name);
-        return std::unexpected(std::format("Failed to fetch dependency: {}", name));
-    }
+
     return {};
 }
 
@@ -75,8 +95,16 @@ std::expected<void, std::string> fetchSystem(const std::string &name) {
     return {};
 }
 
-std::expected<void, std::string>
-fetchLocal(const std::string &name, const std::string &path, const std::vector<std::string> &profiles) {
+struct FetchLocalArgs {
+    std::string name;
+    std::string path;
+    std::vector<std::string> profiles;
+};
+
+std::expected<void, std::string> fetchLocal(const FetchLocalArgs &fn_args) {
+    const std::string &name = fn_args.name;
+    const std::string &path = fn_args.path;
+    const std::vector<std::string> &profiles = fn_args.profiles;
     fs::path local_path = fs::absolute(path);
     std::string visited_env = std::getenv("CATALYST_VISITED") ? std::getenv("CATALYST_VISITED") : "";
 
@@ -96,7 +124,7 @@ fetchLocal(const std::string &name, const std::string &path, const std::vector<s
 
     std::vector<std::string> args = {"catalyst", "build"};
     if (profiles.size() != 0) {
-        args.push_back("--profiles");
+        args.emplace_back("--profiles");
         for (const auto &p : profiles) {
             args.push_back(p);
         }
@@ -117,6 +145,14 @@ fetchLocal(const std::string &name, const std::string &path, const std::vector<s
     return {};
 }
 
+struct LockedDep {
+    std::string hash;
+    std::string url;
+    std::string version;
+    std::string triplet;
+    std::string path;
+};
+
 } // namespace
 
 std::expected<void, std::string> action(const Parse &parse_args) {
@@ -128,6 +164,40 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     if (auto res = hooks::preFetch(config); !res) {
         catalyst::logger.log(LogLevel::ERROR, "Pre-fetch hook failed: {}", res.error());
         return res;
+    }
+
+    // Load lockfile if it exists
+    std::unordered_map<std::string, LockedDep> lockfile_deps;
+    fs::path lockfile_path = "catalyst.lock";
+    if (parse_args.workspace) {
+        lockfile_path = parse_args.workspace->getRoot() / "catalyst.lock";
+    }
+
+    if (fs::exists(lockfile_path)) {
+        catalyst::logger.log(LogLevel::INFO, "Using lockfile at {}", lockfile_path.string());
+        try {
+            YAML::Node lock_node = YAML::LoadFile(lockfile_path.string());
+            if (lock_node["dependencies"] && lock_node["dependencies"].IsSequence()) {
+                for (const auto &dep : lock_node["dependencies"]) {
+                    if (dep["name"]) {
+                        LockedDep ld;
+                        if (dep["hash"])
+                            ld.hash = dep["hash"].as<std::string>();
+                        if (dep["url"])
+                            ld.url = dep["url"].as<std::string>();
+                        if (dep["version"])
+                            ld.version = dep["version"].as<std::string>();
+                        if (dep["triplet"])
+                            ld.triplet = dep["triplet"].as<std::string>();
+                        if (dep["path"])
+                            ld.path = dep["path"].as<std::string>();
+                        lockfile_deps[dep["name"].as<std::string>()] = ld;
+                    }
+                }
+            }
+        } catch (const std::exception &e) {
+            catalyst::logger.log(LogLevel::WARN, "Failed to load lockfile: {}", e.what());
+        }
     }
 
     std::string build_dir = config.getString("manifest.dirs.build").value_or("build");
@@ -178,39 +248,82 @@ std::expected<void, std::string> action(const Parse &parse_args) {
             }
 
             catalyst::logger.log(LogLevel::DEBUG, "Fetching dependency '{}' from '{}'", name, source);
+
+            // Check if locked
+            std::string locked_hash;
+            std::string locked_url;
+            std::string locked_version;
+            std::string locked_triplet;
+            std::string locked_path;
+            if (lockfile_deps.contains(name)) {
+                locked_hash = lockfile_deps[name].hash;
+                locked_url = lockfile_deps[name].url;
+                locked_version = lockfile_deps[name].version;
+                locked_triplet = lockfile_deps[name].triplet;
+                locked_path = lockfile_deps[name].path;
+                catalyst::logger.log(LogLevel::DEBUG, "Dependency '{}' is locked.", name);
+            }
+
             if (source == "vcpkg") {
-                if (!dep["version"]) {
+                std::string version;
+                if (!locked_version.empty())
+                    version = locked_version;
+                else if (dep["version"])
+                    version = dep["version"].as<std::string>();
+                else
                     return std::unexpected(std::format("vcpkg dependency '{}' is missing version.", name));
-                }
-                if (!dep["triplet"]) {
+
+                std::string triplet;
+                if (!locked_triplet.empty())
+                    triplet = locked_triplet;
+                else if (dep["triplet"])
+                    triplet = dep["triplet"].as<std::string>();
+                else
                     return std::unexpected(std::format("vcpkg dependency '{}' is missing triplet.", name));
-                }
+
                 if (auto res = fetchVcpkg(name); !res)
                     return std::unexpected(res.error());
+
             } else if (source == "system") {
                 if (auto res = fetchSystem(name); !res)
                     return std::unexpected(res.error());
             } else if (source == "local") {
-                if (!dep["path"]) {
+                std::string path;
+                if (!locked_path.empty())
+                    path = locked_path;
+                else if (dep["path"])
+                    path = dep["path"].as<std::string>();
+                else
                     return std::unexpected(std::format("Local dependency '{}' is missing path.", name));
-                }
-                auto path = dep["path"].as<std::string>();
+
                 std::vector<std::string> profiles_vec;
                 if (dep["profiles"] && dep["profiles"].IsSequence()) {
                     profiles_vec = dep["profiles"].as<std::vector<std::string>>();
                 }
-                if (auto res = fetchLocal(name, path, profiles_vec); !res)
+                if (auto res = fetchLocal({.name = name, .path = path, .profiles = profiles_vec}); !res)
                     return std::unexpected(res.error());
             } else {
                 fs::path dep_path = fs::path(build_dir) / "catalyst-libs" / name;
                 if (fs::exists(dep_path)) {
                     std::println(std::cout, "Skipping fetch for existing git dependency: {}", name);
                 } else {
-                    if (!dep["version"] || !dep["version"].IsScalar()) {
-                        return std::unexpected(std::format("git dependency '{}' is missing version.", name));
-                    }
-                    auto version = dep["version"].as<std::string>();
-                    if (auto res = fetchGit(build_dir, name, source, version); !res)
+                    std::string version;
+                    if (!locked_version.empty())
+                        version = locked_version;
+                    else if (dep["version"])
+                        version = dep["version"].as<std::string>();
+                    else
+                        version = "latest";
+
+                    std::string url;
+                    if (!locked_url.empty())
+                        url = locked_url;
+                    else if (source == "git" && dep["url"])
+                        url = dep["url"].as<std::string>();
+                    else
+                        url = source;
+
+                    if (auto res = fetchGit(build_dir, name, url, version, locked_hash); !res)
                         return std::unexpected(res.error());
                 }
             }

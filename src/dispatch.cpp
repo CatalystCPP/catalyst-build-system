@@ -42,12 +42,12 @@ std::pair<int, bool> parseCli(int argc, char **argv, catalyst::CliContext &ctx) 
     tie(ctx.ide_sync_subc, ctx.ide_sync_res) = catalyst::ide_sync::parse(ctx.app);
     tie(ctx.init_subc, ctx.init_res) = catalyst::init::parse(ctx.app);
     tie(ctx.install_subc, ctx.install_res) = catalyst::install::parse(ctx.app);
+    tie(ctx.lock_subc, ctx.lock_res) = catalyst::lock::parse(ctx.app);
     tie(ctx.run_subc, ctx.run_res) = catalyst::run::parse(ctx.app);
     tie(ctx.test_subc, ctx.test_res) = catalyst::test::parse(ctx.app);
     tie(ctx.bench_subc, ctx.bench_res) = catalyst::bench::parse(ctx.app);
     tie(ctx.tidy_subc, ctx.tidy_res) = catalyst::tidy::parse(ctx.app);
     tie(ctx.pack_subc, ctx.pack_res) = catalyst::pack::parse(ctx.app);
-    // tie(ctx.bench_subc, ctx.bench_res) = catalyst::bench::parse(ctx.app);
     tie(ctx.doc_subc, ctx.doc_res) = catalyst::doc::parse(ctx.app);
     tie(ctx.add_git_subc, ctx.add_git_res) = catalyst::add::git::parse(*ctx.add_subc);
     tie(ctx.add_system_subc, ctx.add_system_res) = catalyst::add::system::parse(*ctx.add_subc);
@@ -114,6 +114,8 @@ int dispatch(const catalyst::CliContext &ctx) {
         return dispatchFN("init", *ctx.init_res, catalyst::init::action);
     if (*ctx.install_subc)
         return dispatchFN("install", *ctx.install_res, catalyst::install::action);
+    if (*ctx.lock_subc)
+        return dispatchFN("lock", *ctx.lock_res, catalyst::lock::action);
     if (*ctx.run_subc)
         return dispatchFN("run", *ctx.run_res, catalyst::run::action);
     if (*ctx.test_subc)
@@ -124,8 +126,6 @@ int dispatch(const catalyst::CliContext &ctx) {
         return dispatchFN("tidy", *ctx.tidy_res, catalyst::tidy::action);
     if (*ctx.pack_subc)
         return dispatchFN("pack", *ctx.pack_res, catalyst::pack::action);
-    // if (*ctx.bench_subc)
-    //     return dispatchFN("bench", *ctx.bench_res, catalyst::bench::action);
     if (*ctx.doc_subc)
         return dispatchFN("doc", *ctx.doc_res, catalyst::doc::action);
     catalyst::logger.log(catalyst::LogLevel::ERROR, "run catalyst --help for info on available commands.");

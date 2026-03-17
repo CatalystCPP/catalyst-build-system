@@ -13,6 +13,7 @@ Catalyst provides a suite of subcommands to manage the entire project lifecycle.
 | [`fetch`](fetch.md) | Fetch remote dependencies. |
 | [`generate`](generate.md) | Generate build scripts (Ninja, Make, etc.). |
 | [`install`](install.md) | Install build artifacts. |
+| [`lock`](lock.md) | Pin dependency versions to a lockfile. |
 | [`clean`](clean.md) | Remove build artifacts. |
 | [`download`](download.md) | Download, build, and install a project from git. |
 | [`fmt`](fmt.md) | Format source code. |

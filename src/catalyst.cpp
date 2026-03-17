@@ -28,16 +28,17 @@ int main(int argc, char **argv) {
     if (should_return)
         return exit_code;
 
-    if (ctx.build_res)
-        ctx.build_res->workspace = ctx.workspace;
-    if (ctx.fetch_res)
-        ctx.fetch_res->workspace = ctx.workspace;
-    if (ctx.test_res)
-        ctx.test_res->workspace = ctx.workspace;
-    if (ctx.bench_res)
-        ctx.bench_res->workspace = ctx.workspace;
-    if (ctx.clean_res)
-        ctx.clean_res->workspace = ctx.workspace;
+    auto assign_ws_if = [&ctx](auto *subc, auto &res) {
+        if (subc && *subc) {
+            res->workspace = ctx.workspace;
+            return true;
+        }
+        return false;
+    };
+
+    assign_ws_if(ctx.bench_subc, ctx.bench_res) || assign_ws_if(ctx.build_subc, ctx.build_res) ||
+        assign_ws_if(ctx.clean_subc, ctx.clean_res) || assign_ws_if(ctx.fetch_subc, ctx.fetch_res) ||
+        assign_ws_if(ctx.lock_subc, ctx.lock_res) || assign_ws_if(ctx.test_subc, ctx.test_res);
 
     if (ctx.show_version) {
         std::println("{}", catalyst::CATALYST_VERSION);

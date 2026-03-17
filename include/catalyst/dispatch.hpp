@@ -13,6 +13,7 @@
 #include "catalyst/subcommands/ide_sync.hpp"
 #include "catalyst/subcommands/init.hpp"
 #include "catalyst/subcommands/install.hpp"
+#include "catalyst/subcommands/lock.hpp"
 #include "catalyst/subcommands/pack.hpp"
 #include "catalyst/subcommands/run.hpp"
 #include "catalyst/subcommands/test.hpp"
@@ -55,6 +56,9 @@ struct CliContext {
 
     CLI::App *install_subc{nullptr};
     std::unique_ptr<catalyst::install::Parse> install_res{nullptr};
+
+    CLI::App *lock_subc{nullptr};
+    std::unique_ptr<catalyst::lock::Parse> lock_res{nullptr};
 
     CLI::App *run_subc{nullptr};
     std::unique_ptr<catalyst::run::Parse> run_res{nullptr};
