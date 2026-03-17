@@ -9,10 +9,10 @@
       
       
       
-        <link rel="prev" href="../ide_sync/">
+        <link rel="prev" href="../install/">
       
       
-        <link rel="next" href="../install/">
+        <link rel="next" href="../pack/">
       
       
         
@@ -23,7 +23,7 @@
     
     
       
-        <title>catalyst init - Catalyst Build System Documentation</title>
+        <title>catalyst lock - Catalyst Build System Documentation</title>
       
     
     
@@ -64,7 +64,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#catalyst-init" class="md-skip">
+        <a href="#catalyst-lock" class="md-skip">
           Skip to content
         </a>
       
@@ -100,7 +100,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              catalyst init
+              catalyst lock
             
           </span>
         </div>
@@ -685,37 +685,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    catalyst init
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../init/" class="md-nav__link">
         
   
   
@@ -731,37 +704,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Examples
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -799,10 +741,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../lock/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    catalyst lock
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -818,6 +787,48 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Details
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Examples
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1219,6 +1230,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Details
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#examples" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1246,43 +1268,29 @@
 
 
 
-<h1 id="catalyst-init">catalyst init</h1>
-<pre><code>Initialize a new catalyst profile.
-
-Usage: catalyst init [OPTIONS]
+<h1 id="catalyst-lock">catalyst lock</h1>
+<pre><code>Resolve and pin dependencies to a catalyst.lock file.
+Usage: catalyst lock [OPTIONS]
 
 Options:
   -h,--help                   Print this help message and exit
-  -n,--name TEXT              the name of the project
-  --path TEXT                 the default path for the project
-  -t,--type TEXT              the project type {binary, staticlib, sharedlib, interface}
-  -v,--version TEXT           the project's version
-  -d,--description TEXT       a description for the project
-  --provides TEXT             Artifact provided by this project.
-  --cc TEXT                   the c compiler to use
-  --cxx TEXT                  the cxx compiler to use
-  --ccflags TEXT              c compiler flags
-  --cxxflags TEXT             cxx compiler flags
-  --ldflags TEXT              linker flags
-  --include-dirs TEXT ...     include directories
-  --source-dirs TEXT ...      source directories
-  --build-dir TEXT            build directory
-  --ides TEXT ...             IDEs to generate project files for {vscode, clion}
-  -p,--profile TEXT           the profile to initialize
-  --force-ide                 force emitting IDE config even if one already exists
+  -p,--profiles TEXT ...      Profile composition to use for dependency resolution.
 </code></pre>
+<h2 id="details">Details</h2>
+<p>The <code>lock</code> command resolves all dependencies declared in your <code>catalyst.yaml</code> (and workspace member manifests) to specific, reproducible states.</p>
+<ul>
+<li><strong>Git</strong>: Resolves branches, tags, or "latest" to specific 40-character commit hashes using <code>git ls-remote</code>.</li>
+<li><strong>Vcpkg</strong>: Records the version and triplet.</li>
+<li><strong>System/Local</strong>: Records the source type and paths.</li>
+</ul>
+<p>In a <strong>Workspace</strong>, a single <code>catalyst.lock</code> is generated at the workspace root, containing a consolidated set of pinned dependencies for all workspace members.</p>
+<p>Running <code>catalyst fetch</code> or <code>catalyst build</code> will automatically detect and use the <code>catalyst.lock</code> file if it exists, ensuring that everyone on your team and your CI/CD pipelines use the exact same dependency versions.</p>
 <h2 id="examples">Examples</h2>
-<p><strong>Create a basic binary project:</strong></p>
-<pre><code class="language-bash">catalyst init --name my-tool
-</code></pre>
-<p><strong>Create a library with specific compilers:</strong></p>
-<pre><code class="language-bash">catalyst init --name my-lib --type staticlib --cxx g++-13
-</code></pre>
-<p><strong>Create a debug profile:</strong></p>
-<pre><code class="language-bash">catalyst init --profile debug --cxxflags &quot;-g -O0&quot;
-</code></pre>
-<p><strong>Create a project and generate IDE configurations:</strong></p>
-<pre><code class="language-bash">catalyst init --name my-tool --ides vscode clion
+<pre><code class="language-bash"># Resolve and pin dependencies for the current project
+catalyst lock
+
+# Resolve dependencies using specific profiles
+catalyst lock --profiles debug release
 </code></pre>
 
 

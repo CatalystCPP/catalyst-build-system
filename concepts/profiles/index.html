@@ -434,6 +434,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../cli/bench/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    catalyst bench
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../cli/build/" class="md-nav__link">
         
   
@@ -470,6 +498,34 @@
     
   
     catalyst clean
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/doc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    catalyst doc
   
 
     
@@ -666,6 +722,62 @@
     
   
     catalyst install
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/lock/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    catalyst lock
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/pack/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    catalyst pack
   
 
     
@@ -1279,6 +1391,7 @@
 <pre><code class="language-yaml">manifest:
   tooling:
     CXXFLAGS: &quot;-O3 -DNDEBUG&quot;
+    LDFLAGS: &quot;-s&quot;
 </code></pre>
 <h2 id="composition">Composition</h2>
 <p>Catalyst allows you to compose profiles by listing them. Settings are merged from left to right, with later profiles overriding earlier ones.</p>
@@ -1298,6 +1411,7 @@ meta: null  # Removes 'meta' section entirely
 <ul>
 <li><strong><code>common</code></strong>: The base profile (<code>catalyst.yaml</code>).</li>
 <li><strong><code>test</code></strong>: Automatically used by <code>catalyst test</code> (<code>catalyst_test.yaml</code>).</li>
+<li><strong>bench</strong>:: Automatically used by <code>catalyst bench</code> (<code>catalyst_bench.yaml</code>)</li>
 </ul>
 <h2 id="centralized-definition">Centralized Definition</h2>
 <p>For projects defining multiple profiles, managing multiple <code>catalyst_*.yaml</code> files can become cumbersome. Catalyst supports a centralized <code>CATALYST.yaml</code> file where all profiles can be defined in a single place.</p>

@@ -9,10 +9,10 @@
       
       
       
-        <link rel="prev" href="../ide_sync/">
+        <link rel="prev" href="../clean/">
       
       
-        <link rel="next" href="../install/">
+        <link rel="next" href="../download/">
       
       
         
@@ -23,7 +23,7 @@
     
     
       
-        <title>catalyst init - Catalyst Build System Documentation</title>
+        <title>catalyst doc - Catalyst Build System Documentation</title>
       
     
     
@@ -64,7 +64,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#catalyst-init" class="md-skip">
+        <a href="#catalyst-doc" class="md-skip">
           Skip to content
         </a>
       
@@ -100,7 +100,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              catalyst init
+              catalyst doc
             
           </span>
         </div>
@@ -517,10 +517,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../doc/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    catalyst doc
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -536,6 +563,48 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -685,37 +754,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    catalyst init
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../init/" class="md-nav__link">
         
   
   
@@ -731,37 +773,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Examples
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1219,10 +1230,21 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#examples" class="md-nav__link">
+  <a href="#usage" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Examples
+        Usage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options
       
     </span>
   </a>
@@ -1246,44 +1268,14 @@
 
 
 
-<h1 id="catalyst-init">catalyst init</h1>
-<pre><code>Initialize a new catalyst profile.
-
-Usage: catalyst init [OPTIONS]
-
-Options:
-  -h,--help                   Print this help message and exit
-  -n,--name TEXT              the name of the project
-  --path TEXT                 the default path for the project
-  -t,--type TEXT              the project type {binary, staticlib, sharedlib, interface}
-  -v,--version TEXT           the project's version
-  -d,--description TEXT       a description for the project
-  --provides TEXT             Artifact provided by this project.
-  --cc TEXT                   the c compiler to use
-  --cxx TEXT                  the cxx compiler to use
-  --ccflags TEXT              c compiler flags
-  --cxxflags TEXT             cxx compiler flags
-  --ldflags TEXT              linker flags
-  --include-dirs TEXT ...     include directories
-  --source-dirs TEXT ...      source directories
-  --build-dir TEXT            build directory
-  --ides TEXT ...             IDEs to generate project files for {vscode, clion}
-  -p,--profile TEXT           the profile to initialize
-  --force-ide                 force emitting IDE config even if one already exists
-</code></pre>
-<h2 id="examples">Examples</h2>
-<p><strong>Create a basic binary project:</strong></p>
-<pre><code class="language-bash">catalyst init --name my-tool
-</code></pre>
-<p><strong>Create a library with specific compilers:</strong></p>
-<pre><code class="language-bash">catalyst init --name my-lib --type staticlib --cxx g++-13
-</code></pre>
-<p><strong>Create a debug profile:</strong></p>
-<pre><code class="language-bash">catalyst init --profile debug --cxxflags &quot;-g -O0&quot;
-</code></pre>
-<p><strong>Create a project and generate IDE configurations:</strong></p>
-<pre><code class="language-bash">catalyst init --name my-tool --ides vscode clion
-</code></pre>
+<h1 id="catalyst-doc">catalyst doc</h1>
+<p>Build a package's documentation.</p>
+<h2 id="usage">Usage</h2>
+<p><code>catalyst doc [OPTIONS]</code></p>
+<h2 id="options">Options</h2>
+<ul>
+<li><code>-h, --help</code>: Print help message</li>
+</ul>
 
 
 

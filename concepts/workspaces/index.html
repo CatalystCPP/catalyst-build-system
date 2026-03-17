@@ -432,6 +432,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../cli/bench/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    catalyst bench
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../cli/build/" class="md-nav__link">
         
   
@@ -468,6 +496,34 @@
     
   
     catalyst clean
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/doc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    catalyst doc
   
 
     
@@ -664,6 +720,62 @@
     
   
     catalyst install
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/lock/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    catalyst lock
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/pack/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    catalyst pack
   
 
     
@@ -1130,6 +1242,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#consolidated-lockfiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consolidated Lockfiles
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#use-cases" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1261,6 +1384,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#consolidated-lockfiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consolidated Lockfiles
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#use-cases" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1330,6 +1464,9 @@ my_app:
 a <code>WORKSPACE.yaml</code> file.</p>
 <p>When resolving dependencies, Catalyst can look up packages within the active workspace. This allows members to depend
 on each other without needing to specify hardcoded relative paths or publish to a remote registry during development.</p>
+<h2 id="consolidated-lockfiles">Consolidated Lockfiles</h2>
+<p>In a workspace, running <a href="../../cli/lock/"><code>catalyst lock</code></a> will generate a single <code>catalyst.lock</code> at the workspace root. This consolidated lockfile contains the resolved and pinned dependencies for <strong>all</strong> workspace members defined in <code>WORKSPACE.yaml</code>.</p>
+<p>This ensures that version consistency is maintained across the entire workspace, and any external dependencies used by multiple members are pinned to the same version.</p>
 <h2 id="use-cases">Use Cases</h2>
 <ul>
 <li>Monorepos: Manage all your microservices or library sets in one place.</li>

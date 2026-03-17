@@ -434,6 +434,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../cli/bench/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    catalyst bench
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../cli/build/" class="md-nav__link">
         
   
@@ -470,6 +498,34 @@
     
   
     catalyst clean
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/doc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    catalyst doc
   
 
     
@@ -666,6 +722,62 @@
     
   
     catalyst install
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/lock/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    catalyst lock
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/pack/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    catalyst pack
   
 
     
@@ -1013,6 +1125,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#reproducible-builds-with-lockfiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reproducible Builds with Lockfiles
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1239,6 +1362,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#reproducible-builds-with-lockfiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reproducible Builds with Lockfiles
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1424,6 +1558,13 @@ configuration.</p>
 <pre><code class="language-bash">catalyst add git https://github.com/fmtlib/fmt.git -v 10.0.0
 catalyst add vcpkg nlohmann-json -t x64-linux
 </code></pre>
+<h2 id="reproducible-builds-with-lockfiles">Reproducible Builds with Lockfiles</h2>
+<p>Catalyst supports pinning dependency versions to ensure that everyone working on a project uses the exact same revisions.</p>
+<p>By running <a href="../../cli/lock/"><code>catalyst lock</code></a>, you generate a <code>catalyst.lock</code> file. This file pins:
+- <strong>Git</strong> dependencies to specific 40-character commit hashes.
+- <strong>Vcpkg</strong> dependencies to their current versions and triplets.
+- <strong>Local/System</strong> dependencies to their paths.</p>
+<p>When a <code>catalyst.lock</code> is present, <code>catalyst fetch</code> and <code>catalyst build</code> will prioritize its contents over the loose version constraints in <code>catalyst.yaml</code>.</p>
 
 
 
