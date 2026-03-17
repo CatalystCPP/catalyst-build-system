@@ -128,7 +128,7 @@ int dispatch(const catalyst::CliContext &ctx) {
         return dispatchFN("pack", *ctx.pack_res, catalyst::pack::action);
     if (*ctx.doc_subc)
         return dispatchFN("doc", *ctx.doc_res, catalyst::doc::action);
-    catalyst::logger.log(catalyst::LogLevel::ERROR, "run catalyst --help for info on available commands.");
+    catalyst::logger.log(catalyst::LogLevel::INFO, "run catalyst --help for info on available commands.");
     return 1;
 }
 } // namespace catalyst
