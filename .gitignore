@@ -21,3 +21,4 @@ Thumbs.db
 *.swp
 *~
 doxygen_docs
+__pycache__/
