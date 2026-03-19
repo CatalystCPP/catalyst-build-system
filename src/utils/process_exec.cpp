@@ -41,7 +41,7 @@ void workingDir(const std::optional<std::string> &working_dir, reproc::options &
 } // namespace configure_opt
 
 std::expected<std::future<int>, std::string>
-processExec(std::vector<std::string> &&args,
+ProcessExecutor::processExec(std::vector<std::string> &&args,
             std::optional<std::string> working_dir,
             std::optional<std::unordered_map<std::string, std::string>> env) {
     if (args.empty()) {
@@ -68,7 +68,7 @@ processExec(std::vector<std::string> &&args,
 }
 
 std::expected<std::string, std::string>
-processExecStdout(const std::vector<std::string> &args,
+ProcessExecutor::processExecStdout(const std::vector<std::string> &args,
                   const std::optional<std::string> &working_dir,
                   const std::optional<std::unordered_map<std::string, std::string>> &env) {
     if (args.empty()) {
@@ -90,5 +90,31 @@ processExecStdout(const std::vector<std::string> &args,
         return std::unexpected(ec.message());
     }
     return output;
+}
+
+namespace {
+    std::shared_ptr<IProcessExecutor> g_executor = std::make_shared<ProcessExecutor>();
+}
+
+IProcessExecutor& getProcessExecutor() {
+    return *g_executor;
+}
+
+void setProcessExecutor(std::shared_ptr<IProcessExecutor> executor) {
+    g_executor = std::move(executor);
+}
+
+std::expected<std::future<int>, std::string>
+processExec(std::vector<std::string> &&args,
+            std::optional<std::string> working_dir,
+            std::optional<std::unordered_map<std::string, std::string>> env) {
+    return getProcessExecutor().processExec(std::move(args), std::move(working_dir), std::move(env));
+}
+
+std::expected<std::string, std::string>
+processExecStdout(const std::vector<std::string> &args,
+                  const std::optional<std::string> &working_dir,
+                  const std::optional<std::unordered_map<std::string, std::string>> &env) {
+    return getProcessExecutor().processExecStdout(args, working_dir, env);
 }
 } // namespace catalyst
