@@ -54,6 +54,11 @@ test:
       source:
         - tests
       build: build/test
+  dependencies:
+    - name: catch2
+      source: vcpkg
+      triplet: x64-linux
+      version: latest
 debug:
   manifest:
     tooling:

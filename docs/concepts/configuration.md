@@ -80,12 +80,16 @@ dependencies:
 
 ## `features`
 
-Defines boolean feature flags that can be toggled via profiles or CLI. Enabling a feature defines a preprocessor macro.
+Defines boolean feature flags that can be toggled via profiles or CLI.
+Enabling a feature defines a preprocessor macro.
+Features can optionally list source files that will be compiled if and only if the feature is enabled.
 
 ```yaml
 features:
-    - logging: true
-    - networking: false
+  logging: true
+  work_estimates:
+    default: true
+    files: ["src/work_estimate.cpp"]
 ```
 
 See [Preprocessor & Features](preprocessor.md) for details.

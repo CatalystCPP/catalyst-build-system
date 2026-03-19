@@ -5,6 +5,8 @@
 #include <tuple>
 #include <utility>
 
+#include <CLI/CLI.hpp>
+
 #include "catalyst/utils/log/log.hpp"
 
 namespace {

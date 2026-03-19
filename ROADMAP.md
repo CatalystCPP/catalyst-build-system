@@ -5,7 +5,7 @@
 | `pack` | Implemented | Assemble the local package for distribution. |
 | `bench` | Implemented | Execute all benchmarks of a local package. |
 | `doc` | Implemented | Build a package's documentation. |
-| `generate-lockfile` | Planned | Generate the lockfile for a package. |
+| `generate-lockfile` | Implement (as catalyst lock) | Generate the lockfile for a package. |
 | `metadata` | Planned | Output the resolved dependecies of a package, the concrete used versions including overrides, in machine-readable format miri. |
 | `owner` | Planned | Manage the owners of a package on the registry. |
 | `publish` | Planned | Uplaot a package to the registry. |
