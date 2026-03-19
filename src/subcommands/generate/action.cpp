@@ -1,5 +1,6 @@
 #include <sys/wait.h>
 
+#include <algorithm>
 #include <expected>
 #include <filesystem>
 #include <fstream>
@@ -11,8 +12,8 @@
 #include <yaml-cpp/yaml.h>
 
 #include "catalyst/hooks.hpp"
-#include "catalyst/utils/log/log.hpp"
 #include "catalyst/subcommands/generate.hpp"
+#include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 
 #include "yaml-cpp/node/node.h"
@@ -21,6 +22,8 @@ namespace catalyst::generate {
 namespace fs = std::filesystem;
 
 namespace {
+
+bool isEnabled(bool default_enabled, const std::string &feature, const std::vector<std::string> &enabled_features);
 
 void writeVariables(const catalyst::utils::yaml::Configuration &config,
                     catalyst::generate::buildwriters::BaseWriter &writer,
@@ -31,6 +34,10 @@ std::vector<std::string> intermediateTargets(catalyst::generate::buildwriters::B
 void finalTarget(const utils::yaml::Configuration &config,
                  const auto &object_files,
                  catalyst::generate::buildwriters::BaseWriter &writer);
+
+void featureFilter(std::unordered_set<fs::path> &source_set,
+                   const catalyst::utils::yaml::Configuration &config,
+                   const std::vector<std::string> &enabled_features);
 
 } // namespace
 
@@ -70,6 +77,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     }
 
     std::unordered_set<std::filesystem::path> source_set = source_set_res.value();
+    featureFilter(source_set, config, parse_args.enabled_features);
 
     fs::path build_dir = config.getString("manifest.dirs.build").value();
     fs::path obj_dir = build_dir / "obj";
@@ -146,13 +154,13 @@ std::vector<std::string> intermediateTargets(catalyst::generate::buildwriters::B
     for (const auto &src : source_set) {
         fs::path relative_src_path = fs::relative(src, current_dir);
         std::string obj_name = relative_src_path.string();
-        std::replace(obj_name.begin(), obj_name.end(), '/', '_');
-        std::replace(obj_name.begin(), obj_name.end(), '\\', '_'); // For Windows paths
+        std::ranges::replace(obj_name, '/', '_');
+        std::ranges::replace(obj_name, '\\', '_'); // For Windows paths
         obj_name = obj_name.substr(0, obj_name.find_last_of('.')) + ".o";
         object_files.push_back((fs::path{"obj"} / obj_name).string());
-        writer.addBuild({object_files.back()},
-                        ((src.extension() == ".c" || src.extension() == ".cu") ? "cc_compile" : "cxx_compile"),
-                        {src.string()});
+        void(writer.addBuild({object_files.back()},
+                             ((src.extension() == ".c" || src.extension() == ".cu") ? "cc_compile" : "cxx_compile"),
+                             {src.string()}));
     }
     return object_files;
 }
@@ -199,7 +207,7 @@ void finalTarget(const utils::yaml::Configuration &config,
     fs::path target_path{target_prefix + target_name + target_suffix};
     catalyst::logger.debug("Final target name: {}", target_path.string());
     writer.addComment("Build edge for the final target");
-    writer.addBuild({target_path.string()}, link_rule, object_files);
+    void(writer.addBuild({target_path.string()}, link_rule, object_files));
 
     // Default target
     writer.addComment("Default target to build");
@@ -239,34 +247,22 @@ void writeVariables(const catalyst::utils::yaml::Configuration &config,
         logger.warn("VCPKG_ROOT environment variable is not defined.");
     }
 
-    if (const auto &features_node = config.getRoot()["features"]; features_node && features_node.IsSequence()) {
-        for (const auto &feature_map : features_node) {
-            if (feature_map.IsMap()) {
-                for (auto it = feature_map.begin(); it != feature_map.end(); ++it) {
-                    auto feature = it->first.as<std::string>();
-                    bool default_enabled = it->second.as<bool>();
-                    bool explicitly_enabled =
-                        std::find(enabled_features.begin(), enabled_features.end(), feature) != enabled_features.end();
-                    bool explicitly_disabled =
-                        std::find(enabled_features.begin(), enabled_features.end(), "no-" + feature) !=
-                        enabled_features.end();
-
-                    bool is_enabled = default_enabled;
-                    if (explicitly_enabled) {
-                        is_enabled = true;
-                    } else if (explicitly_disabled) {
-                        is_enabled = false;
-                    }
-
-                    std::string flag = std::format(" -DFF_{}__{}={}",
-                                                   config.getString("manifest.name").value_or("name"),
-                                                   feature,
-                                                   is_enabled ? "1" : "0");
-                    cxxflags += flag;
-                    ccflags += flag;
-                }
+    if (const auto &features_node = config.getRoot()["features"]; features_node && features_node.IsMap()) {
+        for (auto it = features_node.begin(); it != features_node.end(); ++it) {
+            auto feature = it->first.as<std::string>();
+            bool default_enabled = false;
+            if (it->second.IsMap() && it->second["default"]) {
+                default_enabled = it->second["default"].as<bool>();
+            } else if (it->second.IsScalar()) {
+                default_enabled = it->second.as<bool>();
             }
-            // reaching this is technically an error but we allow it
+
+            std::string flag = std::format(" -DFF_{}__{}={}",
+                                           config.getString("manifest.name").value_or("name"),
+                                           feature,
+                                           isEnabled(default_enabled, feature, enabled_features) ? "1" : "0");
+            cxxflags += flag;
+            ccflags += flag;
         }
     }
 
@@ -291,24 +287,75 @@ void writeVariables(const catalyst::utils::yaml::Configuration &config,
     }
 
     writer.addComment("Variables");
-    writer.addVariable("cc", config.getString("manifest.tooling.CC").value_or("clang"));
-    writer.addVariable("cxx", config.getString("manifest.tooling.CXX").value_or("clang++"));
-    writer.addVariable("cxxflags", cxxflags);
-    writer.addVariable("cflags", ccflags);
-    writer.addVariable("ldflags", ldflags);
-    writer.addVariable("ldlibs", ldlibs); // place compiled libraries here
+    void(writer.addVariable("cc", config.getString("manifest.tooling.CC").value_or("clang")));
+    void(writer.addVariable("cxx", config.getString("manifest.tooling.CXX").value_or("clang++")));
+    void(writer.addVariable("cxxflags", cxxflags));
+    void(writer.addVariable("cflags", ccflags));
+    void(writer.addVariable("ldflags", ldflags));
+    void(writer.addVariable("ldlibs", ldlibs)); // place compiled libraries here
 }
 
 void writeRules(catalyst::generate::buildwriters::BaseWriter &writer) {
     catalyst::logger.debug("Writing rules to build file.");
     writer.addComment("Rules for compiling");
-    writer.addRule("cxx_compile", "$cxx $cxxflags -MMD -MF $out.d -c $in -o $out", "CXX $out", "$out.d", "gcc");
-    writer.addRule("cc_compile", "$cc $cflags -MMD -MF $out.d -c $in -o $out", "CC $out", "$out.d", "gcc");
+    void(writer.addRule("cxx_compile", "$cxx $cxxflags -MMD -MF $out.d -c $in -o $out", "CXX $out", "$out.d", "gcc"));
+    void(writer.addRule("cc_compile", "$cc $cflags -MMD -MF $out.d -c $in -o $out", "CC $out", "$out.d", "gcc"));
 
     writer.addComment("Rules for linking");
-    writer.addRule("binary_link", "$cxx $in -o $out $ldflags $ldlibs", "LINK $out");
-    writer.addRule("static_link", "ar rcs $out $in", "LINK $out");
-    writer.addRule("shared_link", "$cxx -shared $in -o $out $ldflags $ldlibs", "LINK $out");
+    void(writer.addRule("binary_link", "$cxx $in -o $out $ldflags $ldlibs", "LINK $out"));
+    void(writer.addRule("static_link", "ar rcs $out $in", "LINK $out"));
+    void(writer.addRule("shared_link", "$cxx -shared $in -o $out $ldflags $ldlibs", "LINK $out"));
+}
+
+void featureFilter(std::unordered_set<fs::path> &source_set,
+                   const catalyst::utils::yaml::Configuration &config,
+                   const std::vector<std::string> &enabled_features) {
+    std::unordered_set<std::string> inactive_features;
+    if (const auto &features_node = config.getRoot()["features"]; features_node && features_node.IsMap()) {
+        for (auto it = features_node.begin(); it != features_node.end(); ++it) {
+            auto feature = it->first.as<std::string>();
+            bool default_enabled = false;
+            if (it->second.IsMap() && it->second["default"]) {
+                default_enabled = it->second["default"].as<bool>();
+            } else if (it->second.IsScalar()) {
+                default_enabled = it->second.as<bool>();
+            }
+
+            if (!isEnabled(default_enabled, feature, enabled_features))
+                inactive_features.insert(feature);
+        }
+    }
+
+    std::unordered_set<fs::path> files_to_remove;
+    if (const auto &features_node = config.getRoot()["features"]; features_node && features_node.IsMap()) {
+        for (const auto &inactive_feature : inactive_features) {
+            if (features_node[inactive_feature].IsMap() && features_node[inactive_feature]["files"] &&
+                features_node[inactive_feature]["files"].IsSequence()) {
+                const YAML::Node &excluded_files = features_node[inactive_feature]["files"];
+                for (const auto &file_node : excluded_files) {
+                    files_to_remove.insert(fs::absolute(file_node.as<std::string>()));
+                }
+            }
+        }
+    }
+
+    for (const auto &file : files_to_remove) {
+        catalyst::logger.debug("Removing file: {} based on feature exclusion", file.string());
+        source_set.erase(file);
+    }
+}
+
+bool isEnabled(bool default_enabled, const std::string &feature, const std::vector<std::string> &enabled_features) {
+    bool explicitly_enabled = std::ranges::find(enabled_features, feature) != enabled_features.end();
+    bool explicitly_disabled = std::ranges::find(enabled_features, "no-" + feature) != enabled_features.end();
+
+    bool is_enabled = default_enabled;
+    if (explicitly_enabled) {
+        is_enabled = true;
+    } else if (explicitly_disabled) {
+        is_enabled = false;
+    }
+    return is_enabled;
 }
 } // namespace
 

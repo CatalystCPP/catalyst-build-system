@@ -47,7 +47,7 @@ YAML::Node getDefaultConfiguration() {
     root["manifest"]["dirs"]["source"] = std::vector<std::string>{};
     root["manifest"]["dirs"]["build"] = "";
     root["dependencies"] = std::vector<YAML::Node>{};
-    root["features"] = std::vector<std::string>{};
+    root["features"] = YAML::Node(YAML::NodeType::Map);
     return root;
 }
 
@@ -222,7 +222,7 @@ void merge_helper(YAML::Node &composite, const std::string &new_profile_name, co
         merge_section(dst, "tooling", src, [&](YAML::Node tdst, YAML::Node tsrc) {
             for (const auto &key : {"CC", "CXX", "FMT", "LINTER", "CCFLAGS", "CXXFLAGS", "LDFLAGS"})
                 merge_scalar(tdst, key, tsrc, std::string("manifest.tooling.") + key);
-            
+
             merge_section(tdst, "doc", tsrc, [&](YAML::Node docdst, YAML::Node docsrc) {
                 for (const auto &key : {"engine", "config", "out_dir"})
                     merge_scalar(docdst, key, docsrc, std::string("manifest.tooling.doc.") + key);
@@ -236,7 +236,21 @@ void merge_helper(YAML::Node &composite, const std::string &new_profile_name, co
         });
     });
 
-    merge_sequence(composite, "features", new_profile);
+    merge_section(composite, "features", new_profile, [&](YAML::Node dst, YAML::Node src) {
+        if (src.IsMap()) {
+            for (const auto &it : src) {
+                dst[it.first.as<std::string>()] = it.second;
+            }
+        } else if (src.IsSequence()) {
+            for (const auto &item : src) {
+                if (item.IsMap()) {
+                    for (const auto &it : item) {
+                        dst[it.first.as<std::string>()] = it.second;
+                    }
+                }
+            }
+        }
+    });
     merge_sequence(composite, "dependencies", new_profile);
 
     merge_section(composite, "hooks", new_profile, [&](YAML::Node dst, YAML::Node src) {

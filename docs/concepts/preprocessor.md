@@ -17,20 +17,24 @@ These macros are automatically defined by Catalyst during compilation.
 > [!NOTE]
 > Read [build subcommand](../cli/build.md) docs for info on how to dynamically enable or disable features.
 
-Features defined in `catalyst.yaml` map directly to preprocessor macros.
+Features defined in `catalyst.yaml` map directly to preprocessor macros. You can also specify an optional list of source files to compile only when the feature is enabled.
 
 **Configuration:**
 ```yaml
 manifest:
   name: my_app
 features:
-  - logging: true
-  - gui: false
+  logging: true
+  gui: false
+  predictive_execution:
+    default: true
+    files: ["src/predictive_execution.cpp"]
 ```
 
 **Generated Macros:**
 - `FF_my_app__logging` (Defined as `1`)
 - `FF_my_app__gui` (Defined as `0`)
+- `FF_my_app__work_estimates` (Defined as `1`)
 
 **Usage in Code:**
 ```cpp
