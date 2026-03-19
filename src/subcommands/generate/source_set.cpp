@@ -54,11 +54,10 @@ std::expected<std::unordered_set<fs::path>, std::string> buildSourceSet(const fs
     }
 
     auto ignore_patterns_opt = createIgnorePatterns(dir, profiles);
-    if (!ignore_patterns_opt) {
-        return {};
+    std::unordered_set<std::string> ignore_patterns;
+    if (ignore_patterns_opt) {
+        ignore_patterns = std::move(*ignore_patterns_opt);
     }
-
-    std::unordered_set<std::string> ignore_patterns = *ignore_patterns_opt;
 
     std::unordered_set<fs::path> source_set;
 
