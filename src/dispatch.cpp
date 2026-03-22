@@ -23,8 +23,12 @@ namespace catalyst {
 namespace {
 template <typename ParseRes_T> int dispatchFN(const char *subc_name, const ParseRes_T &parse_res, auto fn) {
     catalyst::logger.debug("Executing {} subcommand", subc_name);
-    if (std::expected<void, std::string> res = fn(parse_res); !res) {
-        catalyst::logger.error("{}", res.error());
+    try {
+        if (std::expected<void, std::string> res = fn(parse_res); !res) {
+            catalyst::logger.error("{}", res.error());
+            return 1;
+        }
+    } catch (const std::exception &err) {
         return 1;
     }
     return 0;

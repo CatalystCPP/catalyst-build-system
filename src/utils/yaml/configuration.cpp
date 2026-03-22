@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstring>
+#include <exception>
 #include <filesystem>
 #include <format>
 #include <functional>
@@ -96,20 +97,80 @@ std::vector<std::string> splitPath(const std::string &key) {
     return segments;
 }
 
-std::optional<YAML::Node> traverse(const std::string &key, YAML::Node &&root) {
+std::optional<YAML::Node> traverse(const std::string &key, const YAML::Node &root) {
     std::vector<std::string> segments = splitPath(key);
-    YAML::Node current = YAML::Node(root);
+    YAML::Node current;
+    current.reset(root);
 
     for (const auto &s : segments) {
         if (!current[s]) {
             return std::nullopt;
         }
-        current = current[s];
+        current.reset(current[s]);
     }
     return current;
 }
 
+void validateProfileKeys(const YAML::Node &profile, const std::string &profile_name) {
+    if (!profile.IsMap())
+        return;
+
+    auto check_keys =
+        [&](const YAML::Node &node, const std::vector<std::string> &allowed_keys, const std::string &path) {
+            if (!node.IsMap())
+                return;
+            for (auto it = node.begin(); it != node.end(); ++it) {
+                auto key = it->first.as<std::string>();
+                if (std::ranges::find(allowed_keys, key) == allowed_keys.end()) {
+                    catalyst::logger.warn("Invalid key '{}' found at '{}' in profile '{}'.", key, path, profile_name);
+                    throw std::exception();
+                }
+            }
+        };
+
+    check_keys(profile, {"meta", "manifest", "dependencies", "features", "hooks"}, "root");
+    if (profile["meta"]) {
+        check_keys(profile["meta"], {"min_ver", "generator"}, "meta");
+    }
+    if (profile["manifest"]) {
+        check_keys(
+            profile["manifest"], {"name", "type", "version", "provides", "tooling", "dirs", "description"}, "manifest");
+        if (profile["manifest"]["tooling"]) {
+            check_keys(profile["manifest"]["tooling"],
+                       {"CC", "CXX", "FMT", "LINTER", "CCFLAGS", "CXXFLAGS", "LDFLAGS", "doc"},
+                       "manifest.tooling");
+            if (profile["manifest"]["tooling"]["doc"]) {
+                check_keys(
+                    profile["manifest"]["tooling"]["doc"], {"engine", "config", "out_dir"}, "manifest.tooling.doc");
+            }
+        }
+        if (profile["manifest"]["dirs"]) {
+            check_keys(profile["manifest"]["dirs"], {"include", "source", "build"}, "manifest.dirs");
+        }
+    }
+    if (profile["dependencies"] && profile["dependencies"].IsSequence()) {
+        for (const auto &dep : profile["dependencies"]) {
+            check_keys(dep,
+                       {"name",
+                        "source",
+                        "version",
+                        "triplet",
+                        "using",
+                        "linkage",
+                        "path",
+                        "url",
+                        "profiles",
+                        "include",
+                        "lib",
+                        "hash"},
+                       "dependencies[]");
+        }
+    }
+}
+
 void merge_helper(YAML::Node &composite, const std::string &new_profile_name, const YAML::Node &new_profile) {
+    validateProfileKeys(new_profile, new_profile_name);
+
     YAML::Node defaults = getDefaultConfiguration();
 
     auto check_conflict = [&](const std::string &dotpath, const std::string &incoming_val) {
@@ -123,11 +184,8 @@ void merge_helper(YAML::Node &composite, const std::string &new_profile_name, co
             std::string default_val = resolve(YAML::Clone(defaults), dotpath);
 
             if (current_val != incoming_val && current_val != default_val) {
-                catalyst::logger.warn("Profile '{}' overrides '{}': '{}' -> '{}'",
-                                     new_profile_name,
-                                     dotpath,
-                                     current_val,
-                                     incoming_val);
+                catalyst::logger.warn(
+                    "Profile '{}' overrides '{}': '{}' -> '{}'", new_profile_name, dotpath, current_val, incoming_val);
             }
         } catch (...) {
             catalyst::logger.debug("Could not check conflict for '{}'", dotpath);
@@ -165,10 +223,8 @@ void merge_helper(YAML::Node &composite, const std::string &new_profile_name, co
                 check_conflict(dotpath, val);
                 dst_parent[key] = val;
             } else {
-                catalyst::logger.warn("Invalid value '{}' for '{}' in profile '{}'. Ignoring.",
-                                     val,
-                                     dotpath,
-                                     new_profile_name);
+                catalyst::logger.warn(
+                    "Invalid value '{}' for '{}' in profile '{}'. Ignoring.", val, dotpath, new_profile_name);
             }
         }
     };
@@ -286,8 +342,7 @@ void merge(YAML::Node &composite, const std::string &profile_name, const fs::pat
 
     if (!fs::exists(profile_path)) {
         catalyst::logger.error("Profile {} not found in {} or CATALYST.yaml", profile_name, profile_path.string());
-        throw std::runtime_error(
-            std::format("Profile {} not found in {} or CATALYST.yaml", profile_name, profile_path.string()));
+        throw std::exception();
     }
     merge_helper(composite, profile_name, YAML::LoadFile(profile_path));
 }
@@ -304,8 +359,9 @@ Configuration::Configuration(const std::vector<std::string> &profiles, const std
     for (size_t ii = 0; ii < profiles.size(); ++ii) {
         for (size_t jj = 0; jj < ii; ++jj) {
             if (profiles[jj] == profiles[ii]) {
-                throw std::runtime_error(
-                    std::format("Duplicate profiles: {0} at index {1} and {0} at index {2}", profiles[ii], jj, ii));
+                catalyst::logger.error(
+                    "Duplicate profiles: {0} at index {1} and {0} and index {2}", profiles[ii], jj, ii);
+                throw std::exception();
             }
         }
     }
@@ -331,20 +387,21 @@ bool Configuration::has(const std::string &key) const {
 }
 
 std::optional<std::string> Configuration::getString(const std::string &key) const {
-    std::optional<YAML::Node> res = traverse(key, YAML::Clone(root));
+    std::optional<YAML::Node> res = traverse(key, root);
     if (!res) {
         return std::nullopt;
     }
 
     try {
         return res.value().as<std::string>();
-    } catch (const YAML::Exception &) {
+    } catch (const YAML::Exception &e) {
+        catalyst::logger.error("YAML Exception in getString for key {}: {}", key, e.what());
         return std::nullopt;
     }
 }
 
 std::optional<int> Configuration::getInt(const std::string &key) const {
-    std::optional<YAML::Node> res = traverse(key, YAML::Clone(root));
+    std::optional<YAML::Node> res = traverse(key, root);
     if (!res) {
         return std::nullopt;
     }
@@ -357,7 +414,7 @@ std::optional<int> Configuration::getInt(const std::string &key) const {
 }
 
 std::optional<bool> Configuration::getBool(const std::string &key) const {
-    std::optional<YAML::Node> res = traverse(key, YAML::Clone(root));
+    std::optional<YAML::Node> res = traverse(key, root);
     if (!res) {
         return std::nullopt;
     }
@@ -370,7 +427,7 @@ std::optional<bool> Configuration::getBool(const std::string &key) const {
 }
 
 std::optional<std::vector<std::string>> Configuration::getStringVector(const std::string &key) const {
-    std::optional<YAML::Node> res = traverse(key, YAML::Clone(root));
+    std::optional<YAML::Node> res = traverse(key, root);
     if (!res) {
         return std::nullopt;
     }
