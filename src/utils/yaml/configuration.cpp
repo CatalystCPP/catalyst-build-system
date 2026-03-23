@@ -137,7 +137,7 @@ void validateProfileKeys(const YAML::Node &profile, const std::string &profile_n
             profile["manifest"], {"name", "type", "version", "provides", "tooling", "dirs", "description"}, "manifest");
         if (profile["manifest"]["tooling"]) {
             check_keys(profile["manifest"]["tooling"],
-                       {"CC", "CXX", "FMT", "LINTER", "CCFLAGS", "CXXFLAGS", "LDFLAGS", "doc"},
+                       {"CC", "CXX", "CC_LAUNCHER", "CXX_LAUNCHER", "FMT", "LINTER", "CCFLAGS", "CXXFLAGS", "LDFLAGS", "doc"},
                        "manifest.tooling");
             if (profile["manifest"]["tooling"]["doc"]) {
                 check_keys(
@@ -276,7 +276,7 @@ void merge_helper(YAML::Node &composite, const std::string &new_profile_name, co
             merge_scalar(dst, key, src, std::string("manifest.") + key);
 
         merge_section(dst, "tooling", src, [&](YAML::Node tdst, YAML::Node tsrc) {
-            for (const auto &key : {"CC", "CXX", "FMT", "LINTER", "CCFLAGS", "CXXFLAGS", "LDFLAGS"})
+            for (const auto &key : {"CC", "CXX", "CC_LAUNCHER", "CXX_LAUNCHER", "FMT", "LINTER", "CCFLAGS", "CXXFLAGS", "LDFLAGS"})
                 merge_scalar(tdst, key, tsrc, std::string("manifest.tooling.") + key);
 
             merge_section(tdst, "doc", tsrc, [&](YAML::Node docdst, YAML::Node docsrc) {

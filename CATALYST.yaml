@@ -43,8 +43,8 @@ common:
 ccache:
   manifest:
     tooling:
-      CC: ccache clang
-      CXX: ccache clang++
+      CC_LAUNCHER: ccache
+      CXX_LAUNCHER: ccache
 test:
   manifest:
     name: catalyst_tests

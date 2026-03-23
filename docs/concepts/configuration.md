@@ -48,6 +48,8 @@ Defines the project's identity, build settings, and directory structure.
 |---|---|---|
 | `CC` | C Compiler | `clang` |
 | `CXX` | C++ Compiler | `clang++` |
+| `CC_LAUNCHER` | C Compiler Launcher (e.g., ccache) | "" |
+| `CXX_LAUNCHER`| C++ Compiler Launcher (e.g., ccache) | "" |
 | `CCFLAGS` | C Compiler Flags | "" |
 | `CXXFLAGS` | C++ Compiler Flags | "" |
 | `LDFLAGS` | Linker Flags | "" |
