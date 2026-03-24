@@ -13,6 +13,7 @@ std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app) {
     build->add_flag("--force-refetch", ret->force_refetch, "Refetch dependencies.")->default_val(false);
     build->add_flag("--workspace,--all", ret->workspace_build, "Build all members in the workspace.")
         ->default_val(false);
+    build->add_flag("--watch,-w", ret->watch, "Continuous build mode. Rebuilds on source file changes.")->default_val(false);
     build->add_option("-P,--package", ret->package, "Build a specific package from the root.");
     build->add_option("-p,--profiles", ret->profiles, "Profile composition to build.")
         ->default_val(std::vector{"common"});

@@ -86,11 +86,11 @@ void LogT::logImpl(LogLevel level, const std::string &message) const {
         if (level == LogLevel::ERROR) {
             std::lock_guard<std::mutex> lock{stdio_mutex};
             std::cerr << std::format("[{:%Y-%m-%d %H:%M:%S}] ", now) << color
-                      << std::format("[{}] {}", toString(level), message) << RESET << "\n";
+                      << std::format("[{}] {}", toString(level), message) << RESET << std::endl;
         } else {
             std::lock_guard<std::mutex> lock{stdio_mutex};
             std::cout << std::format("[{:%Y-%m-%d %H:%M:%S}] ", now) << color
-                      << std::format("[{}] {}", toString(level), message) << RESET << "\n";
+                      << std::format("[{}] {}", toString(level), message) << RESET << std::endl;
         }
     }
 }

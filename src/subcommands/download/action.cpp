@@ -5,11 +5,11 @@
 #include <random>
 
 #include "catalyst/dir_guard.hpp"
-#include "catalyst/utils/log/log.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/build.hpp"
 #include "catalyst/subcommands/download.hpp"
 #include "catalyst/subcommands/install.hpp"
+#include "catalyst/utils/log/log.hpp"
 
 namespace fs = std::filesystem;
 
@@ -62,13 +62,14 @@ std::expected<void, std::string> action(const Parse &args) {
     catalyst::DirectoryChangeGuard scoped_dir(temp_dir);
 
     catalyst::logger.info("Building downloaded project with profiles: {} and features: {}",
-                         std::format("{}", args.profiles),
-                         std::format("{}", args.enabled_features));
+                          std::format("{}", args.profiles),
+                          std::format("{}", args.enabled_features));
     catalyst::build::Parse build_args{
         .regen = false,
         .force_rebuild = false,
         .force_refetch = false,
         .workspace_build = false,
+        .watch = false,
         .package = "",
         .profiles = args.profiles,
         .enabled_features = args.enabled_features,

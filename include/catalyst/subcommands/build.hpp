@@ -13,6 +13,7 @@ struct Parse {
     bool force_rebuild;
     bool force_refetch;
     bool workspace_build;
+    bool watch;
     std::string package;
     std::vector<std::string> profiles;
     std::vector<std::string> enabled_features;
