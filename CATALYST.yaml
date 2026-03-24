@@ -69,3 +69,29 @@ release:
     tooling:
       CCFLAGS: -O3 -DNDEBUG --std=c++23 -Wall -Wextra -Wpedantic
       CXXFLAGS: -O3 -DNDEBUG --std=c++23 -Wall -Wextra -Wpedantic
+linux_x86_64:
+  manifest:
+    tooling:
+      CC: x86_64-linux-gnu-gcc
+      CXX: x86_64-linux-gnu-g++
+linux_aarch64:
+  manifest:
+    tooling:
+      CC: aarch64-linux-gnu-gcc
+      CXX: aarch64-linux-gnu-g++
+windows_x86_64:
+  manifest:
+    tooling:
+      CC: x86_64-w64-mingw32-gcc
+      CXX: x86_64-w64-mingw32-g++
+      LDFLAGS: -static
+macos_x86_64:
+  manifest:
+    tooling:
+      CC: x86_64-apple-darwin-clang
+      CXX: x86_64-apple-darwin-clang++
+macos_arm64:
+  manifest:
+    tooling:
+      CC: aarch64-apple-darwin-clang
+      CXX: aarch64-apple-darwin-clang++
