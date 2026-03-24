@@ -10,6 +10,7 @@ Options:
   -b,--force-rebuild          Recompile dependencies
   --force-refetch             Refetch dependencies
   --workspace,--all           Build all members in the workspace
+  -w,--watch                  Continuous build mode. Rebuilds on source file changes
   -P,--package TEXT           Build a specific package from the root
   -p,--profiles TEXT ...      Profile composition to build (default: common)
   -f,--features TEXT ...      Features to enable
@@ -63,3 +64,16 @@ catalyst build --backend gmake
 ```bash
 catalyst build --features no-logging
 ```
+
+**Watch mode:**
+Continuously watch source and include directories for file changes and automatically rebuild.
+```bash
+catalyst build --watch
+```
+
+Watch mode can be combined with other flags:
+```bash
+catalyst build --watch --profiles debug
+```
+
+Press `Ctrl+C` to stop watching.

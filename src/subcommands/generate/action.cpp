@@ -287,8 +287,18 @@ void writeVariables(const catalyst::utils::yaml::Configuration &config,
     }
 
     writer.addComment("Variables");
-    void(writer.addVariable("cc", config.getString("manifest.tooling.CC").value_or("clang")));
-    void(writer.addVariable("cxx", config.getString("manifest.tooling.CXX").value_or("clang++")));
+    std::string cc_cmd = config.getString("manifest.tooling.CC").value_or("clang");
+    if (auto cc_launcher = config.getString("manifest.tooling.CC_LAUNCHER")) {
+        cc_cmd = std::format("{} {}", cc_launcher.value(), cc_cmd);
+    }
+    void(writer.addVariable("cc", cc_cmd));
+
+    std::string cxx_cmd = config.getString("manifest.tooling.CXX").value_or("clang++");
+    if (auto cxx_launcher = config.getString("manifest.tooling.CXX_LAUNCHER")) {
+        cxx_cmd = std::format("{} {}", cxx_launcher.value(), cxx_cmd);
+    }
+    void(writer.addVariable("cxx", cxx_cmd));
+
     void(writer.addVariable("cxxflags", cxxflags));
     void(writer.addVariable("cflags", ccflags));
     void(writer.addVariable("ldflags", ldflags));
