@@ -18,8 +18,8 @@
 #include "catalyst/subcommands/fetch.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
-#include "catalyst/utils/yaml/configuration.hpp"
 #include "catalyst/utils/watcher.hpp"
+#include "catalyst/utils/yaml/configuration.hpp"
 #include "catalyst/workspace.hpp"
 
 namespace catalyst::build {
@@ -225,8 +225,8 @@ std::expected<void, std::string> action(const Parse &parse_args) {
             catalyst::logger.error("Pre-build hook failed: {}", res.error());
             if (auto hook_res = hooks::onBuildFailure(config); !hook_res) {
                 catalyst::logger.error("on_build_failure hook failed: {}", hook_res.error());
-                return std::unexpected(res.error() +
-                                    "\nAdditionally, the on_build_failure hook failed with error: " + hook_res.error());
+                return std::unexpected(
+                    res.error() + "\nAdditionally, the on_build_failure hook failed with error: " + hook_res.error());
             }
             return res;
         }
@@ -238,14 +238,15 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         if (!fs::exists(build_dir / build_filename) || parse_args.regen) {
             catalyst::logger.info("Generating build files.");
             auto res = catalyst::generate::action({.profiles = parse_args.profiles,
-                                                .enabled_features = parse_args.enabled_features,
-                                                .backend = parse_args.backend});
+                                                   .enabled_features = parse_args.enabled_features,
+                                                   .backend = parse_args.backend});
             if (!res) {
                 catalyst::logger.error("Failed to generate build files: {}", res.error());
                 if (auto hook_res = hooks::onBuildFailure(config); !hook_res) {
                     catalyst::logger.error("on_build_failure hook failed: {}", hook_res.error());
                     return std::unexpected(
-                        res.error() + "\nAdditionally, the on_build_failure hook failed with error: " + hook_res.error());
+                        res.error() +
+                        "\nAdditionally, the on_build_failure hook failed with error: " + hook_res.error());
                 }
                 return std::unexpected(res.error());
             }
@@ -257,13 +258,15 @@ std::expected<void, std::string> action(const Parse &parse_args) {
                 fs::remove_all(fs::path{build_dir / "catalyst-libs"}); // cleanup
             }
             catalyst::logger.info("Fetching dependencies.");
-            if (auto res = catalyst::fetch::action({.profiles = parse_args.profiles, .workspace = parse_args.workspace});
+            if (auto res =
+                    catalyst::fetch::action({.profiles = parse_args.profiles, .workspace = parse_args.workspace});
                 !res) {
                 catalyst::logger.error("Failed to fetch dependencies: {}", res.error());
                 if (auto hook_res = hooks::onBuildFailure(config); !hook_res) {
                     catalyst::logger.error("on_build_failure hook failed: {}", hook_res.error());
                     return std::unexpected(
-                        res.error() + "\nAdditionally, the on_build_failure hook failed with error: " + hook_res.error());
+                        res.error() +
+                        "\nAdditionally, the on_build_failure hook failed with error: " + hook_res.error());
                 }
                 return std::unexpected(res.error());
             }
@@ -288,8 +291,8 @@ std::expected<void, std::string> action(const Parse &parse_args) {
             catalyst::logger.error("Failed to generate compile commands: {}", res.error());
             if (auto hook_res = hooks::onBuildFailure(config); !hook_res) {
                 catalyst::logger.error("on_build_failure hook failed: {}", hook_res.error());
-                return std::unexpected(res.error() +
-                                    "\nAdditionally, the on_build_failure hook failed with error: " + hook_res.error());
+                return std::unexpected(
+                    res.error() + "\nAdditionally, the on_build_failure hook failed with error: " + hook_res.error());
             }
             return res;
         }
@@ -299,8 +302,8 @@ std::expected<void, std::string> action(const Parse &parse_args) {
             catalyst::logger.error("Post-build hook failed: {}", res.error());
             if (auto hook_res = hooks::onBuildFailure(config); !hook_res) {
                 catalyst::logger.error("on_build_failure hook failed: {}", hook_res.error());
-                return std::unexpected(res.error() +
-                                    "\nAdditionally, the on_build_failure hook failed with error: " + hook_res.error());
+                return std::unexpected(
+                    res.error() + "\nAdditionally, the on_build_failure hook failed with error: " + hook_res.error());
             }
             return res;
         }
@@ -308,20 +311,24 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     };
 
     auto res = run_build();
-    if (!res && !parse_args.watch) return res;
+    if (!res && !parse_args.watch)
+        return res;
 
     if (parse_args.watch) {
         auto src_dirs = config.getStringVector("manifest.dirs.source").value_or(std::vector<std::string>{"src"});
         auto inc_dirs = config.getStringVector("manifest.dirs.include").value_or(std::vector<std::string>{"include"});
 
         std::vector<fs::path> watch_paths;
-        for (const auto& d : src_dirs) watch_paths.push_back(fs::absolute(d));
-        for (const auto& d : inc_dirs) watch_paths.push_back(fs::absolute(d));
+        watch_paths.reserve(src_dirs.size() + inc_dirs.size());
+        for (const auto &d : src_dirs)
+            watch_paths.push_back(fs::absolute(d));
+        for (const auto &d : inc_dirs)
+            watch_paths.push_back(fs::absolute(d));
 
         catalyst::logger.info("Watching for changes in: {} and {}", src_dirs, inc_dirs);
 
         utils::watcher::Watcher watcher(watch_paths);
-        watcher.watch([&](const fs::path& changed) {
+        watcher.watch([&](const fs::path &changed) {
             catalyst::logger.info("File changed: {}. Rebuilding...", changed.string());
             auto watch_res = run_build();
             if (!watch_res) {
