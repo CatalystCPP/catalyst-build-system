@@ -81,6 +81,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         cpack_out << std::format("set(CPACK_PACKAGE_DESCRIPTION_SUMMARY \"{}\")\n", pkg_description);
         cpack_out << std::format("set(CPACK_PACKAGE_DESCRIPTION \"{}\")\n", pkg_description);
         cpack_out << std::format("set(CPACK_PACKAGE_CONTACT \"{}\")\n", pkg_contact);
+        cpack_out << "set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)\n";
         cpack_out << std::format("set(CPACK_INSTALLED_DIRECTORIES \"{}\" \".\")\n", fs::absolute(staging_dir).string());
     }
 
