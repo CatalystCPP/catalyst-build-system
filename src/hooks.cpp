@@ -7,6 +7,7 @@
 #include <yaml-cpp/yaml.h>
 
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/dispatch.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 
@@ -44,6 +45,45 @@ std::expected<void, std::string> executeHook(const YAML::Node &profile_comp, con
                 catalyst::logger.debug("[Catalyst Hook: {}] Running script: {}", hook_name, script);
                 if (catalyst::processExec(shell_cmd(script)).value().get() != 0) {
                     return std::unexpected(std::format("Hook '{}' script failed: {}", hook_name, script));
+                }
+            } else if (item["catalyst"]) {
+                auto cat_node = item["catalyst"];
+                if (cat_node.IsScalar()) {
+                    auto args = cat_node.as<std::string>();
+                    catalyst::logger.debug("[Catalyst Hook: {}] Running catalyst: {}", hook_name, args);
+                    auto res = catalyst::dispatchHook("catalyst " + args);
+                    if (!res) {
+                        return std::unexpected(std::format("Hook '{}' catalyst dispatch failed: {}", hook_name, res.error()));
+                    }
+                } else if (cat_node.IsMap()) {
+                    if (!cat_node["subcommand"]) {
+                        return std::unexpected(std::format("Hook '{}' catalyst missing required 'subcommand' field", hook_name));
+                    }
+                    std::vector<std::string> args;
+                    if (cat_node["global_args"]) {
+                        for (const auto &a : cat_node["global_args"]) args.push_back(a.as<std::string>());
+                    }
+                    args.push_back(cat_node["subcommand"].as<std::string>());
+                    if (cat_node["profiles"]) {
+                        for (const auto &p : cat_node["profiles"]) {
+                            args.push_back("-p");
+                            args.push_back(p.as<std::string>());
+                        }
+                    }
+                    if (cat_node["args"]) {
+                        for (const auto &a : cat_node["args"]) args.push_back(a.as<std::string>());
+                    }
+                    
+                    std::string joined;
+                    for (const auto &a : args) joined += a + " ";
+                    catalyst::logger.debug("[Catalyst Hook: {}] Running catalyst: {}", hook_name, joined);
+                    
+                    auto res = catalyst::dispatchHook(args);
+                    if (!res) {
+                        return std::unexpected(std::format("Hook '{}' catalyst dispatch failed: {}", hook_name, res.error()));
+                    }
+                } else {
+                    return std::unexpected(std::format("Hook '{}' catalyst has invalid type", hook_name));
                 }
             }
         }

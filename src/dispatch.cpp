@@ -1,6 +1,7 @@
 #include "catalyst/dispatch.hpp"
 
 #include <algorithm>
+#include <format>
 #include <functional>
 #include <tuple>
 #include <utility>
@@ -16,27 +17,9 @@ std::string concatArgv(int argc, char **argv) {
         res += std::string{argv[ii]} + " ";
     return res;
 }
-} // namespace
 
-namespace catalyst {
-
-namespace {
-template <typename ParseRes_T> int dispatchFN(const char *subc_name, const ParseRes_T &parse_res, auto fn) {
-    catalyst::logger.debug("Executing {} subcommand", subc_name);
-    try {
-        if (std::expected<void, std::string> res = fn(parse_res); !res) {
-            catalyst::logger.error("{}", res.error());
-            return 1;
-        }
-    } catch (const std::exception &err) {
-        return 1;
-    }
-    return 0;
-}
-} // namespace
-
-std::pair<int, bool> parseCli(int argc, char **argv, catalyst::CliContext &ctx) {
-    using std::tie, std::string_view;
+void setupCli(catalyst::CliContext &ctx) {
+    using std::tie;
 
     tie(ctx.add_subc, ctx.add_res) = catalyst::add::parse(ctx.app);
     tie(ctx.build_subc, ctx.build_res) = catalyst::build::parse(ctx.app);
@@ -70,6 +53,48 @@ std::pair<int, bool> parseCli(int argc, char **argv, catalyst::CliContext &ctx) 
         std::cout << ctx.app.help() << '\n';
         ctx.helped = true;
     });
+}
+} // namespace
+
+namespace catalyst {
+
+namespace {
+thread_local std::vector<std::string> g_call_chain;
+
+template <typename ParseRes_T> int dispatchFN(const char *subc_name, const ParseRes_T &parse_res, auto fn) {
+    if (std::find(g_call_chain.begin(), g_call_chain.end(), subc_name) != g_call_chain.end()) {
+        std::string chain;
+        for (const auto &n : g_call_chain) chain += n + " -> ";
+        chain += subc_name;
+        catalyst::logger.error("recursive hook detected: {}", chain);
+        return 1;
+    }
+    if (g_call_chain.size() >= 4) {
+        catalyst::logger.error("maximum hook dispatch depth exceeded");
+        return 1;
+    }
+    
+    struct Guard {
+        ~Guard() { g_call_chain.pop_back(); }
+    } guard;
+    g_call_chain.push_back(subc_name);
+
+    catalyst::logger.debug("Executing {} subcommand", subc_name);
+    try {
+        if (std::expected<void, std::string> res = fn(parse_res); !res) {
+            catalyst::logger.error("{}", res.error());
+            return 1;
+        }
+    } catch (const std::exception &err) {
+        return 1;
+    }
+    return 0;
+}
+} // namespace
+
+std::pair<int, bool> parseCli(int argc, char **argv, catalyst::CliContext &ctx) {
+    using std::string_view;
+    setupCli(ctx);
 
     try {
         ctx.app.parse(argc, argv);
@@ -87,6 +112,33 @@ std::pair<int, bool> parseCli(int argc, char **argv, catalyst::CliContext &ctx) 
         return {0, true};
 
     return {0, false};
+}
+
+std::pair<int, bool> parseCli(const std::string &args, catalyst::CliContext &ctx) {
+    setupCli(ctx);
+
+    try {
+        ctx.app.parse(args, true);
+    } catch (const CLI::ParseError &e) {
+        if (args.find("--help") == std::string::npos && args.find("-h") == std::string::npos) {
+            catalyst::logger.error("Failed to parse provided arguments: {}", args);
+            return {ctx.app.exit(e), true};
+        }
+        return {ctx.app.exit(e), true};
+    }
+
+    if (ctx.helped)
+        return {0, true};
+
+    return {0, false};
+}
+
+std::pair<int, bool> parseCli(const std::vector<std::string> &args, catalyst::CliContext &ctx) {
+    std::string arg_str = "catalyst ";
+    for (const auto &a : args) {
+        arg_str += a + " ";
+    }
+    return parseCli(arg_str, ctx);
 }
 
 int dispatch(const catalyst::CliContext &ctx) {
@@ -136,4 +188,48 @@ int dispatch(const catalyst::CliContext &ctx) {
     catalyst::logger.info("run catalyst --help for info on available commands.");
     return 1;
 }
+
+namespace {
+std::expected<void, std::string> dispatchHookImpl(auto &&args) {
+    catalyst::CliContext ctx;
+    ctx.workspace = catalyst::Workspace::findRoot();
+    auto [exit_code, should_return] = catalyst::parseCli(args, ctx);
+    if (should_return) {
+        if (exit_code == 0) return {};
+        return std::unexpected(std::format("hook parsing failed with exit code {}", exit_code));
+    }
+
+    auto assign_ws_if = [&ctx](auto *subc, auto &res) {
+        if (subc && *subc) {
+            res->workspace = ctx.workspace;
+            return true;
+        }
+        return false;
+    };
+
+    assign_ws_if(ctx.bench_subc, ctx.bench_res) || assign_ws_if(ctx.build_subc, ctx.build_res) ||
+        assign_ws_if(ctx.clean_subc, ctx.clean_res) || assign_ws_if(ctx.fetch_subc, ctx.fetch_res) ||
+        assign_ws_if(ctx.lock_subc, ctx.lock_res) || assign_ws_if(ctx.test_subc, ctx.test_res);
+
+    if (ctx.show_version) {
+        std::cout << catalyst::CATALYST_VERSION << '\n';
+        return {};
+    }
+
+    int disp_res = dispatch(ctx);
+    if (disp_res != 0) {
+        return std::unexpected(std::format("hook dispatch failed with exit code {}", disp_res));
+    }
+    return {};
+}
+} // namespace
+
+std::expected<void, std::string> dispatchHook(const std::string &args) {
+    return dispatchHookImpl(args);
+}
+
+std::expected<void, std::string> dispatchHook(const std::vector<std::string> &args) {
+    return dispatchHookImpl(args);
+}
+
 } // namespace catalyst

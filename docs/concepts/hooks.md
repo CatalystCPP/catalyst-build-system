@@ -6,15 +6,29 @@ Catalyst provides a hook system that allows you to execute custom commands or sc
 
 You can define hooks in your `catalyst.yaml` or any profile-specific `catalyst_*.yaml` file. Hooks are defined under the `hooks` key. You can specify a single command or a list of commands to execute for each hook.
 
+### Hook Types
+
+Catalyst supports three types of hooks:
+
+1. **`command`**: Executes a standard shell command (via `sh -c` or `cmd /c`).
+2. **`script`**: Executes a script file (via `sh -c` or `cmd /c`).
+3. **`catalyst`**: Dispatches a Catalyst subcommand internally. This is preferred for invoking other Catalyst commands (like `test` after a `build`) because it avoids shelling out to a new process, shares the current configuration context, and enforces recursion protection (depth limit of 4).
+
+The `catalyst` hook type supports both a short string form and a structured map form:
+
 **Example `catalyst.yaml`:**
 
 ```yaml
 hooks:
   pre-build:
     - command: "echo 'Starting build...'"
+    - catalyst: "test --help" # Short string form
   post-build:
     - command: "echo 'Build finished!'"
     - script: "scripts/notify.sh"
+    - catalyst:               # Structured map form
+        subcommand: clean
+        args: ["--workspace"]
   on-build-failure:
     - command: "echo 'Build failed!'"
 

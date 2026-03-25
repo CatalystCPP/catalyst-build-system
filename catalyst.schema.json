@@ -1,0 +1,215 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Catalyst Build System Configuration",
+  "description": "Configuration schema for catalyst.yaml and CATALYST.yaml files.",
+  "definitions": {
+    "profile_config": {
+      "type": "object",
+      "properties": {
+        "meta": {
+          "type": "object",
+          "properties": {
+            "min_ver": {
+              "type": "string",
+              "description": "Minimum Catalyst version required to build the project."
+            },
+            "generator": {
+              "type": "string",
+              "enum": ["cbe", "ninja", "gmake", "make"],
+              "description": "The generator to use."
+            }
+          },
+          "additionalProperties": false
+        },
+        "manifest": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Project name. Must be unique in a workspace."
+            },
+            "type": {
+              "type": "string",
+              "enum": ["BINARY", "STATICLIB", "SHAREDLIB", "INTERFACE"],
+              "description": "Artifact type."
+            },
+            "version": {
+              "type": "string",
+              "description": "Project version string."
+            },
+            "description": {
+              "type": "string",
+              "description": "Human-readable description."
+            },
+            "provides": {
+              "type": "string",
+              "description": "Output artifact name pattern (e.g., *.so)."
+            },
+            "tooling": {
+              "type": "object",
+              "properties": {
+                "CC": { "type": "string" },
+                "CXX": { "type": "string" },
+                "CC_LAUNCHER": { "type": "string" },
+                "CXX_LAUNCHER": { "type": "string" },
+                "CCFLAGS": { "type": "string" },
+                "CXXFLAGS": { "type": "string" },
+                "LDFLAGS": { "type": "string" }
+              }
+            },
+            "dirs": {
+              "type": "object",
+              "properties": {
+                "include": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "List of include directories."
+                },
+                "source": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "List of source directories."
+                },
+                "build": {
+                  "type": "string",
+                  "description": "Output directory."
+                }
+              }
+            }
+          }
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "source"],
+            "oneOf": [
+              {
+                "properties": {
+                  "source": { "const": "git" },
+                  "name": { "type": "string" },
+                  "url": { "type": "string" },
+                  "version": { "type": "string" },
+                  "using": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  }
+                },
+                "required": ["url", "version"]
+              },
+              {
+                "properties": {
+                  "source": { "const": "vcpkg" },
+                  "name": { "type": "string" },
+                  "version": { "type": "string" },
+                  "triplet": { "type": "string" },
+                  "using": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "source": { "const": "local" },
+                  "name": { "type": "string" },
+                  "path": { "type": "string" },
+                  "profiles": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  }
+                },
+                "required": ["path"]
+              },
+              {
+                "properties": {
+                  "source": { "const": "system" },
+                  "name": { "type": "string" },
+                  "lib": { "type": "string" },
+                  "include": { "type": "string" }
+                }
+              }
+            ]
+          }
+        },
+        "features": {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              { "type": "boolean" },
+              {
+                "type": "object",
+                "properties": {
+                  "default": { "type": "boolean" },
+                  "files": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "hooks": {
+          "type": "object",
+          "patternProperties": {
+            "^(pre|post|on)-[a-zA-Z0-9-]+$": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "oneOf": [
+                  {
+                    "properties": { "command": { "type": "string" } },
+                    "required": ["command"]
+                  },
+                  {
+                    "properties": { "script": { "type": "string" } },
+                    "required": ["script"]
+                  },
+                  {
+                    "properties": {
+                      "catalyst": {
+                        "anyOf": [
+                          { "type": "string" },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "subcommand": { "type": "string" },
+                              "args": {
+                                "type": "array",
+                                "items": { "type": "string" }
+                              },
+                              "global_args": {
+                                "type": "array",
+                                "items": { "type": "string" }
+                              },
+                              "profiles": {
+                                "type": "array",
+                                "items": { "type": "string" }
+                              }
+                            },
+                            "required": ["subcommand"]
+                          }
+                        ]
+                      }
+                    },
+                    "required": ["catalyst"]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "anyOf": [
+    { "$ref": "#/definitions/profile_config" },
+    {
+      "type": "object",
+      "patternProperties": {
+        "^[a-zA-Z0-9_]+$": { "$ref": "#/definitions/profile_config" }
+      }
+    }
+  ]
+}
