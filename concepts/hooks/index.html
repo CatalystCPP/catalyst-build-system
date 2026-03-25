@@ -1090,6 +1090,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Configuring Hooks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#hook-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hook Types
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1360,6 +1377,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Configuring Hooks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#hook-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hook Types
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1516,13 +1550,25 @@
 <p>Catalyst provides a hook system that allows you to execute custom commands or scripts at various points in the build process. This enables you to extend and customize your build workflow to fit your project's specific needs.</p>
 <h2 id="configuring-hooks">Configuring Hooks</h2>
 <p>You can define hooks in your <code>catalyst.yaml</code> or any profile-specific <code>catalyst_*.yaml</code> file. Hooks are defined under the <code>hooks</code> key. You can specify a single command or a list of commands to execute for each hook.</p>
+<h3 id="hook-types">Hook Types</h3>
+<p>Catalyst supports three types of hooks:</p>
+<ol>
+<li><strong><code>command</code></strong>: Executes a standard shell command (via <code>sh -c</code> or <code>cmd /c</code>).</li>
+<li><strong><code>script</code></strong>: Executes a script file (via <code>sh -c</code> or <code>cmd /c</code>).</li>
+<li><strong><code>catalyst</code></strong>: Dispatches a Catalyst subcommand internally. This is preferred for invoking other Catalyst commands (like <code>test</code> after a <code>build</code>) because it avoids shelling out to a new process, shares the current configuration context, and enforces recursion protection (depth limit of 4).</li>
+</ol>
+<p>The <code>catalyst</code> hook type supports both a short string form and a structured map form:</p>
 <p><strong>Example <code>catalyst.yaml</code>:</strong></p>
 <pre><code class="language-yaml">hooks:
   pre-build:
     - command: &quot;echo 'Starting build...'&quot;
+    - catalyst: &quot;test --help&quot; # Short string form
   post-build:
     - command: &quot;echo 'Build finished!'&quot;
     - script: &quot;scripts/notify.sh&quot;
+    - catalyst:               # Structured map form
+        subcommand: clean
+        args: [&quot;--workspace&quot;]
   on-build-failure:
     - command: &quot;echo 'Build failed!'&quot;
 

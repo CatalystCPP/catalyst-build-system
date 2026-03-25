@@ -1278,6 +1278,7 @@ Options:
   -b,--force-rebuild          Recompile dependencies
   --force-refetch             Refetch dependencies
   --workspace,--all           Build all members in the workspace
+  -w,--watch                  Continuous build mode. Rebuilds on source file changes
   -P,--package TEXT           Build a specific package from the root
   -p,--profiles TEXT ...      Profile composition to build (default: common)
   -f,--features TEXT ...      Features to enable
@@ -1312,6 +1313,14 @@ Build only the <code>app</code> package and its dependencies within the workspac
 <p><strong>Disable features:</strong></p>
 <pre><code class="language-bash">catalyst build --features no-logging
 </code></pre>
+<p><strong>Watch mode:</strong>
+Continuously watch source and include directories for file changes and automatically rebuild.</p>
+<pre><code class="language-bash">catalyst build --watch
+</code></pre>
+<p>Watch mode can be combined with other flags:</p>
+<pre><code class="language-bash">catalyst build --watch --profiles debug
+</code></pre>
+<p>Press <code>Ctrl+C</code> to stop watching.</p>
 
 
 

@@ -1551,6 +1551,16 @@ hooks:       # Lifecycle scripts
 <td><code>clang++</code></td>
 </tr>
 <tr>
+<td><code>CC_LAUNCHER</code></td>
+<td>C Compiler Launcher (e.g., ccache)</td>
+<td>""</td>
+</tr>
+<tr>
+<td><code>CXX_LAUNCHER</code></td>
+<td>C++ Compiler Launcher (e.g., ccache)</td>
+<td>""</td>
+</tr>
+<tr>
 <td><code>CCFLAGS</code></td>
 <td>C Compiler Flags</td>
 <td>""</td>
@@ -1608,10 +1618,14 @@ hooks:       # Lifecycle scripts
 </code></pre>
 <hr />
 <h2 id="features"><code>features</code></h2>
-<p>Defines boolean feature flags that can be toggled via profiles or CLI. Enabling a feature defines a preprocessor macro.</p>
+<p>Defines boolean feature flags that can be toggled via profiles or CLI.
+Enabling a feature defines a preprocessor macro.
+Features can optionally list source files that will be compiled if and only if the feature is enabled.</p>
 <pre><code class="language-yaml">features:
-    - logging: true
-    - networking: false
+  logging: true
+  work_estimates:
+    default: true
+    files: [&quot;src/work_estimate.cpp&quot;]
 </code></pre>
 <p>See <a href="../preprocessor/">Preprocessor &amp; Features</a> for details.</p>
 <hr />

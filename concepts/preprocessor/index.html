@@ -1321,17 +1321,21 @@
 <p>[!NOTE]
 Read <a href="../../cli/build/">build subcommand</a> docs for info on how to dynamically enable or disable features.</p>
 </blockquote>
-<p>Features defined in <code>catalyst.yaml</code> map directly to preprocessor macros.</p>
+<p>Features defined in <code>catalyst.yaml</code> map directly to preprocessor macros. You can also specify an optional list of source files to compile only when the feature is enabled.</p>
 <p><strong>Configuration:</strong></p>
 <pre><code class="language-yaml">manifest:
   name: my_app
 features:
-  - logging: true
-  - gui: false
+  logging: true
+  gui: false
+  predictive_execution:
+    default: true
+    files: [&quot;src/predictive_execution.cpp&quot;]
 </code></pre>
 <p><strong>Generated Macros:</strong>
 - <code>FF_my_app__logging</code> (Defined as <code>1</code>)
-- <code>FF_my_app__gui</code> (Defined as <code>0</code>)</p>
+- <code>FF_my_app__gui</code> (Defined as <code>0</code>)
+- <code>FF_my_app__work_estimates</code> (Defined as <code>1</code>)</p>
 <p><strong>Usage in Code:</strong></p>
 <pre><code class="language-cpp">#if FF_my_app__logging
     log(&quot;This is logged.&quot;);
