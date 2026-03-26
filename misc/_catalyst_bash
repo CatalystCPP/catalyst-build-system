@@ -4,7 +4,7 @@ _catalyst() {
     local cur prev words cword
     _init_completion || return
 
-    local subcommands="add bench build clean doc download fetch fmt generate ide_sync init install lock pack run test tidy"
+    local subcommands="add bench build clean doc download fetch fmt generate ide_sync init install lock pack profile-ls run test tidy"
 
     if [[ $cword -eq 1 ]]; then
         COMPREPLY=($(compgen -W "$subcommands" -- "$cur"))
@@ -51,7 +51,7 @@ _catalyst() {
             ;;
         build)
             if [[ "$cur" == -* ]]; then
-                COMPREPLY=($(compgen -W "-r --regen -b --force-rebuild --force-refetch --workspace --all -P --package -p --profiles -f --features --backend" -- "$cur"))
+                COMPREPLY=($(compgen -W "-r --regen -b --force-rebuild --force-refetch --workspace --all -P --package -p --profiles -f --features --backend --watch -w" -- "$cur"))
             fi
             ;;
         clean)
@@ -128,6 +128,9 @@ _catalyst() {
             if [[ "$cur" == -* ]]; then
                 COMPREPLY=($(compgen -W "-p --profiles -s --source -t --target -G --generators" -- "$cur"))
             fi
+            ;;
+        profile-ls)
+            # no flags
             ;;
         run)
             if [[ "$cur" == -* ]]; then

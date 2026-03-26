@@ -26,6 +26,7 @@ _catalyst() {
                 'install:install the build artifacts'
                 'lock:resolve and pin dependencies'
                 'pack:assemble the local package for distribution'
+                'profile-ls:list all profiles'
                 'run:run a built executable'
                 'test:run the test executable'
                 'tidy:run linting'
@@ -75,6 +76,9 @@ _catalyst() {
                     ;;
                 pack)
                     _catalyst_pack
+                    ;;
+                profile-ls)
+                    _catalyst_profile_ls
                     ;;
                 run)
                     _catalyst_run
@@ -160,7 +164,8 @@ _catalyst_build() {
         '(-P --package)'{-P,--package}'[package]:package:' \
         '(-p --profiles)'{-p,--profiles}'[profiles]:profiles:' \
         '(-f --features)'{-f,--features}'[features]:features:' \
-        '--backend[backend]:backend:(ninja gmake cbe)'
+        '--backend[backend]:backend:(ninja gmake cbe)' \
+        '(-w --watch)'{-w,--watch}'[watch for file changes and rebuild]'
 }
 
 _catalyst_clean() {
@@ -242,6 +247,10 @@ _catalyst_pack() {
         '(-s --source)'{-s,--source}'[source]:source:_directories' \
         '(-t --target)'{-t,--target}'[target]:target:_directories' \
         '(-G --generators)'{-G,--generators}'[generators]:generators:'
+}
+
+_catalyst_profile_ls() {
+    # no flags
 }
 
 _catalyst_run() {
