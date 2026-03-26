@@ -8,6 +8,7 @@
 
 #include <CLI/CLI.hpp>
 
+#include "catalyst/subcommands/profile_ls.hpp"
 #include "catalyst/utils/log/log.hpp"
 
 namespace {
@@ -38,6 +39,7 @@ void setupCli(catalyst::CliContext &ctx) {
     tie(ctx.tidy_subc, ctx.tidy_res) = catalyst::tidy::parse(ctx.app);
     tie(ctx.pack_subc, ctx.pack_res) = catalyst::pack::parse(ctx.app);
     tie(ctx.doc_subc, ctx.doc_res) = catalyst::doc::parse(ctx.app);
+    tie(ctx.profiles_ls_subc, ctx.profile_ls_res) = catalyst::profile_ls::parse(ctx.app);
     tie(ctx.add_git_subc, ctx.add_git_res) = catalyst::add::git::parse(*ctx.add_subc);
     tie(ctx.add_system_subc, ctx.add_system_res) = catalyst::add::system::parse(*ctx.add_subc);
     tie(ctx.add_local_subc, ctx.add_local_res) = catalyst::add::local::parse(*ctx.add_subc);
@@ -62,7 +64,7 @@ namespace {
 thread_local std::vector<std::string> g_call_chain;
 
 template <typename ParseRes_T> int dispatchFN(const char *subc_name, const ParseRes_T &parse_res, auto fn) {
-    if (std::find(g_call_chain.begin(), g_call_chain.end(), subc_name) != g_call_chain.end()) {
+    if (std::ranges::find(g_call_chain, subc_name) != g_call_chain.end()) {
         std::string chain;
         for (const auto &n : g_call_chain) chain += n + " -> ";
         chain += subc_name;
@@ -73,11 +75,11 @@ template <typename ParseRes_T> int dispatchFN(const char *subc_name, const Parse
         catalyst::logger.error("maximum hook dispatch depth exceeded");
         return 1;
     }
-    
+
     struct Guard {
         ~Guard() { g_call_chain.pop_back(); }
     } guard;
-    g_call_chain.push_back(subc_name);
+    g_call_chain.emplace_back(subc_name);
 
     catalyst::logger.debug("Executing {} subcommand", subc_name);
     try {
@@ -185,6 +187,8 @@ int dispatch(const catalyst::CliContext &ctx) {
         return dispatchFN("pack", *ctx.pack_res, catalyst::pack::action);
     if (*ctx.doc_subc)
         return dispatchFN("doc", *ctx.doc_res, catalyst::doc::action);
+    if (*ctx.profiles_ls_subc)
+        return dispatchFN("profile-ls", *ctx.profile_ls_res, catalyst::profile_ls::action);
     catalyst::logger.info("run catalyst --help for info on available commands.");
     return 1;
 }

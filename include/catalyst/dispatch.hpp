@@ -1,5 +1,9 @@
 #pragma once
 
+#include <memory>
+
+#include <CLI/App.hpp>
+
 #include "catalyst/globals.hpp"
 #include "catalyst/subcommands/add.hpp"
 #include "catalyst/subcommands/bench.hpp"
@@ -15,6 +19,7 @@
 #include "catalyst/subcommands/install.hpp"
 #include "catalyst/subcommands/lock.hpp"
 #include "catalyst/subcommands/pack.hpp"
+#include "catalyst/subcommands/profile_ls.hpp"
 #include "catalyst/subcommands/run.hpp"
 #include "catalyst/subcommands/test.hpp"
 #include "catalyst/subcommands/tidy.hpp"
@@ -77,6 +82,9 @@ struct CliContext {
 
     CLI::App *doc_subc{nullptr};
     std::unique_ptr<catalyst::doc::Parse> doc_res{nullptr};
+
+    CLI::App *profiles_ls_subc{nullptr};
+    std::unique_ptr<catalyst::profile_ls::Parse> profile_ls_res{nullptr};
 
     CLI::App *add_git_subc{nullptr};
     std::unique_ptr<catalyst::add::git::Parse> add_git_res{nullptr};

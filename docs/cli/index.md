@@ -19,8 +19,8 @@ Catalyst provides a suite of subcommands to manage the entire project lifecycle.
 | [`fmt`](fmt.md) | Format source code. |
 | [`tidy`](tidy.md) | Run static analysis. |
 | [`pack`](pack.md) | Assemble the local package for distribution. |
-| [`bench`](bench.md) | Execute all benchmarks of a local package. |
 | [`doc`](doc.md) | Build a package's documentation. |
+| [`profile-ls`](profile_ls.md) | List all available profiles in the current workspace. |
 
 ## Global Options
 
