@@ -5,7 +5,7 @@ common:
   manifest:
     name: catalyst
     type: BINARY
-    version: 1.1.0
+    version: 1.2.0
     description: Catalyst is a Declarative Modern C++ Package Manager
     provides: catalyst
     tooling:
