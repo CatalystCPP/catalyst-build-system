@@ -3,8 +3,10 @@
 #include <algorithm>
 #include <format>
 #include <functional>
+#include <string>
 #include <tuple>
 #include <utility>
+#include <vector>
 
 #include <CLI/CLI.hpp>
 
@@ -61,7 +63,9 @@ void setupCli(catalyst::CliContext &ctx) {
 namespace catalyst {
 
 namespace {
+// NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
 thread_local std::vector<std::string> g_call_chain;
+// NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
 template <typename ParseRes_T> int dispatchFN(const char *subc_name, const ParseRes_T &parse_res, auto fn) {
     if (std::ranges::find(g_call_chain, subc_name) != g_call_chain.end()) {
@@ -122,7 +126,7 @@ std::pair<int, bool> parseCli(const std::string &args, catalyst::CliContext &ctx
     try {
         ctx.app.parse(args, true);
     } catch (const CLI::ParseError &e) {
-        if (args.find("--help") == std::string::npos && args.find("-h") == std::string::npos) {
+        if (!args.contains("--help") && !args.contains("-h")) {
             catalyst::logger.error("Failed to parse provided arguments: {}", args);
             return {ctx.app.exit(e), true};
         }
