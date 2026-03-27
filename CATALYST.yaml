@@ -6,13 +6,14 @@ common:
     name: catalyst
     type: BINARY
     version: 1.2.0
-    description: Catalyst is a Declarative Modern C++ Package Manager
+    description: Catalyst is a Declarative C++ Package Manager
     provides: catalyst
     tooling:
       CC: clang
       CXX: clang++
       CCFLAGS: --std=c++23 -Wall -Wextra -Wpedantic
       CXXFLAGS: --std=c++23 -Wall -Wextra -Wpedantic
+      LDFLAGS: -static
       FMT: clang-format
       doc:
         engine: doxygen
