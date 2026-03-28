@@ -1,6 +1,7 @@
 #include <sys/wait.h>
 
 #include <algorithm>
+#include <cstdint>
 #include <expected>
 #include <filesystem>
 #include <fstream>
@@ -145,6 +146,17 @@ std::expected<void, std::string> action(const Parse &parse_args) {
 }
 
 namespace {
+constexpr uint64_t fnv1aHash(const std::string &text) {
+    constexpr uint64_t FNV1A_BIAS = 0xcbf29ce484222325ULL;
+    constexpr uint64_t FNV1A_PRIME = 0x100000001b3ULL;
+    uint64_t hash = FNV1A_BIAS;
+    for (char c : text) {
+        hash ^= static_cast<uint64_t>(c);
+        hash *= FNV1A_PRIME;
+    }
+    return hash;
+}
+
 std::vector<std::string> intermediateTargets(catalyst::generate::buildwriters::BaseWriter &writer,
                                              const std::unordered_set<std::filesystem::path> &source_set) {
     catalyst::logger.debug("Generate subcommand invoked.");
@@ -153,10 +165,8 @@ std::vector<std::string> intermediateTargets(catalyst::generate::buildwriters::B
     std::vector<std::string> object_files;
     for (const auto &src : source_set) {
         fs::path relative_src_path = fs::relative(src, current_dir);
-        std::string obj_name = relative_src_path.string();
-        std::ranges::replace(obj_name, '/', '_');
-        std::ranges::replace(obj_name, '\\', '_'); // For Windows paths
-        obj_name = obj_name.substr(0, obj_name.find_last_of('.')) + ".o";
+        std::string obj_name =
+            std::format("{}_{:016x}.o", relative_src_path.stem().string(), fnv1aHash(relative_src_path.string()));
         object_files.push_back((fs::path{"obj"} / obj_name).string());
         void(writer.addBuild({object_files.back()},
                              ((src.extension() == ".c" || src.extension() == ".cu") ? "cc_compile" : "cxx_compile"),
