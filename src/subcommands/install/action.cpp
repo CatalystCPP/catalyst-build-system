@@ -33,7 +33,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         return std::unexpected(e.what());
     }
 
-    fs::path build_dir = config.getString("manifest.dirs.build").value_or("build");
+    fs::path build_dir = config.getBuildDir();
 
     if (!fs::exists(build_dir)) {
         return std::unexpected(

@@ -27,7 +27,8 @@ std::expected<YAML::Node, std::string> profileComposition(const std::vector<std:
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);
 std::expected<void, std::string> action(const Parse &);
 
-std::expected<std::string, std::string> libPath(const YAML::Node &profile);
+std::expected<std::string, std::string> libPath(const YAML::Node &profile,
+                                                 const std::vector<std::string> &profiles);
 std::expected<FindRes, std::string> findDep(const std::string &build_dir, const YAML::Node &dep);
 std::expected<FindRes, std::string> findLocal(const YAML::Node &dep);
 std::expected<FindRes, std::string> findSystem(const YAML::Node &dep);

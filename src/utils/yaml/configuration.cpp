@@ -370,6 +370,7 @@ Configuration::Configuration(const std::vector<std::string> &profiles, const std
         merge(root, profile_name, root_dir);
     }
 
+    this->profile_names = profile_names;
     catalyst::logger.debug("Profile composition finished.");
 }
 
@@ -437,4 +438,11 @@ std::optional<std::vector<std::string>> Configuration::getStringVector(const std
     } catch (const YAML::Exception &) {
         return std::nullopt;
     }
+}
+
+std::filesystem::path Configuration::getBuildDir() const {
+    std::string base = getString("manifest.dirs.build").value_or("build");
+    if (base.empty())
+        base = "build";
+    return multiplexedBuildDir(base, profile_names);
 }

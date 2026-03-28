@@ -10,6 +10,7 @@
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/yaml/configuration.hpp"
 
 namespace catalyst::clean {
 namespace fs = std::filesystem;
@@ -67,7 +68,9 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         return res;
     }
 
-    auto build_dir = profile_comp["manifest"]["dirs"]["build"].as<std::string>();
+    auto build_dir = catalyst::utils::yaml::multiplexedBuildDir(
+                         profile_comp["manifest"]["dirs"]["build"].as<std::string>(), profiles)
+                         .string();
     auto generator = profile_comp["meta"]["generator"].as<std::string>();
     catalyst::logger.debug("Cleaning build directory: {}", build_dir);
     if (generator == "ninja") {
