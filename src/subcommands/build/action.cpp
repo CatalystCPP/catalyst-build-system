@@ -112,7 +112,7 @@ std::vector<WorkspaceMember> buildOrderTopSort(const Workspace &ws) {
 
 bool depMissing(const utils::yaml::Configuration &config) {
     catalyst::logger.debug("Checking for missing dependencies.");
-    fs::path build_dir = config.getString("manifest.dirs.build").value_or("build");
+    fs::path build_dir = config.getBuildDir();
     if (!config.has("dependencies")) {
         catalyst::logger.debug("No dependencies declared, skipping check.");
         return false;
@@ -231,7 +231,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
             return res;
         }
 
-        fs::path build_dir = config.getString("manifest.dirs.build").value_or("build");
+        fs::path build_dir = config.getBuildDir();
         std::string generator = config.getString("meta.generator").value_or("cbe");
         std::string build_filename = (generator == "ninja") ? "build.ninja" : "catalyst.build";
 

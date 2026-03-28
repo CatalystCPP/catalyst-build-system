@@ -13,6 +13,7 @@
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/subcommands/bench.hpp"
+#include "catalyst/utils/yaml/configuration.hpp"
 
 namespace fs = std::filesystem;
 
@@ -99,7 +100,9 @@ std::expected<void, std::string> action(const Parse &args) {
     if (!profile_comp["manifest"]["dirs"]["build"]) {
         return std::unexpected("build directory is not defined in common+benchmark");
     }
-    build_dir = profile_comp["manifest"]["dirs"]["build"].as<std::string>();
+    build_dir = catalyst::utils::yaml::multiplexedBuildDir(
+                    profile_comp["manifest"]["dirs"]["build"].as<std::string>(), profiles)
+                    .string();
 
     if (profile_comp["manifest"]["provides"] && profile_comp["manifest"]["provides"].as<std::string>() != "") {
         exe = profile_comp["manifest"]["provides"].as<std::string>();
@@ -113,7 +116,7 @@ std::expected<void, std::string> action(const Parse &args) {
     fs::path exe_path = fs::absolute(fs::path(std::format("{}/{}", build_dir, exe)));
     std::string command = commandStr(exe_path, args.params);
 
-    std::expected<std::string, std::string> lib_path_res = catalyst::generate::libPath(profile_comp);
+    std::expected<std::string, std::string> lib_path_res = catalyst::generate::libPath(profile_comp, profiles);
     if (!lib_path_res) {
         return std::unexpected("Failed to generate LD_LIBRARY_PATH");
     }

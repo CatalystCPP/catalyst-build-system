@@ -193,7 +193,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         }
     }
 
-    std::string build_dir = config.getString("manifest.dirs.build").value_or("build");
+    std::string build_dir = config.getBuildDir().string();
     if (auto deps = config.getRoot()["dependencies"]; deps && deps.IsSequence()) {
         for (int ii = 0; auto dep : deps) {
             if (!dep["name"]) {

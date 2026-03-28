@@ -13,6 +13,7 @@
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/subcommands/test.hpp"
+#include "catalyst/utils/yaml/configuration.hpp"
 
 namespace fs = std::filesystem;
 
@@ -99,7 +100,9 @@ std::expected<void, std::string> action(const Parse &args) {
     if (!profile_comp["manifest"]["dirs"]["build"]) {
         return std::unexpected("build directory is not defined");
     }
-    build_dir = profile_comp["manifest"]["dirs"]["build"].as<std::string>();
+    build_dir = catalyst::utils::yaml::multiplexedBuildDir(
+                    profile_comp["manifest"]["dirs"]["build"].as<std::string>(), profiles)
+                    .string();
 
     if (profile_comp["manifest"]["provides"] && profile_comp["manifest"]["provides"].as<std::string>() != "") {
         exe = profile_comp["manifest"]["provides"].as<std::string>();

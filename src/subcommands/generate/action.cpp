@@ -79,7 +79,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     std::unordered_set<std::filesystem::path> source_set = source_set_res.value();
     featureFilter(source_set, config, parse_args.enabled_features);
 
-    fs::path build_dir = config.getString("manifest.dirs.build").value();
+    fs::path build_dir = config.getBuildDir();
     fs::path obj_dir = build_dir / "obj";
 
     catalyst::logger.debug("Creating object directory: {}", obj_dir.string());
@@ -219,7 +219,7 @@ void writeVariables(const catalyst::utils::yaml::Configuration &config,
                     const std::vector<std::string> &enabled_features) {
 
     catalyst::logger.debug("Writing variables to build file.");
-    std::string build_dir_str = config.getString("manifest.dirs.build").value_or("build");
+    std::string build_dir_str = config.getBuildDir().string();
 
     std::string cxxflags =
         std::format(R"({} -DCATALYST_BUILD_SYS=1 -DCATALYST_PROJ_NAME="{}" -DCATALYST_PROJ_VER="{}")",

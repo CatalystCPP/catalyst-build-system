@@ -5,6 +5,7 @@
 #include "catalyst/dir_guard.hpp"
 #include "catalyst/utils/log/log.hpp"
 #include "catalyst/subcommands/generate.hpp"
+#include "catalyst/utils/yaml/configuration.hpp"
 
 #include "yaml-cpp/node/node.h"
 
@@ -56,7 +57,8 @@ std::expected<FindRes, std::string> findLocal(const YAML::Node &dep) {
     // Add library directory
     std::string library_path;
     if (auto build_dir_node = profile["manifest"]["dirs"]["build"]) {
-        auto build_dir = build_dir_node.as<std::string>();
+        fs::path build_dir = catalyst::utils::yaml::multiplexedBuildDir(
+            build_dir_node.as<std::string>(), profiles);
         auto lib_path = fs::absolute(dep_path / build_dir);
         catalyst::logger.debug("Adding library path: {}", lib_path.string());
         library_path += std::format(" -L{}", lib_path.string());
