@@ -11,7 +11,16 @@ enum class Generator : std::uint8_t {
     TGZ,
     ZIP,
     DEB,
-    RPM
+    RPM,
+    NSIS,
+    WIX,
+    DMG,
+    STGZ,
+    FREEBSD,
+    APK,
+    SEVEN_ZIP,
+    TXZ,
+    EXTERNAL
 };
 
 struct Parse {

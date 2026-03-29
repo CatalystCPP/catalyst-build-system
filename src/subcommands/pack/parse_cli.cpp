@@ -21,7 +21,16 @@ std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app) {
         {"TGZ", Generator::TGZ},
         {"ZIP", Generator::ZIP},
         {"DEB", Generator::DEB},
-        {"RPM", Generator::RPM}
+        {"RPM", Generator::RPM},
+        {"NSIS", Generator::NSIS},
+        {"WIX", Generator::WIX},
+        {"DMG", Generator::DMG},
+        {"STGZ", Generator::STGZ},
+        {"FREEBSD", Generator::FREEBSD},
+        {"APK", Generator::APK},
+        {"7Z", Generator::SEVEN_ZIP},
+        {"TXZ", Generator::TXZ},
+        {"EXTERNAL", Generator::EXTERNAL}
     };
     pack->add_option("-G,--generators", ret->generators, "CPack generators to use")
         ->transform(CLI::CheckedTransformer(gen_map, CLI::ignore_case));

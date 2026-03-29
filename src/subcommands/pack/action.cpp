@@ -15,6 +15,31 @@
 namespace catalyst::pack {
 namespace fs = std::filesystem;
 
+namespace {
+std::string escape_cmake(const std::string& str) {
+    std::string res;
+    for (char c : str) {
+        if (c == '\\' || c == '"') {
+            res += '\\';
+        }
+        res += c;
+    }
+    return res;
+}
+
+struct CleanupGuard {
+    std::vector<fs::path> paths;
+    ~CleanupGuard() {
+        for (const auto& p : paths) {
+            std::error_code ec;
+            if (fs::exists(p, ec)) {
+                fs::remove_all(p, ec);
+            }
+        }
+    }
+};
+} // namespace
+
 std::expected<void, std::string> action(const Parse &parse_args) {
     catalyst::logger.debug("Pack subcommand invoked.");
 
@@ -46,9 +71,13 @@ std::expected<void, std::string> action(const Parse &parse_args) {
 
     // 1. Stage the installation files
     fs::path staging_dir = build_dir / "pack_stage";
-    if (fs::exists(staging_dir)) {
-        fs::remove_all(staging_dir);
+    std::error_code ec;
+    if (fs::exists(staging_dir, ec)) {
+        fs::remove_all(staging_dir, ec);
     }
+
+    CleanupGuard cleanup_guard;
+    cleanup_guard.paths.push_back(staging_dir);
 
     catalyst::install::Parse install_args;
     install_args.profiles = parse_args.profiles;
@@ -67,22 +96,35 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     std::string pkg_contact = config.getString("manifest.maintainer").value_or(
         config.getString("manifest.author").value_or("Unknown <unknown@example.com>")
     );
+    std::string pkg_vendor = config.getString("manifest.vendor").value_or("Catalyst");
 
     // 3. Generate CPackConfig.cmake
     fs::path cpack_config_path = build_dir / "CPackConfig.cmake";
+    cleanup_guard.paths.push_back(cpack_config_path);
+
     {
         std::ofstream cpack_out(cpack_config_path);
         if (!cpack_out) {
             return std::unexpected("Failed to open CPackConfig.cmake for writing.");
         }
-        cpack_out << std::format("set(CPACK_PACKAGE_NAME \"{}\")\n", pkg_name);
-        cpack_out << std::format("set(CPACK_PACKAGE_VERSION \"{}\")\n", pkg_version);
-        cpack_out << std::format("set(CPACK_PACKAGE_FILE_NAME \"{}-{}\")\n", pkg_name, pkg_version);
-        cpack_out << std::format("set(CPACK_PACKAGE_DESCRIPTION_SUMMARY \"{}\")\n", pkg_description);
-        cpack_out << std::format("set(CPACK_PACKAGE_DESCRIPTION \"{}\")\n", pkg_description);
-        cpack_out << std::format("set(CPACK_PACKAGE_CONTACT \"{}\")\n", pkg_contact);
+        cpack_out << std::format("set(CPACK_PACKAGE_NAME \"{}\")\n", escape_cmake(pkg_name));
+        cpack_out << std::format("set(CPACK_PACKAGE_VERSION \"{}\")\n", escape_cmake(pkg_version));
+        cpack_out << std::format("set(CPACK_PACKAGE_FILE_NAME \"{}-{}\")\n", escape_cmake(pkg_name), escape_cmake(pkg_version));
+        cpack_out << std::format("set(CPACK_PACKAGE_DESCRIPTION_SUMMARY \"{}\")\n", escape_cmake(pkg_description));
+        cpack_out << std::format("set(CPACK_PACKAGE_DESCRIPTION \"{}\")\n", escape_cmake(pkg_description));
+        cpack_out << std::format("set(CPACK_PACKAGE_CONTACT \"{}\")\n", escape_cmake(pkg_contact));
+        cpack_out << std::format("set(CPACK_PACKAGE_VENDOR \"{}\")\n", escape_cmake(pkg_vendor));
+
+        if (auto license = config.getString("manifest.license_file"); license) {
+            cpack_out << std::format("set(CPACK_RESOURCE_FILE_LICENSE \"{}\")\n", escape_cmake(fs::absolute(*license).generic_string()));
+        }
+
+        if (auto readme = config.getString("manifest.readme_file"); readme) {
+            cpack_out << std::format("set(CPACK_RESOURCE_FILE_README \"{}\")\n", escape_cmake(fs::absolute(*readme).generic_string()));
+        }
+
         cpack_out << "set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)\n";
-        cpack_out << std::format("set(CPACK_INSTALLED_DIRECTORIES \"{}\" \".\")\n", fs::absolute(staging_dir).string());
+        cpack_out << std::format("set(CPACK_INSTALLED_DIRECTORIES \"{}\" \".\")\n", escape_cmake(fs::absolute(staging_dir).generic_string()));
     }
 
     // 4. Run cpack
@@ -95,6 +137,15 @@ std::expected<void, std::string> action(const Parse &parse_args) {
                 case Generator::ZIP: return "ZIP";
                 case Generator::DEB: return "DEB";
                 case Generator::RPM: return "RPM";
+                case Generator::NSIS: return "NSIS";
+                case Generator::WIX: return "WIX";
+                case Generator::DMG: return "DragNDrop";
+                case Generator::STGZ: return "STGZ";
+                case Generator::FREEBSD: return "FREEBSD";
+                case Generator::APK: return "APK";
+                case Generator::SEVEN_ZIP: return "7Z";
+                case Generator::TXZ: return "TXZ";
+                case Generator::EXTERNAL: return "External";
                 default: return "TGZ";
             }
         };
@@ -121,25 +172,6 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     } else {
         if (int code = res.value().get(); code != 0) {
             return std::unexpected(std::format("cpack failed with exit code {}", code));
-        }
-    }
-
-    // 5. Cleanup
-    catalyst::logger.debug("Cleaning up staging directory: {}", staging_dir.string());
-    if (fs::exists(staging_dir)) {
-        fs::remove_all(staging_dir);
-    }
-    if (fs::exists(cpack_config_path)) {
-        fs::remove(cpack_config_path);
-    }
-
-    // 6. Normalize package permissions to 644
-    for (const auto& entry : fs::directory_iterator(target_path)) {
-        if (entry.is_regular_file()) {
-            fs::permissions(entry.path(), 
-                            fs::perms::owner_read | fs::perms::owner_write | 
-                            fs::perms::group_read | fs::perms::others_read, 
-                            fs::perm_options::replace);
         }
     }
 
