@@ -168,7 +168,7 @@ void validateProfileKeys(const YAML::Node &profile, const std::string &profile_n
     }
 }
 
-void merge_helper(YAML::Node &composite, const std::string &new_profile_name, const YAML::Node &new_profile) {
+void mergeHelper(YAML::Node &composite, const std::string &new_profile_name, const YAML::Node &new_profile) {
     validateProfileKeys(new_profile, new_profile_name);
 
     YAML::Node defaults = getDefaultConfiguration();
@@ -328,7 +328,7 @@ void merge(YAML::Node &composite, const std::string &profile_name, const fs::pat
     if (fs::exists(root_dir / "CATALYST.yaml")) {
         if (YAML::Node catalyst_yaml = YAML::LoadFile(root_dir / "CATALYST.yaml"); catalyst_yaml[profile_name]) {
             catalyst::logger.debug("Found profile '{}' in CATALYST.yaml", profile_name);
-            merge_helper(composite, profile_name, catalyst_yaml[profile_name]);
+            mergeHelper(composite, profile_name, catalyst_yaml[profile_name]);
             return;
         }
     }
@@ -344,27 +344,23 @@ void merge(YAML::Node &composite, const std::string &profile_name, const fs::pat
         catalyst::logger.error("Profile {} not found in {} or CATALYST.yaml", profile_name, profile_path.string());
         throw std::exception();
     }
-    merge_helper(composite, profile_name, YAML::LoadFile(profile_path));
+    mergeHelper(composite, profile_name, YAML::LoadFile(profile_path));
 }
 
 } // namespace
 
 Configuration::Configuration(const std::vector<std::string> &profiles, const std::filesystem::path &root_dir) {
-    std::vector profile_names = profiles;
+    std::vector<std::string> profile_names;
+    for (const auto &p : profiles) {
+        if (std::ranges::find(profile_names, p) == profile_names.end()) {
+            profile_names.push_back(p);
+        } else {
+            catalyst::logger.warn("Duplicate profile '{}' ignored during composition.", p);
+        }
+    }
     catalyst::logger.debug("Composing profiles: {}.", profile_names);
 
     root = getDefaultConfiguration();
-
-    // NOTE: PERF: This is possibly more performant than creating a temporary std::unordered_set
-    for (size_t ii = 0; ii < profiles.size(); ++ii) {
-        for (size_t jj = 0; jj < ii; ++jj) {
-            if (profiles[jj] == profiles[ii]) {
-                catalyst::logger.error(
-                    "Duplicate profiles: {0} at index {1} and {0} and index {2}", profiles[ii], jj, ii);
-                throw std::exception();
-            }
-        }
-    }
 
     for (const auto &profile_name : profile_names) {
         merge(root, profile_name, root_dir);

@@ -67,6 +67,13 @@ namespace {
 thread_local std::vector<std::string> g_call_chain;
 // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
+void injectCommon(std::vector<std::string> &profiles) {
+    if (std::getenv("CATALYST_MACHINE")) return;
+    if (std::ranges::find(profiles, "common") == profiles.end()) {
+        profiles.insert(profiles.begin(), "common");
+    }
+}
+
 template <typename ParseRes_T> int dispatchFN(const char *subc_name, const ParseRes_T &parse_res, auto fn) {
     if (std::ranges::find(g_call_chain, subc_name) != g_call_chain.end()) {
         std::string chain;
@@ -159,36 +166,56 @@ int dispatch(const catalyst::CliContext &ctx) {
             return dispatchFN("add vcpkg", *ctx.add_vcpkg_res, catalyst::add::vcpkg::action);
         return 1;
     }
-    if (*ctx.build_subc)
+    if (*ctx.build_subc) {
+        injectCommon(ctx.build_res->profiles);
         return dispatchFN("build", *ctx.build_res, catalyst::build::action);
-    if (*ctx.clean_subc)
+    }
+    if (*ctx.clean_subc) {
+        injectCommon(ctx.clean_res->profiles);
         return dispatchFN("clean", *ctx.clean_res, catalyst::clean::action);
-    if (*ctx.download_subc)
+    }
+    if (*ctx.download_subc) {
+        injectCommon(ctx.download_res->profiles);
         return dispatchFN("download", *ctx.download_res, catalyst::download::action);
-    if (*ctx.fetch_subc)
+    }
+    if (*ctx.fetch_subc) {
+        injectCommon(ctx.fetch_res->profiles);
         return dispatchFN("fetch", *ctx.fetch_res, catalyst::fetch::action);
+    }
     if (*ctx.fmt_subc)
         return dispatchFN("fmt", *ctx.fmt_res, catalyst::fmt::action);
-    if (*ctx.generate_subc)
+    if (*ctx.generate_subc) {
+        injectCommon(ctx.generate_res->profiles);
         return dispatchFN("generate", *ctx.generate_res, catalyst::generate::action);
-    if (*ctx.ide_sync_subc)
+    }
+    if (*ctx.ide_sync_subc) {
+        injectCommon(ctx.ide_sync_res->profiles);
         return dispatchFN("ide_sync", *ctx.ide_sync_res, catalyst::ide_sync::action);
+    }
     if (*ctx.init_subc)
         return dispatchFN("init", *ctx.init_res, catalyst::init::action);
-    if (*ctx.install_subc)
+    if (*ctx.install_subc) {
+        injectCommon(ctx.install_res->profiles);
         return dispatchFN("install", *ctx.install_res, catalyst::install::action);
-    if (*ctx.lock_subc)
+    }
+    if (*ctx.lock_subc) {
+        injectCommon(ctx.lock_res->profiles);
         return dispatchFN("lock", *ctx.lock_res, catalyst::lock::action);
+    }
     if (*ctx.run_subc)
         return dispatchFN("run", *ctx.run_res, catalyst::run::action);
     if (*ctx.test_subc)
         return dispatchFN("test", *ctx.test_res, catalyst::test::action);
     if (*ctx.bench_subc)
         return dispatchFN("bench", *ctx.bench_res, catalyst::bench::action);
-    if (*ctx.tidy_subc)
+    if (*ctx.tidy_subc) {
+        injectCommon(ctx.tidy_res->profiles);
         return dispatchFN("tidy", *ctx.tidy_res, catalyst::tidy::action);
-    if (*ctx.pack_subc)
+    }
+    if (*ctx.pack_subc) {
+        injectCommon(ctx.pack_res->profiles);
         return dispatchFN("pack", *ctx.pack_res, catalyst::pack::action);
+    }
     if (*ctx.doc_subc)
         return dispatchFN("doc", *ctx.doc_res, catalyst::doc::action);
     if (*ctx.profiles_ls_subc)
