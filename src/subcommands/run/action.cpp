@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cctype>
 #include <expected>
 #include <filesystem>
@@ -54,7 +55,7 @@ std::expected<void, std::string> action(const Parse &args) {
     std::string build_dir;
     auto str_to_lower = [](std::string &input) -> void {
         auto lower = [](const char c) -> char { return static_cast<char>(std::tolower(c)); };
-        std::transform(input.begin(), input.end(), input.begin(), lower);
+        std::ranges::transform(input, input.begin(), lower);
         return;
     };
     std::string target_type = profile_comp["manifest"]["type"].Scalar();
@@ -68,12 +69,12 @@ std::expected<void, std::string> action(const Parse &args) {
             "Profile: {} defines 'manifest.type' = {}. Expected 'manifest.type' = BINARY", args.profile, target_type));
     }
 
-    if (!profile_comp["manifest"]["dirs"]["build"]) {
-        return std::unexpected(std::format("Build directory is not defined in profile: {}.", args.profile));
+    std::string build_dir_base = "build";
+    if (profile_comp["manifest"]["dirs"]["build"]) {
+        build_dir_base = profile_comp["manifest"]["dirs"]["build"].as<std::string>();
+        if (build_dir_base.empty()) build_dir_base = "build";
     }
-    build_dir = catalyst::utils::yaml::multiplexedBuildDir(
-                    profile_comp["manifest"]["dirs"]["build"].as<std::string>(), profiles)
-                    .string();
+    build_dir = catalyst::utils::yaml::multiplexedBuildDir(build_dir_base, profiles).string();
 
     if (profile_comp["manifest"]["provides"] && profile_comp["manifest"]["provides"].as<std::string>() != "") {
         exe = profile_comp["manifest"]["provides"].as<std::string>();
