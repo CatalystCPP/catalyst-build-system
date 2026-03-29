@@ -9,10 +9,10 @@
       
       
       
-        <link rel="prev" href="../environment-variables/">
+        <link rel="prev" href="../dependencies/">
       
       
-        <link rel="next" href="../preprocessor/">
+        <link rel="next" href="../hooks/">
       
       
         
@@ -23,7 +23,7 @@
     
     
       
-        <title>Hooks - Catalyst Build System Documentation</title>
+        <title>Environment Variables - Catalyst Build System Documentation</title>
       
     
     
@@ -64,7 +64,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#hooks" class="md-skip">
+        <a href="#environment-variables" class="md-skip">
           Skip to content
         </a>
       
@@ -100,7 +100,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Hooks
+              Environment Variables
             
           </span>
         </div>
@@ -1047,34 +1047,6 @@
                 
   
   
-  
-  
-    <li class="md-nav__item">
-      <a href="../environment-variables/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Environment Variables
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
     
   
   
@@ -1094,7 +1066,7 @@
   <span class="md-ellipsis">
     
   
-    Hooks
+    Environment Variables
   
 
     
@@ -1112,7 +1084,7 @@
   <span class="md-ellipsis">
     
   
-    Hooks
+    Environment Variables
   
 
     
@@ -1138,163 +1110,24 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#configuring-hooks" class="md-nav__link">
+  <a href="#catalyst_machine" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Configuring Hooks
+        CATALYST_MACHINE
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Configuring Hooks">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#hook-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Hook Types
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#available-hooks" class="md-nav__link">
+  <a href="#catalyst_visited" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Available Hooks
+        CATALYST_VISITED
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Available Hooks">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#global-hooks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Global Hooks
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#subcommand-hooks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Subcommand Hooks
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Subcommand Hooks">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#generate" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        generate
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#fetch" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        fetch
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#clean" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        clean
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#run" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        run
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#test" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        test
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#bench" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        bench
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#target-specific-hooks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Target-Specific Hooks
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#file-specific-hooks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        File-Specific Hooks
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1302,6 +1135,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../hooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hooks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1425,163 +1286,24 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#configuring-hooks" class="md-nav__link">
+  <a href="#catalyst_machine" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Configuring Hooks
+        CATALYST_MACHINE
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Configuring Hooks">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#hook-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Hook Types
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#available-hooks" class="md-nav__link">
+  <a href="#catalyst_visited" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Available Hooks
+        CATALYST_VISITED
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Available Hooks">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#global-hooks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Global Hooks
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#subcommand-hooks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Subcommand Hooks
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Subcommand Hooks">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#generate" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        generate
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#fetch" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        fetch
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#clean" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        clean
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#run" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        run
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#test" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        test
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#bench" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        bench
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#target-specific-hooks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Target-Specific Hooks
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#file-specific-hooks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        File-Specific Hooks
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1602,219 +1324,22 @@
 
 
 
-<h1 id="hooks">Hooks</h1>
-<p>Catalyst provides a hook system that allows you to execute custom commands or scripts at various points in the build process. This enables you to extend and customize your build workflow to fit your project's specific needs.</p>
-<h2 id="configuring-hooks">Configuring Hooks</h2>
-<p>You can define hooks in your <code>catalyst.yaml</code> or any profile-specific <code>catalyst_*.yaml</code> file. Hooks are defined under the <code>hooks</code> key. You can specify a single command or a list of commands to execute for each hook.</p>
-<h3 id="hook-types">Hook Types</h3>
-<p>Catalyst supports three types of hooks:</p>
-<ol>
-<li><strong><code>command</code></strong>: Executes a standard shell command (via <code>sh -c</code> or <code>cmd /c</code>).</li>
-<li><strong><code>script</code></strong>: Executes a script file (via <code>sh -c</code> or <code>cmd /c</code>).</li>
-<li><strong><code>catalyst</code></strong>: Dispatches a Catalyst subcommand internally. This is preferred for invoking other Catalyst commands (like <code>test</code> after a <code>build</code>) because it avoids shelling out to a new process, shares the current configuration context, and enforces recursion protection (depth limit of 4).</li>
-</ol>
-<p>The <code>catalyst</code> hook type supports both a short string form and a structured map form:</p>
-<p><strong>Example <code>catalyst.yaml</code>:</strong></p>
-<pre><code class="language-yaml">hooks:
-  pre-build:
-    - command: &quot;echo 'Starting build...'&quot;
-    - catalyst: &quot;test --help&quot; # Short string form
-  post-build:
-    - command: &quot;echo 'Build finished!'&quot;
-    - script: &quot;scripts/notify.sh&quot;
-    - catalyst:               # Structured map form
-        subcommand: clean
-        args: [&quot;--workspace&quot;]
-  on-build-failure:
-    - command: &quot;echo 'Build failed!'&quot;
-
-</code></pre>
-<h2 id="available-hooks">Available Hooks</h2>
-<p>Here is a comprehensive list of the available hooks in Catalyst, organized by when they are triggered.</p>
-<h3 id="global-hooks">Global Hooks</h3>
-<p>These hooks are triggered for every build and provide a way to execute commands at the very beginning and end of the build process.</p>
-<table>
-<thead>
-<tr>
-<th>Hook</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>pre-build</code></td>
-<td>Runs once before the entire build process begins (before <code>generate</code>, <code>fetch</code>, and <code>build</code>).</td>
-</tr>
-<tr>
-<td><code>post-build</code></td>
-<td>Runs once after the entire build process has successfully completed.</td>
-</tr>
-<tr>
-<td><code>on-build-failure</code></td>
-<td>Runs if the build fails at any stage. This is useful for logging, sending notifications, or reverting changes.</td>
-</tr>
-</tbody>
-</table>
-<h3 id="subcommand-hooks">Subcommand Hooks</h3>
-<p>These hooks are specific to individual Catalyst subcommands, allowing you to customize the behavior of each command.</p>
-<h4 id="generate"><code>generate</code></h4>
-<table>
-<thead>
-<tr>
-<th>Hook</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>pre-generate</code></td>
-<td>Runs before the build file is generated.</td>
-</tr>
-<tr>
-<td><code>post-generate</code></td>
-<td>Runs after the build file is generated.</td>
-</tr>
-</tbody>
-</table>
-<h4 id="fetch"><code>fetch</code></h4>
-<table>
-<thead>
-<tr>
-<th>Hook</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>pre-fetch</code></td>
-<td>Runs before any dependencies are fetched.</td>
-</tr>
-<tr>
-<td><code>post-fetch</code></td>
-<td>Runs after all dependencies have been fetched.</td>
-</tr>
-</tbody>
-</table>
-<h4 id="clean"><code>clean</code></h4>
-<table>
-<thead>
-<tr>
-<th>Hook</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>pre-clean</code></td>
-<td>Runs before the project is cleaned.</td>
-</tr>
-<tr>
-<td><code>post-clean</code></td>
-<td>Runs after the project has been cleaned.</td>
-</tr>
-</tbody>
-</table>
-<h4 id="run"><code>run</code></h4>
-<table>
-<thead>
-<tr>
-<th>Hook</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>pre-run</code></td>
-<td>Runs before the target is executed.</td>
-</tr>
-<tr>
-<td><code>post-run</code></td>
-<td>Runs after the target has been executed.</td>
-</tr>
-</tbody>
-</table>
-<h4 id="test"><code>test</code></h4>
-<table>
-<thead>
-<tr>
-<th>Hook</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>pre-test</code></td>
-<td>Runs before the tests are executed.</td>
-</tr>
-<tr>
-<td><code>post-test</code></td>
-<td>Runs after the tests have been executed.</td>
-</tr>
-</tbody>
-</table>
-<h4 id="bench"><code>bench</code></h4>
-<table>
-<thead>
-<tr>
-<th>Hook</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>pre-bench</code></td>
-<td>Runs before the benchmarks are executed.</td>
-</tr>
-<tr>
-<td><code>post-bench</code></td>
-<td>Runs after the benchmarks have been executed.</td>
-</tr>
-</tbody>
-</table>
-<h3 id="target-specific-hooks">Target-Specific Hooks</h3>
+<h1 id="environment-variables">Environment Variables</h1>
+<p>Catalyst reads and sets a small number of environment variables at runtime. Most are internal and managed automatically; they are documented here for transparency and advanced use.</p>
+<h2 id="catalyst_machine"><code>CATALYST_MACHINE</code></h2>
+<p><strong>Type:</strong> Flag (any non-empty value is truthy)</p>
+<p>Set by Catalyst when it spawns a child Catalyst process to fetch a local dependency. When present, Catalyst skips automatically prepending the <code>common</code> profile to the invocation.</p>
+<p>This prevents the <code>common</code> profile from being injected multiple times as dependency fetches recurse into nested projects.</p>
 <blockquote>
-<p>[!NOTE]
-Not Yet Implemented.</p>
+<p><strong>Note:</strong> This variable is intended for internal use. Setting it manually will suppress <code>common</code> profile injection for that invocation.</p>
 </blockquote>
-<p>These hooks can be defined within a specific build target's configuration, allowing for fine-grained control over the build process for individual targets.</p>
-<table>
-<thead>
-<tr>
-<th>Hook</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>pre-link</code></td>
-<td>Runs before the target is linked. This can be useful for pre-link steps.</td>
-</tr>
-<tr>
-<td><code>post-link</code></td>
-<td>Runs after the target is linked. This can be useful for post-link steps.</td>
-</tr>
-</tbody>
-</table>
-<h3 id="file-specific-hooks">File-Specific Hooks</h3>
+<hr />
+<h2 id="catalyst_visited"><code>CATALYST_VISITED</code></h2>
+<p><strong>Type:</strong> Colon-separated list of absolute paths</p>
+<p>Tracks which local dependency paths have already been visited during a recursive <code>fetch</code> operation. Set and propagated by Catalyst across child processes to detect and break dependency cycles.</p>
 <blockquote>
-<p>[!NOTE]
-Not Yet Implemented.</p>
+<p><strong>Note:</strong> This variable is intended for internal use. Do not set it manually.</p>
 </blockquote>
-<p>These hooks are triggered when a specific file is processed, allowing for custom actions on a per-file basis.</p>
-<table>
-<thead>
-<tr>
-<th>Hook</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>on-compile</code></td>
-<td>Runs when a specific source file is compiled. This can be useful for custom pre-processing or code generation.</td>
-</tr>
-</tbody>
-</table>
 
 
 
