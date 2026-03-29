@@ -16,7 +16,7 @@ std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app) {
         ->default_val(std::filesystem::current_path());
     pack->add_option("-t,--target", ret->target_path, "the output directory for the package")
         ->default_val(std::filesystem::path{"build/pack"});
-    
+
     std::map<std::string, Generator> gen_map{
         {"TGZ", Generator::TGZ},
         {"ZIP", Generator::ZIP},
@@ -32,9 +32,9 @@ std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app) {
         {"TXZ", Generator::TXZ},
         {"EXTERNAL", Generator::EXTERNAL}
     };
-    pack->add_option("-G,--generators", ret->generators, "CPack generators to use")
-        ->transform(CLI::CheckedTransformer(gen_map, CLI::ignore_case));
-        
+    pack->add_option("-G,--generators", ret->generators, "CPack generators to use: 7Z, APK, DEB, DMG, EXTERNAL, FREEBSD, NSIS, RPM, STGZ, TGZ, TXZ, WIX, ZIP")
+        ->transform(CLI::CheckedTransformer(gen_map, CLI::ignore_case).description(""));
+
     return {pack, std::move(ret)};
 }
 } // namespace catalyst::pack
