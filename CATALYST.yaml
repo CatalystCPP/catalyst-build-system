@@ -45,6 +45,7 @@ common:
 ccache:
   manifest:
     tooling:
+      LDFLAGS: -fuse-ld=mold # put it here since this is the "fast build" profile
       CC_LAUNCHER: ccache
       CXX_LAUNCHER: ccache
 test:
