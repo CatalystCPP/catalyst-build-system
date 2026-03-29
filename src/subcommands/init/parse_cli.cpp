@@ -21,8 +21,8 @@ std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app) {
                                                       {"staticlib", Parse::Type::STATICLIB},
                                                       {"sharedlib", Parse::Type::SHAREDLIB},
                                                       {"interface", Parse::Type::INTERFACE}};
-    init->add_option("-t,--type", ret->type, "the project type")
-        ->transform(CLI::CheckedTransformer(type_map, CLI::ignore_case))
+    init->add_option("-t,--type", ret->type, "the project type binary, staticlib, sharedlib, or interface")
+        ->transform(CLI::CheckedTransformer(type_map, CLI::ignore_case).description(""))
         ->default_str("binary");
 
     init->add_option("-v,--version", ret->version, "the project's version")->default_str("0.0.1");
