@@ -115,7 +115,7 @@ def test_init_and_build(tmp_path):
     
     # 2. Build project
     result = subprocess.run([str(CATALYST_BIN), "build"], cwd=project_dir, capture_output=True, text=True, env=env)
-    assert result.returncode == 0, f"Build failed: {result.stderr}\\nStdout: {result.stdout}"
+    assert result.returncode == 0, f"Build failed: {result.stderr}\nStdout: {result.stdout}"
     
     # 3. Run project
     app_bin = project_dir / "build" / "new_project"
@@ -136,3 +136,69 @@ def test_invalid_yaml_handles_gracefully(tmp_path):
     result = subprocess.run([str(CATALYST_BIN), "build"], cwd=project_dir, capture_output=True, text=True, env=env)
     assert result.returncode != 0
     assert "error" in result.stderr.lower() or "error" in result.stdout.lower() or "failed" in result.stderr.lower() or "failed" in result.stdout.lower()
+
+def test_pack_subcommand(tmp_path):
+    project_dir = tmp_path / "pack_project"
+    project_dir.mkdir()
+    
+    # 1. Init project
+    env = os.environ.copy()
+    subprocess.run([str(CATALYST_BIN), "init"], cwd=project_dir, capture_output=True, text=True, env=env)
+    
+    # 2. Add metadata to catalyst.yaml for packing
+    with open(project_dir / "catalyst.yaml", "w") as f:
+        f.write("""meta:
+  min_ver: 0.1.0
+manifest:
+  name: pack_project
+  type: BINARY
+  version: 0.1.0
+  description: A project to test packing
+  vendor: "CatalystTest"
+  maintainer: "test@example.com"
+  author: "Test Author"
+  dirs:
+    include: [include]
+    source: [src]
+    build: build
+""")
+
+    # 3. Build project (needed for packing)
+    subprocess.run([str(CATALYST_BIN), "build"], cwd=project_dir, capture_output=True, text=True, env=env)
+    
+    # 4. Run pack
+    result = subprocess.run([str(CATALYST_BIN), "pack", "-G", "TGZ"], cwd=project_dir, capture_output=True, text=True, env=env)
+    assert result.returncode == 0, f"Pack failed: {result.stderr}"
+    
+    # 5. Check if package exists
+    pack_dir = project_dir / "build" / "pack"
+    assert pack_dir.exists()
+    
+    tgz_files = list(pack_dir.glob("*.tar.gz"))
+    assert len(tgz_files) > 0, "No TGZ package generated!"
+
+def test_pack_multiple_generators(tmp_path):
+    project_dir = tmp_path / "pack_multi"
+    project_dir.mkdir()
+    
+    # 1. Init project
+    env = os.environ.copy()
+    subprocess.run([str(CATALYST_BIN), "init"], cwd=project_dir, capture_output=True, text=True, env=env)
+    
+    # 2. Build project
+    subprocess.run([str(CATALYST_BIN), "build"], cwd=project_dir, capture_output=True, text=True, env=env)
+    
+    # 3. Run pack with multiple generators
+    # Using ZIP and TGZ as they are generally available on most systems
+    result = subprocess.run([str(CATALYST_BIN), "pack", "-G", "TGZ", "ZIP"], cwd=project_dir, capture_output=True, text=True, env=env)
+    assert result.returncode == 0, f"Pack failed: {result.stderr}"
+    
+    # 4. Check if both packages exist
+    pack_dir = project_dir / "build" / "pack"
+    assert pack_dir.exists()
+    
+    tgz_files = list(pack_dir.glob("*.tar.gz"))
+    zip_files = list(pack_dir.glob("*.zip"))
+    
+    assert len(tgz_files) > 0, "No TGZ package generated!"
+    assert len(zip_files) > 0, "No ZIP package generated!"
