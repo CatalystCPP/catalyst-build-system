@@ -126,6 +126,7 @@ std::expected<void, std::string> fetchLocal(const FetchLocalArgs &fn_args) {
 
     std::unordered_map<std::string, std::string> env_map;
     env_map["CATALYST_VISITED"] = new_visited;
+    env_map["CATALYST_MACHINE"] = "1";
 
     auto res = catalyst::processExec(std::move(args), local_path.string(), env_map);
     if (!res) {
