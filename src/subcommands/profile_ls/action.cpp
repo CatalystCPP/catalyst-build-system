@@ -47,7 +47,7 @@ void addIndividualProfiles(std::vector<std::string> &out_profiles) {
     const std::string prefix = "catalyst_";
     const std::string suffix = ".yaml";
 
-    for (const auto &entry : fs::directory_iterator()) {
+    for (const auto &entry : fs::directory_iterator(fs::current_path())) {
         if (!entry.is_regular_file())
             continue;
 
