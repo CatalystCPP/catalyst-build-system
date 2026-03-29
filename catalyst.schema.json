@@ -41,6 +41,26 @@
               "type": "string",
               "description": "Human-readable description."
             },
+            "author": {
+              "type": "string",
+              "description": "Project author."
+            },
+            "maintainer": {
+              "type": "string",
+              "description": "Project maintainer (used by package managers)."
+            },
+            "vendor": {
+              "type": "string",
+              "description": "Project vendor (used by package managers)."
+            },
+            "license_file": {
+              "type": "string",
+              "description": "Path to the license file."
+            },
+            "readme_file": {
+              "type": "string",
+              "description": "Path to the readme file."
+            },
             "provides": {
               "type": "string",
               "description": "Output artifact name pattern (e.g., *.so)."
