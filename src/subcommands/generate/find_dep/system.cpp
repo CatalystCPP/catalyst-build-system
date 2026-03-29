@@ -2,9 +2,9 @@
 #include <optional>
 #include <string>
 
-#include "catalyst/utils/log/log.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/generate.hpp"
+#include "catalyst/utils/log/log.hpp"
 
 namespace catalyst::generate {
 std::optional<FindRes> findSystemFromPkgConfig(const std::string &dep_name);
@@ -58,7 +58,8 @@ std::expected<FindRes, std::string> findSystem(const YAML::Node &dep) {
         trim(lib_path_val);
         trim(libs_val);
 
-        catalyst::logger.debug("Resolved via pkg-config: cflags='{}' L='{}' l='{}'", cflags_val, lib_path_val, libs_val);
+        catalyst::logger.debug(
+            "Resolved via pkg-config: cflags='{}' L='{}' l='{}'", cflags_val, lib_path_val, libs_val);
 
         if (!has_explicit_include)
             inc_path += " " + cflags_val;

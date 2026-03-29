@@ -38,7 +38,7 @@ public:
 };
 
 // Dependency injection accessors
-IProcessExecutor& getProcessExecutor();
+IProcessExecutor &getProcessExecutor();
 void setProcessExecutor(std::shared_ptr<IProcessExecutor> executor);
 
 // Legacy free functions for backwards compatibility (optional, but good to keep until full refactor)

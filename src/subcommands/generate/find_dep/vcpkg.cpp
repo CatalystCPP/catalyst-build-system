@@ -6,9 +6,9 @@
 #include <string>
 #include <unordered_map>
 
-#include "catalyst/utils/log/log.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/generate.hpp"
+#include "catalyst/utils/log/log.hpp"
 
 namespace catalyst::generate {
 std::expected<FindRes, std::string> findVcpkg(const YAML::Node &dep) {
@@ -76,9 +76,8 @@ std::expected<FindRes, std::string> findVcpkg(const YAML::Node &dep) {
 
     if (linkage == "static" || linkage == "shared") {
         if (!fs::exists(lib_path) || !fs::is_directory(lib_path)) {
-            catalyst::logger.warn("Could not find library directory for vcpkg package '{}' at: {}",
-                                 dep_name,
-                                 lib_path.string());
+            catalyst::logger.warn(
+                "Could not find library directory for vcpkg package '{}' at: {}", dep_name, lib_path.string());
             libs += std::format(" -l{}", dep_name);
         }
     }

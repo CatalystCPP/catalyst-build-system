@@ -4,8 +4,8 @@
 #include <string>
 #include <vector>
 
-#include "catalyst/utils/log/log.hpp"
 #include "catalyst/subcommands/generate.hpp"
+#include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 
 #include "yaml-cpp/yaml.h"
@@ -40,12 +40,11 @@ std::string ld_filter(std::string &ldflags) {
 } // namespace
 
 // NOTE: used for run::action. Needs to be updated to use find_*.
-std::expected<std::string, std::string> libPath(const YAML::Node &profile,
-                                                 const std::vector<std::string> &profiles) {
+std::expected<std::string, std::string> libPath(const YAML::Node &profile, const std::vector<std::string> &profiles) {
     catalyst::logger.debug("Calculating LD_LIBRARY_PATH.");
     fs::path current_dir = fs::current_path();
-    fs::path build_dir = catalyst::utils::yaml::multiplexedBuildDir(
-        profile["manifest"]["dirs"]["build"].as<std::string>(), profiles);
+    fs::path build_dir =
+        catalyst::utils::yaml::multiplexedBuildDir(profile["manifest"]["dirs"]["build"].as<std::string>(), profiles);
     std::string ldflags = "-Lcatalyst-libs";
 
     if (const char *vcpkg_root = std::getenv("VCPKG_ROOT"); vcpkg_root != nullptr) {
@@ -64,7 +63,8 @@ std::expected<std::string, std::string> libPath(const YAML::Node &profile,
     if (auto deps = profile["dependencies"]; deps && deps.IsSequence()) {
         for (const auto &dep : deps) {
             if (auto res = findDep(build_dir.string(), dep); !res) {
-                catalyst::logger.error("Failed to resolve dependency {}: {}", dep["name"].as<std::string>(), res.error());
+                catalyst::logger.error(
+                    "Failed to resolve dependency {}: {}", dep["name"].as<std::string>(), res.error());
             } else {
                 ldflags += " " + res.value().lib_path;
             }

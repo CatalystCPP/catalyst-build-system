@@ -68,7 +68,8 @@ thread_local std::vector<std::string> g_call_chain;
 // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
 void injectCommon(std::vector<std::string> &profiles) {
-    if (std::getenv("CATALYST_MACHINE")) return;
+    if (std::getenv("CATALYST_MACHINE"))
+        return;
     if (std::ranges::find(profiles, "common") == profiles.end()) {
         profiles.insert(profiles.begin(), "common");
     }
@@ -77,7 +78,8 @@ void injectCommon(std::vector<std::string> &profiles) {
 template <typename ParseRes_T> int dispatchFN(const char *subc_name, const ParseRes_T &parse_res, auto fn) {
     if (std::ranges::find(g_call_chain, subc_name) != g_call_chain.end()) {
         std::string chain;
-        for (const auto &n : g_call_chain) chain += n + " -> ";
+        for (const auto &n : g_call_chain)
+            chain += n + " -> ";
         chain += subc_name;
         catalyst::logger.error("recursive hook detected: {}", chain);
         return 1;
@@ -88,7 +90,9 @@ template <typename ParseRes_T> int dispatchFN(const char *subc_name, const Parse
     }
 
     struct Guard {
-        ~Guard() { g_call_chain.pop_back(); }
+        ~Guard() {
+            g_call_chain.pop_back();
+        }
     } guard;
     g_call_chain.emplace_back(subc_name);
 
@@ -230,7 +234,8 @@ std::expected<void, std::string> dispatchHookImpl(auto &&args) {
     ctx.workspace = catalyst::Workspace::findRoot();
     auto [exit_code, should_return] = catalyst::parseCli(args, ctx);
     if (should_return) {
-        if (exit_code == 0) return {};
+        if (exit_code == 0)
+            return {};
         return std::unexpected(std::format("hook parsing failed with exit code {}", exit_code));
     }
 

@@ -1,10 +1,11 @@
 #pragma once
 #include <expected>
 #include <memory>
-#include <string>
 #include <optional>
+#include <string>
 
 #include <CLI/App.hpp>
+
 #include "catalyst/utils/yaml/configuration.hpp"
 
 namespace catalyst::doc {
@@ -17,11 +18,7 @@ struct Parse {
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);
 std::expected<void, std::string> action(const Parse &parse_args);
 
-enum class DocEngine : std::uint8_t {
-    Doxygen,
-    ClangDoc,
-    Jocasta
-};
+enum class DocEngine : std::uint8_t { Doxygen, ClangDoc, Jocasta };
 
 class BaseRunner {
 protected:
@@ -29,15 +26,14 @@ protected:
     const catalyst::utils::yaml::Configuration &config;
 
 public:
-    BaseRunner(const Parse &opts, const catalyst::utils::yaml::Configuration &config)
-        : opts(opts), config(config) {}
+    BaseRunner(const Parse &opts, const catalyst::utils::yaml::Configuration &config) : opts(opts), config(config) {
+    }
     virtual ~BaseRunner() = default;
 
     virtual std::expected<void, std::string> run() = 0;
 };
 
-template <DocEngine DocEngine_T>
-class DerivedRunner : public BaseRunner {
+template <DocEngine DocEngine_T> class DerivedRunner : public BaseRunner {
 private:
     static consteval bool isImplemented(DocEngine t) {
         return t == DocEngine::Doxygen || t == DocEngine::ClangDoc || t == DocEngine::Jocasta;

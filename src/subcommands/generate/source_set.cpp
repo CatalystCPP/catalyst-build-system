@@ -10,8 +10,8 @@
 
 #include <yaml-cpp/yaml.h>
 
-#include "catalyst/utils/log/log.hpp"
 #include "catalyst/subcommands/generate.hpp"
+#include "catalyst/utils/log/log.hpp"
 
 namespace fs = std::filesystem;
 
@@ -109,7 +109,8 @@ std::expected<std::unordered_set<fs::path>, std::string> buildSourceSet(const st
     for (const auto &dir : paths) {
         auto source_set_ex = ::buildSourceSet(dir, profiles);
         if (!source_set_ex) {
-            return std::unexpected(std::format("Failed to build source set for directory: {}. Error: {}", dir.string(), source_set_ex.error()));
+            return std::unexpected(std::format(
+                "Failed to build source set for directory: {}. Error: {}", dir.string(), source_set_ex.error()));
         }
         source_set.insert(source_set_ex->begin(), source_set_ex->end());
     }

@@ -1,4 +1,5 @@
 #include <memory>
+
 #include <CLI/App.hpp>
 
 #include "catalyst/subcommands/bench.hpp"

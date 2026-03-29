@@ -133,12 +133,25 @@ void validateProfileKeys(const YAML::Node &profile, const std::string &profile_n
         check_keys(profile["meta"], {"min_ver", "generator"}, "meta");
     }
     if (profile["manifest"]) {
-        check_keys(
-            profile["manifest"], {"name", "type", "version", "provides", "tooling", "dirs", "description", "author", "maintainer", "vendor", "license_file", "readme_file"}, "manifest");
+        check_keys(profile["manifest"],
+                   {"name",
+                    "type",
+                    "version",
+                    "provides",
+                    "tooling",
+                    "dirs",
+                    "description",
+                    "author",
+                    "maintainer",
+                    "vendor",
+                    "license_file",
+                    "readme_file"},
+                   "manifest");
         if (profile["manifest"]["tooling"]) {
-            check_keys(profile["manifest"]["tooling"],
-                       {"CC", "CXX", "CC_LAUNCHER", "CXX_LAUNCHER", "FMT", "LINTER", "CCFLAGS", "CXXFLAGS", "LDFLAGS", "doc"},
-                       "manifest.tooling");
+            check_keys(
+                profile["manifest"]["tooling"],
+                {"CC", "CXX", "CC_LAUNCHER", "CXX_LAUNCHER", "FMT", "LINTER", "CCFLAGS", "CXXFLAGS", "LDFLAGS", "doc"},
+                "manifest.tooling");
             if (profile["manifest"]["tooling"]["doc"]) {
                 check_keys(
                     profile["manifest"]["tooling"]["doc"], {"engine", "config", "out_dir"}, "manifest.tooling.doc");
@@ -272,11 +285,21 @@ void mergeHelper(YAML::Node &composite, const std::string &new_profile_name, con
     });
 
     merge_section(composite, "manifest", new_profile, [&](YAML::Node dst, YAML::Node src) {
-        for (const auto &key : {"name", "type", "version", "provides", "description", "author", "maintainer", "vendor", "license_file", "readme_file"})
+        for (const auto &key : {"name",
+                                "type",
+                                "version",
+                                "provides",
+                                "description",
+                                "author",
+                                "maintainer",
+                                "vendor",
+                                "license_file",
+                                "readme_file"})
             merge_scalar(dst, key, src, std::string("manifest.") + key);
 
         merge_section(dst, "tooling", src, [&](YAML::Node tdst, YAML::Node tsrc) {
-            for (const auto &key : {"CC", "CXX", "CC_LAUNCHER", "CXX_LAUNCHER", "FMT", "LINTER", "CCFLAGS", "CXXFLAGS", "LDFLAGS"})
+            for (const auto &key :
+                 {"CC", "CXX", "CC_LAUNCHER", "CXX_LAUNCHER", "FMT", "LINTER", "CCFLAGS", "CXXFLAGS", "LDFLAGS"})
                 merge_scalar(tdst, key, tsrc, std::string("manifest.tooling.") + key);
 
             merge_section(tdst, "doc", tsrc, [&](YAML::Node docdst, YAML::Node docsrc) {

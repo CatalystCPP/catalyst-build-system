@@ -210,9 +210,8 @@ std::expected<void, std::string> action(const Parse &parse_args) {
 
             if (parse_args.workspace) {
                 if (auto member = parse_args.workspace->findPackage(name)) {
-                    catalyst::logger.info("Dependency '{}' found in workspace at '{}'. Linking...",
-                                         name,
-                                         member->path.string());
+                    catalyst::logger.info(
+                        "Dependency '{}' found in workspace at '{}'. Linking...", name, member->path.string());
                     fs::path lib_path = fs::path(build_dir) / "catalyst-libs" / name;
 
                     try {

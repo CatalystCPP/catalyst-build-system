@@ -8,8 +8,7 @@
 
 namespace catalyst::utils::yaml {
 
-inline std::filesystem::path multiplexedBuildDir(const std::string &base,
-                                                  const std::vector<std::string> &profiles) {
+inline std::filesystem::path multiplexedBuildDir(const std::string &base, const std::vector<std::string> &profiles) {
     std::string suffix;
     for (std::size_t i = 0; i < profiles.size(); ++i) {
         if (i != 0)

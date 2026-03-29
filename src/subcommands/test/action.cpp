@@ -10,10 +10,10 @@
 #include <yaml-cpp/yaml.h>
 
 #include "catalyst/hooks.hpp"
-#include "catalyst/utils/log/log.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/subcommands/test.hpp"
+#include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 
 namespace fs = std::filesystem;
@@ -101,7 +101,8 @@ std::expected<void, std::string> action(const Parse &args) {
     std::string build_dir_base = "build";
     if (profile_comp["manifest"]["dirs"]["build"]) {
         build_dir_base = profile_comp["manifest"]["dirs"]["build"].as<std::string>();
-        if (build_dir_base.empty()) build_dir_base = "build";
+        if (build_dir_base.empty())
+            build_dir_base = "build";
     }
     build_dir = catalyst::utils::yaml::multiplexedBuildDir(build_dir_base, profiles).string();
 

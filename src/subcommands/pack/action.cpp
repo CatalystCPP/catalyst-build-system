@@ -16,7 +16,7 @@ namespace catalyst::pack {
 namespace fs = std::filesystem;
 
 namespace {
-std::string escape_cmake(const std::string& str) {
+std::string escape_cmake(const std::string &str) {
     std::string res;
     for (char c : str) {
         if (c == '\\' || c == '"') {
@@ -30,7 +30,7 @@ std::string escape_cmake(const std::string& str) {
 struct CleanupGuard {
     std::vector<fs::path> paths;
     ~CleanupGuard() {
-        for (const auto& p : paths) {
+        for (const auto &p : paths) {
             std::error_code ec;
             if (fs::exists(p, ec)) {
                 fs::remove_all(p, ec);
@@ -93,9 +93,9 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     std::string pkg_name = config.getString("manifest.name").value_or("catalyst-pkg");
     std::string pkg_version = config.getString("manifest.version").value_or("1.0.0");
     std::string pkg_description = config.getString("manifest.description").value_or("A Catalyst packaged project");
-    std::string pkg_contact = config.getString("manifest.maintainer").value_or(
-        config.getString("manifest.author").value_or("Unknown <unknown@example.com>")
-    );
+    std::string pkg_contact =
+        config.getString("manifest.maintainer")
+            .value_or(config.getString("manifest.author").value_or("Unknown <unknown@example.com>"));
     std::string pkg_vendor = config.getString("manifest.vendor").value_or("Catalyst");
 
     // 3. Generate CPackConfig.cmake
@@ -109,22 +109,26 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         }
         cpack_out << std::format("set(CPACK_PACKAGE_NAME \"{}\")\n", escape_cmake(pkg_name));
         cpack_out << std::format("set(CPACK_PACKAGE_VERSION \"{}\")\n", escape_cmake(pkg_version));
-        cpack_out << std::format("set(CPACK_PACKAGE_FILE_NAME \"{}-{}\")\n", escape_cmake(pkg_name), escape_cmake(pkg_version));
+        cpack_out << std::format(
+            "set(CPACK_PACKAGE_FILE_NAME \"{}-{}\")\n", escape_cmake(pkg_name), escape_cmake(pkg_version));
         cpack_out << std::format("set(CPACK_PACKAGE_DESCRIPTION_SUMMARY \"{}\")\n", escape_cmake(pkg_description));
         cpack_out << std::format("set(CPACK_PACKAGE_DESCRIPTION \"{}\")\n", escape_cmake(pkg_description));
         cpack_out << std::format("set(CPACK_PACKAGE_CONTACT \"{}\")\n", escape_cmake(pkg_contact));
         cpack_out << std::format("set(CPACK_PACKAGE_VENDOR \"{}\")\n", escape_cmake(pkg_vendor));
 
         if (auto license = config.getString("manifest.license_file"); license) {
-            cpack_out << std::format("set(CPACK_RESOURCE_FILE_LICENSE \"{}\")\n", escape_cmake(fs::absolute(*license).generic_string()));
+            cpack_out << std::format("set(CPACK_RESOURCE_FILE_LICENSE \"{}\")\n",
+                                     escape_cmake(fs::absolute(*license).generic_string()));
         }
 
         if (auto readme = config.getString("manifest.readme_file"); readme) {
-            cpack_out << std::format("set(CPACK_RESOURCE_FILE_README \"{}\")\n", escape_cmake(fs::absolute(*readme).generic_string()));
+            cpack_out << std::format("set(CPACK_RESOURCE_FILE_README \"{}\")\n",
+                                     escape_cmake(fs::absolute(*readme).generic_string()));
         }
 
         cpack_out << "set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)\n";
-        cpack_out << std::format("set(CPACK_INSTALLED_DIRECTORIES \"{}\" \".\")\n", escape_cmake(fs::absolute(staging_dir).generic_string()));
+        cpack_out << std::format("set(CPACK_INSTALLED_DIRECTORIES \"{}\" \".\")\n",
+                                 escape_cmake(fs::absolute(staging_dir).generic_string()));
     }
 
     // 4. Run cpack
@@ -133,20 +137,34 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         std::string gens;
         auto gen_to_string = [](Generator g) -> std::string {
             switch (g) {
-                case Generator::TGZ: return "TGZ";
-                case Generator::ZIP: return "ZIP";
-                case Generator::DEB: return "DEB";
-                case Generator::RPM: return "RPM";
-                case Generator::NSIS: return "NSIS";
-                case Generator::WIX: return "WIX";
-                case Generator::DMG: return "DragNDrop";
-                case Generator::STGZ: return "STGZ";
-                case Generator::FREEBSD: return "FREEBSD";
-                case Generator::APK: return "APK";
-                case Generator::SEVEN_ZIP: return "7Z";
-                case Generator::TXZ: return "TXZ";
-                case Generator::EXTERNAL: return "External";
-                default: return "TGZ";
+                case Generator::TGZ:
+                    return "TGZ";
+                case Generator::ZIP:
+                    return "ZIP";
+                case Generator::DEB:
+                    return "DEB";
+                case Generator::RPM:
+                    return "RPM";
+                case Generator::NSIS:
+                    return "NSIS";
+                case Generator::WIX:
+                    return "WIX";
+                case Generator::DMG:
+                    return "DragNDrop";
+                case Generator::STGZ:
+                    return "STGZ";
+                case Generator::FREEBSD:
+                    return "FREEBSD";
+                case Generator::APK:
+                    return "APK";
+                case Generator::SEVEN_ZIP:
+                    return "7Z";
+                case Generator::TXZ:
+                    return "TXZ";
+                case Generator::EXTERNAL:
+                    return "External";
+                default:
+                    return "TGZ";
             }
         };
 

@@ -1,5 +1,3 @@
-#include "catalyst/subcommands/lock.hpp"
-
 #include <filesystem>
 #include <format>
 #include <fstream>
@@ -12,6 +10,7 @@
 #include <yaml-cpp/yaml.h>
 
 #include "catalyst/process_exec.hpp"
+#include "catalyst/subcommands/lock.hpp"
 #include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 
@@ -37,10 +36,12 @@ std::expected<std::string, std::string> resolveGitHash(const std::string &url, c
     if (output.empty()) {
         // Try as a tag/branch ref if HEAD didn't work or if it's a specific version
         res = catalyst::processExecStdout({"git", "ls-remote", url, "refs/tags/" + ref});
-        if (res && !res.value().empty()) output = res.value();
+        if (res && !res.value().empty())
+            output = res.value();
         else {
             res = catalyst::processExecStdout({"git", "ls-remote", url, "refs/heads/" + ref});
-            if (res && !res.value().empty()) output = res.value();
+            if (res && !res.value().empty())
+                output = res.value();
         }
     }
 
@@ -80,7 +81,8 @@ void collectDependencies(const utils::yaml::Configuration &config,
                          const std::optional<Workspace> &workspace) {
     if (auto deps = config.getRoot()["dependencies"]; deps && deps.IsSequence()) {
         for (const auto &dep : deps) {
-            if (!dep["name"] || !dep["source"]) continue;
+            if (!dep["name"] || !dep["source"])
+                continue;
 
             auto name = dep["name"].as<std::string>();
 
@@ -123,7 +125,8 @@ std::expected<void, std::string> action(const Parse &parse_args) {
 
         for (const auto &[name, member] : parse_args.workspace->getMembers()) {
             std::vector<std::string> profiles = member.profiles;
-            if (profiles.empty()) profiles = {"common"};
+            if (profiles.empty())
+                profiles = {"common"};
 
             try {
                 utils::yaml::Configuration config(profiles, member.path);
@@ -156,11 +159,16 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         YAML::Node dep_node;
         dep_node["name"] = info.name;
         dep_node["source"] = info.source;
-        if (!info.url.empty()) dep_node["url"] = info.url;
-        if (!info.version.empty()) dep_node["version"] = info.version;
-        if (!info.hash.empty()) dep_node["hash"] = info.hash;
-        if (!info.triplet.empty()) dep_node["triplet"] = info.triplet;
-        if (!info.path.empty()) dep_node["path"] = info.path;
+        if (!info.url.empty())
+            dep_node["url"] = info.url;
+        if (!info.version.empty())
+            dep_node["version"] = info.version;
+        if (!info.hash.empty())
+            dep_node["hash"] = info.hash;
+        if (!info.triplet.empty())
+            dep_node["triplet"] = info.triplet;
+        if (!info.path.empty())
+            dep_node["path"] = info.path;
 
         lock_node["dependencies"].push_back(dep_node);
     }

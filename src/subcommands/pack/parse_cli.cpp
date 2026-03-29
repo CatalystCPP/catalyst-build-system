@@ -1,6 +1,7 @@
 #include <filesystem>
 #include <map>
 #include <memory>
+
 #include <CLI/App.hpp>
 
 #include "catalyst/subcommands/pack.hpp"
@@ -17,22 +18,23 @@ std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app) {
     pack->add_option("-t,--target", ret->target_path, "the output directory for the package")
         ->default_val(std::filesystem::path{"build/pack"});
 
-    std::map<std::string, Generator> gen_map{
-        {"TGZ", Generator::TGZ},
-        {"ZIP", Generator::ZIP},
-        {"DEB", Generator::DEB},
-        {"RPM", Generator::RPM},
-        {"NSIS", Generator::NSIS},
-        {"WIX", Generator::WIX},
-        {"DMG", Generator::DMG},
-        {"STGZ", Generator::STGZ},
-        {"FREEBSD", Generator::FREEBSD},
-        {"APK", Generator::APK},
-        {"7Z", Generator::SEVEN_ZIP},
-        {"TXZ", Generator::TXZ},
-        {"EXTERNAL", Generator::EXTERNAL}
-    };
-    pack->add_option("-G,--generators", ret->generators, "CPack generators to use: 7Z, APK, DEB, DMG, EXTERNAL, FREEBSD, NSIS, RPM, STGZ, TGZ, TXZ, WIX, ZIP")
+    std::map<std::string, Generator> gen_map{{"TGZ", Generator::TGZ},
+                                             {"ZIP", Generator::ZIP},
+                                             {"DEB", Generator::DEB},
+                                             {"RPM", Generator::RPM},
+                                             {"NSIS", Generator::NSIS},
+                                             {"WIX", Generator::WIX},
+                                             {"DMG", Generator::DMG},
+                                             {"STGZ", Generator::STGZ},
+                                             {"FREEBSD", Generator::FREEBSD},
+                                             {"APK", Generator::APK},
+                                             {"7Z", Generator::SEVEN_ZIP},
+                                             {"TXZ", Generator::TXZ},
+                                             {"EXTERNAL", Generator::EXTERNAL}};
+    pack->add_option(
+            "-G,--generators",
+            ret->generators,
+            "CPack generators to use: 7Z, APK, DEB, DMG, EXTERNAL, FREEBSD, NSIS, RPM, STGZ, TGZ, TXZ, WIX, ZIP")
         ->transform(CLI::CheckedTransformer(gen_map, CLI::ignore_case).description(""));
 
     return {pack, std::move(ret)};

@@ -1,8 +1,8 @@
-#include "catalyst/subcommands/lock.hpp"
-
 #include <vector>
 
 #include <CLI/App.hpp>
+
+#include "catalyst/subcommands/lock.hpp"
 
 namespace catalyst::lock {
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app) {
