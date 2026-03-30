@@ -56,7 +56,7 @@ std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app) {
     init->add_option("--ides", ret->ides, "IDEs to generate project files for")
         ->transform(CLI::CheckedTransformer(ide_map, CLI::ignore_case));
     init->add_option("-p,--profile", ret->profile, "the profile to initialize")->default_val("common");
-    init->add_flag("--force-ide", ret->force_emit_ide, "force emitting IDE config even if one already exists")
+    init->add_flag("-f,--force-ide", ret->force_emit_ide, "force emitting IDE config even if one already exists")
         ->default_val(false);
 
     return {init, std::move(ret)};
