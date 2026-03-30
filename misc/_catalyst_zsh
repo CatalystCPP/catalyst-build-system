@@ -94,6 +94,12 @@ _catalyst() {
     esac
 }
 
+_catalyst_profiles() {
+    local -a profiles
+    profiles=(${(f)"$(catalyst profile-ls 2>/dev/null)"})
+    _describe -t profiles 'profiles' profiles
+}
+
 _catalyst_add() {
     local context state state_descr line
     typeset -A opt_args
@@ -120,13 +126,13 @@ _catalyst_add() {
                         '(-n --name)'{-n,--name}'[name]:name:' \
                         '(-v --version)'{-v,--version}'[version]:version:' \
                         '(-f --features)'{-f,--features}'[features]:features:' \
-                        '(-p --profiles)'{-p,--profiles}'[profiles]:profiles:' \
+                        '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles' \
                         '1:remote:'
                     ;;
                 local)
                     _arguments \
                         '(-f --features)'{-f,--features}'[features]:features:' \
-                        '(-p --profiles)'{-p,--profiles}'[profiles]:profiles:' \
+                        '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles' \
                         '1:name:' \
                         '2:path:_directories'
                     ;;
@@ -134,7 +140,7 @@ _catalyst_add() {
                     _arguments \
                         '(-l --lib)'{-l,--lib}'[lib]:lib:' \
                         '(-i --inc)'{-i,--inc}'[inc]:inc:' \
-                        '(-p --profiles)'{-p,--profiles}'[profiles]:profiles:' \
+                        '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles' \
                         '1:name:'
                     ;;
                 vcpkg)
@@ -142,7 +148,7 @@ _catalyst_add() {
                         '(-t --triplet)'{-t,--triplet}'[triplet]:triplet:' \
                         '(-v --version)'{-v,--version}'[version]:version:' \
                         '(-f --features)'{-f,--features}'[features]:features:' \
-                        '(-p --profiles)'{-p,--profiles}'[profiles]:profiles:' \
+                        '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles' \
                         '1:name:'
                     ;;
             esac
@@ -162,7 +168,7 @@ _catalyst_build() {
         '--force-refetch[refetch dependencies]' \
         '(--workspace --all)'{--workspace,--all}'[build all members in the workspace]' \
         '(-P --package)'{-P,--package}'[package]:package:' \
-        '(-p --profiles)'{-p,--profiles}'[profiles]:profiles:' \
+        '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles' \
         '(-f --features)'{-f,--features}'[features]:features:' \
         '--backend[backend]:backend:(ninja gmake cbe)' \
         '(-w --watch)'{-w,--watch}'[watch for file changes and rebuild]'
@@ -170,7 +176,7 @@ _catalyst_build() {
 
 _catalyst_clean() {
     _arguments \
-        '(-p --profile)'{-p,--profile}'[profile]:profile:'
+        '*'{-p,--profile}'[profile]:*:profile:_catalyst_profiles'
 }
 
 _catalyst_doc() {
@@ -182,7 +188,7 @@ _catalyst_doc() {
 
 _catalyst_download() {
     _arguments \
-        '(-p --profiles)'{-p,--profiles}'[profiles]:profiles:' \
+        '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles' \
         '(-f --features)'{-f,--features}'[features]:features:' \
         '(-t --target)'{-t,--target}'[target]:target:_directories' \
         '1:remote:' \
@@ -191,20 +197,20 @@ _catalyst_download() {
 
 _catalyst_fetch() {
     _arguments \
-        '(-p --profiles)'{-p,--profiles}'[profiles]:profiles:'
+        '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles'
 }
 
 _catalyst_generate() {
     _arguments \
-        '(-p --profiles)'{-p,--profiles}'[profiles]:profiles:' \
+        '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles' \
         '(-f --features)'{-f,--features}'[features]:features:' \
         '(-b --backend)'{-b,--backend}'[backend]:backend:(ninja gmake cbe)'
 }
 
 _catalyst_ide_sync() {
     _arguments \
-        '(-p --profiles)'{-p,--profiles}'[profiles]:profiles:' \
-        '--ides[ides]:ides:' \
+        '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles' \
+        '--ides[ides]:ides:(vscode clion)' \
         '(-f --force-ide)'{-f,--force-ide}'[force emitting IDE config]'
 }
 
@@ -212,7 +218,7 @@ _catalyst_init() {
     _arguments \
         '(-n --name)'{-n,--name}'[name]:name:' \
         '--path[path]:path:_directories' \
-        '(-t --type)'{-t,--type}'[type]:type:(library executable)' \
+        '(-t --type)'{-t,--type}'[type]:type:(binary staticlib sharedlib interface)' \
         '(-v --version)'{-v,--version}'[version]:version:' \
         '(-d --description)'{-d,--description}'[description]:description:' \
         '--provides[provides]:provides:' \
@@ -224,29 +230,29 @@ _catalyst_init() {
         '--include-dirs[include dirs]:include_dirs:_directories' \
         '--source-dirs[source dirs]:source_dirs:_directories' \
         '--build-dir[build dir]:build_dir:_directories' \
-        '--ides[ides]:ides:' \
-        '(-p --profile)'{-p,--profile}'[profile]:profile:' \
+        '--ides[ides]:ides:(vscode clion)' \
+        '*'{-p,--profile}'[profile]:*:profile:_catalyst_profiles' \
         '(-f --force-ide)'{-f,--force-ide}'[force emitting IDE config]'
 }
 
 _catalyst_install() {
     _arguments \
-        '(-p --profiles)'{-p,--profiles}'[profiles]:profiles:' \
+        '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles' \
         '(-s --source)'{-s,--source}'[source]:source:_directories' \
         '(-t --target)'{-t,--target}'[target]:target:_directories'
 }
 
 _catalyst_lock() {
     _arguments \
-        '(-p --profiles)'{-p,--profiles}'[profiles]:profiles:'
+        '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles'
 }
 
 _catalyst_pack() {
     _arguments \
-        '(-p --profiles)'{-p,--profiles}'[profiles]:profiles:' \
+        '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles' \
         '(-s --source)'{-s,--source}'[source]:source:_directories' \
         '(-t --target)'{-t,--target}'[target]:target:_directories' \
-        '(-G --generators)'{-G,--generators}'[generators]:generators:'
+        '(-G --generators)'{-G,--generators}'[generators]:generators:(TGZ ZIP DEB RPM NSIS WIX DMG STGZ FREEBSD APK 7Z TXZ EXTERNAL)'
 }
 
 _catalyst_profile_ls() {
@@ -255,7 +261,7 @@ _catalyst_profile_ls() {
 
 _catalyst_run() {
     _arguments \
-        '(-p --profile)'{-p,--profile}'[profile]:profile:' \
+        '*'{-p,--profile}'[profile]:*:profile:_catalyst_profiles' \
         '(-P --params)'{-P,--params}'[params]:params:' \
         '*:target:'
 }
@@ -268,7 +274,7 @@ _catalyst_test() {
 
 _catalyst_tidy() {
     _arguments \
-        '(-p --profiles)'{-p,--profiles}'[profiles]:profiles:' \
+        '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles' \
         '--fix[automatically fix lint warnings]'
 }
 
