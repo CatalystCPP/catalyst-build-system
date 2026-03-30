@@ -43,7 +43,7 @@ Catalyst is designed to build itself. If you already have a `catalyst` binary:
 catalyst build --profiles debug
 ```
 
-If you are building for the first time, please refer to the [Installation guide](docs/installation.md) for bootstrapping instructions.
+If you are building for the first time, please refer to the [Installation guide](installation.md) for bootstrapping instructions.
 
 ## Style Guide
 
