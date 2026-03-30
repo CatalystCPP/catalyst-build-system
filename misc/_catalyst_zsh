@@ -21,7 +21,7 @@ _catalyst() {
                 'fetch:fetch dependencies'
                 'fmt:format source files'
                 'generate:generate a build file'
-                'ide_sync:sync IDE configuration files'
+                'ide-sync:sync IDE configuration files'
                 'init:initialize a profile'
                 'install:install the build artifacts'
                 'lock:resolve and pin dependencies'
@@ -62,7 +62,7 @@ _catalyst() {
                 generate)
                     _catalyst_generate
                     ;;
-                ide_sync)
+                ide-sync)
                     _catalyst_ide_sync
                     ;;
                 init)

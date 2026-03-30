@@ -9,7 +9,7 @@
 
 namespace catalyst::ide_sync {
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app) {
-    CLI::App *ide_sync = app.add_subcommand("ide_sync", "Sync IDE configuration files for an existing project.");
+    CLI::App *ide_sync = app.add_subcommand("ide-sync", "Sync IDE configuration files for an existing project.");
     auto ret = std::make_unique<Parse>();
 
     const std::map<std::string, Parse::IdeType> ide_map{
