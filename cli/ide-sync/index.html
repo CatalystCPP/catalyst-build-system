@@ -9,23 +9,25 @@
       
       
       
+        <link rel="prev" href="../generate/">
       
-        <link rel="next" href="getting_started/">
+      
+        <link rel="next" href="../init/">
       
       
         
       
       
-      <link rel="icon" href="assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
     
     
       
-        <title>Catalyst Build System Documentation</title>
+        <title>ide-sync - Catalyst Build System Documentation</title>
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
       
 
@@ -44,7 +46,7 @@
       
     
     
-    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -62,7 +64,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#catalyst-a-modern-declarative-c-build-system" class="md-skip">
+        <a href="#catalyst-ide-sync" class="md-skip">
           Skip to content
         </a>
       
@@ -78,7 +80,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="." title="Catalyst Build System Documentation" class="md-header__button md-logo" aria-label="Catalyst Build System Documentation" data-md-component="logo">
+    <a href="../.." title="Catalyst Build System Documentation" class="md-header__button md-logo" aria-label="Catalyst Build System Documentation" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -98,7 +100,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Home
+              ide-sync
             
           </span>
         </div>
@@ -176,7 +178,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="." title="Catalyst Build System Documentation" class="md-nav__button md-logo" aria-label="Catalyst Build System Documentation" data-md-component="logo">
+    <a href="../.." title="Catalyst Build System Documentation" class="md-nav__button md-logo" aria-label="Catalyst Build System Documentation" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -191,37 +193,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Home
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="." class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -237,98 +212,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#key-features" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Key Features
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#documentation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Documentation
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Documentation">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Getting Started
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#core-concepts" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Core Concepts
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#cli-reference" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        CLI Reference
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#community-contributing" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Community &amp; Contributing
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -340,7 +223,7 @@
   
   
     <li class="md-nav__item">
-      <a href="getting_started/" class="md-nav__link">
+      <a href="../../getting_started/" class="md-nav__link">
         
   
   
@@ -367,7 +250,7 @@
   
   
     <li class="md-nav__item">
-      <a href="installation/" class="md-nav__link">
+      <a href="../../installation/" class="md-nav__link">
         
   
   
@@ -441,7 +324,7 @@
   
   
     <li class="md-nav__item">
-      <a href="concepts/" class="md-nav__link">
+      <a href="../../concepts/" class="md-nav__link">
         
   
   
@@ -469,7 +352,7 @@
   
   
     <li class="md-nav__item">
-      <a href="concepts/configuration/" class="md-nav__link">
+      <a href="../../concepts/configuration/" class="md-nav__link">
         
   
   
@@ -497,7 +380,7 @@
   
   
     <li class="md-nav__item">
-      <a href="concepts/workspaces/" class="md-nav__link">
+      <a href="../../concepts/workspaces/" class="md-nav__link">
         
   
   
@@ -525,7 +408,7 @@
   
   
     <li class="md-nav__item">
-      <a href="concepts/profiles/" class="md-nav__link">
+      <a href="../../concepts/profiles/" class="md-nav__link">
         
   
   
@@ -553,7 +436,7 @@
   
   
     <li class="md-nav__item">
-      <a href="concepts/dependencies/" class="md-nav__link">
+      <a href="../../concepts/dependencies/" class="md-nav__link">
         
   
   
@@ -581,7 +464,7 @@
   
   
     <li class="md-nav__item">
-      <a href="concepts/environment-variables/" class="md-nav__link">
+      <a href="../../concepts/environment-variables/" class="md-nav__link">
         
   
   
@@ -609,7 +492,7 @@
   
   
     <li class="md-nav__item">
-      <a href="concepts/hooks/" class="md-nav__link">
+      <a href="../../concepts/hooks/" class="md-nav__link">
         
   
   
@@ -637,7 +520,7 @@
   
   
     <li class="md-nav__item">
-      <a href="concepts/preprocessor/" class="md-nav__link">
+      <a href="../../concepts/preprocessor/" class="md-nav__link">
         
   
   
@@ -665,7 +548,7 @@
   
   
     <li class="md-nav__item">
-      <a href="concepts/catalystignore/" class="md-nav__link">
+      <a href="../../concepts/catalystignore/" class="md-nav__link">
         
   
   
@@ -697,18 +580,20 @@
       
   
   
+    
   
   
+  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
         
           
           <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
@@ -729,7 +614,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -747,7 +632,7 @@
   
   
     <li class="md-nav__item">
-      <a href="cli/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -775,7 +660,7 @@
   
   
     <li class="md-nav__item">
-      <a href="cli/add/" class="md-nav__link">
+      <a href="../add/" class="md-nav__link">
         
   
   
@@ -803,7 +688,7 @@
   
   
     <li class="md-nav__item">
-      <a href="cli/bench/" class="md-nav__link">
+      <a href="../bench/" class="md-nav__link">
         
   
   
@@ -831,7 +716,7 @@
   
   
     <li class="md-nav__item">
-      <a href="cli/build/" class="md-nav__link">
+      <a href="../build/" class="md-nav__link">
         
   
   
@@ -859,7 +744,7 @@
   
   
     <li class="md-nav__item">
-      <a href="cli/clean/" class="md-nav__link">
+      <a href="../clean/" class="md-nav__link">
         
   
   
@@ -887,7 +772,7 @@
   
   
     <li class="md-nav__item">
-      <a href="cli/doc/" class="md-nav__link">
+      <a href="../doc/" class="md-nav__link">
         
   
   
@@ -915,7 +800,7 @@
   
   
     <li class="md-nav__item">
-      <a href="cli/download/" class="md-nav__link">
+      <a href="../download/" class="md-nav__link">
         
   
   
@@ -943,7 +828,7 @@
   
   
     <li class="md-nav__item">
-      <a href="cli/fetch/" class="md-nav__link">
+      <a href="../fetch/" class="md-nav__link">
         
   
   
@@ -971,7 +856,7 @@
   
   
     <li class="md-nav__item">
-      <a href="cli/fmt/" class="md-nav__link">
+      <a href="../fmt/" class="md-nav__link">
         
   
   
@@ -999,7 +884,7 @@
   
   
     <li class="md-nav__item">
-      <a href="cli/generate/" class="md-nav__link">
+      <a href="../generate/" class="md-nav__link">
         
   
   
@@ -1024,10 +909,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="cli/ide-sync/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ide-sync
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1043,6 +955,48 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Details
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Examples
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1055,7 +1009,7 @@
   
   
     <li class="md-nav__item">
-      <a href="cli/init/" class="md-nav__link">
+      <a href="../init/" class="md-nav__link">
         
   
   
@@ -1083,7 +1037,7 @@
   
   
     <li class="md-nav__item">
-      <a href="cli/install/" class="md-nav__link">
+      <a href="../install/" class="md-nav__link">
         
   
   
@@ -1111,7 +1065,7 @@
   
   
     <li class="md-nav__item">
-      <a href="cli/lock/" class="md-nav__link">
+      <a href="../lock/" class="md-nav__link">
         
   
   
@@ -1139,7 +1093,7 @@
   
   
     <li class="md-nav__item">
-      <a href="cli/pack/" class="md-nav__link">
+      <a href="../pack/" class="md-nav__link">
         
   
   
@@ -1167,7 +1121,7 @@
   
   
     <li class="md-nav__item">
-      <a href="cli/profile_ls/" class="md-nav__link">
+      <a href="../profile_ls/" class="md-nav__link">
         
   
   
@@ -1195,7 +1149,7 @@
   
   
     <li class="md-nav__item">
-      <a href="cli/run/" class="md-nav__link">
+      <a href="../run/" class="md-nav__link">
         
   
   
@@ -1223,7 +1177,7 @@
   
   
     <li class="md-nav__item">
-      <a href="cli/test/" class="md-nav__link">
+      <a href="../test/" class="md-nav__link">
         
   
   
@@ -1251,7 +1205,7 @@
   
   
     <li class="md-nav__item">
-      <a href="cli/tidy/" class="md-nav__link">
+      <a href="../tidy/" class="md-nav__link">
         
   
   
@@ -1286,7 +1240,7 @@
   
   
     <li class="md-nav__item">
-      <a href="CONTRIBUTING/" class="md-nav__link">
+      <a href="../../CONTRIBUTING/" class="md-nav__link">
         
   
   
@@ -1313,7 +1267,7 @@
   
   
     <li class="md-nav__item">
-      <a href="ROADMAP/" class="md-nav__link">
+      <a href="../../ROADMAP/" class="md-nav__link">
         
   
   
@@ -1340,7 +1294,7 @@
   
   
     <li class="md-nav__item">
-      <a href="LICENSE/" class="md-nav__link">
+      <a href="../../LICENSE/" class="md-nav__link">
         
   
   
@@ -1387,10 +1341,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#key-features" class="md-nav__link">
+  <a href="#details" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Key Features
+        Details
       
     </span>
   </a>
@@ -1398,63 +1352,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#documentation" class="md-nav__link">
+  <a href="#examples" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Documentation
+        Examples
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Documentation">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Getting Started
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#core-concepts" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Core Concepts
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#cli-reference" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        CLI Reference
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#community-contributing" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Community &amp; Contributing
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1475,59 +1379,36 @@
 
 
 
-<h1 id="catalyst-a-modern-declarative-c-build-system">Catalyst: <strong>A Modern, Declarative C++ Build System</strong></h1>
-<blockquote>
-<p>WARNING: Catalyst is currently in early development. APIs and features are subject to change.
-NOTE: This documentation refers to binaries built from the 1.1.0 tag.</p>
-</blockquote>
-<p>Catalyst is a next-generation build system for C++ that aims to bring the ease of use of declarative configuration to
-the C++ ecosystem. It prioritizes declarative configuration, reproducibility, and developer experience.</p>
-<h2 id="key-features">Key Features</h2>
-<ul>
-<li><strong>Declarative Configuration</strong>: Define your project with simple YAML files. No more complex CMake scripting.</li>
-<li><strong>Profile Composition</strong>: Mix and match build configurations (e.g., <code>debug</code>, <code>release</code>, <code>asan</code>) easily.</li>
-<li><strong>Dependency Management</strong>: Built-in support for <code>vcpkg</code>, <code>git</code> repositories, local packages, and system libraries.</li>
-<li><strong>Reproducible Builds</strong>: Designed for determinism and isolation.</li>
-<li><strong>Modern C++ Support</strong>: Built for C++20 and beyond.</li>
-</ul>
-<h2 id="documentation">Documentation</h2>
-<h3 id="getting-started">Getting Started</h3>
-<ul>
-<li><a href="installation/">Installation</a></li>
-<li><a href="getting_started/">Getting Started Guide</a></li>
-</ul>
-<h3 id="core-concepts">Core Concepts</h3>
-<ul>
-<li><a href="concepts/configuration/">Configuration</a></li>
-<li><a href="concepts/profiles/">Profiles</a></li>
-<li><a href="concepts/dependencies/">Dependencies</a></li>
-<li><a href="concepts/hooks/">Hooks</a></li>
-<li><a href="concepts/preprocessor/">Preprocessor &amp; Features</a></li>
-<li><a href="concepts/catalystignore/">catalystignore</a></li>
-<li><a href="concepts/environment-variables/">Environment Variables</a></li>
-</ul>
-<h3 id="cli-reference">CLI Reference</h3>
-<ul>
-<li><a href="cli/">Command Overview</a></li>
-<li><a href="cli/init/">init</a></li>
-<li><a href="cli/add/">add</a></li>
-<li><a href="cli/build/">build</a></li>
-<li><a href="cli/run/">run</a></li>
-<li><a href="cli/install/">install</a></li>
-<li><a href="cli/test/">test</a></li>
-<li><a href="cli/fetch/">fetch</a></li>
-<li><a href="cli/generate/">generate</a></li>
-<li><a href="cli/clean/">clean</a></li>
-<li><a href="cli/fmt/">fmt</a></li>
-<li><a href="cli/tidy/">tidy</a></li>
-<li><a href="cli/download/">download</a></li>
-</ul>
-<h3 id="community-contributing">Community &amp; Contributing</h3>
-<ul>
-<li><a href="CONTRIBUTING/">Contributing Guidelines</a></li>
-<li><a href="ROADMAP/">Roadmap</a></li>
-</ul>
-<hr />
+<h1 id="catalyst-ide-sync">catalyst ide-sync</h1>
+<pre><code>Sync IDE configuration files for an existing project.
+Usage: catalyst ide-sync [OPTIONS]
+
+Options:
+  -h,--help                   Print this help message and exit
+  -p,--profiles TEXT [common]  ...
+                              Profiles to use from the configuration file
+  --ides ENUM:value in {clion-&gt;,vscode-&gt;} OR {} ...
+                              IDEs to generate project files for
+  -f,--force-ide [0]          force emitting IDE config even if one already exists
+</code></pre>
+<h2 id="details">Details</h2>
+<p>The <code>ide-sync</code> command regenerates IDE project files (such as VS Code or CLion configurations) based on the current Catalyst configuration. This is useful when you've modified your project's structure, dependencies, or build settings and need to update your IDE integration.</p>
+<h2 id="examples">Examples</h2>
+<p><strong>Sync IDE configurations:</strong></p>
+<pre><code class="language-bash">catalyst ide-sync
+</code></pre>
+<p><strong>Sync for specific IDE:</strong></p>
+<pre><code class="language-bash">catalyst ide-sync --ides vscode
+</code></pre>
+<p><strong>Force regenerate IDE config:</strong></p>
+<pre><code class="language-bash">catalyst ide-sync --force-ide
+</code></pre>
+<p><strong>Sync with specific profiles:</strong></p>
+<pre><code class="language-bash">catalyst ide-sync --profiles common debug
+</code></pre>
+<p><strong>Sync for multiple IDEs:</strong></p>
+<pre><code class="language-bash">catalyst ide-sync --ides vscode clion
+</code></pre>
 
 
 
@@ -1577,10 +1458,10 @@ the C++ ecosystem. It prioritizes declarative configuration, reproducibility, an
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": [], "search": "assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>
