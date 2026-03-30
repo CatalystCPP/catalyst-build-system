@@ -4,12 +4,53 @@ _catalyst() {
     local cur prev words cword
     _init_completion || return
 
-    local subcommands="add bench build clean doc download fetch fmt generate ide_sync init install lock pack profile-ls run test tidy"
+    local subcommands="add bench build clean doc download fetch fmt generate ide-sync init install lock pack profile-ls run test tidy"
 
     if [[ $cword -eq 1 ]]; then
         COMPREPLY=($(compgen -W "$subcommands" -- "$cur"))
         return
     fi
+
+    local last_flag=""
+    for (( i=1; i<cword; i++ )); do
+        if [[ "${words[i]}" == -* ]]; then
+            last_flag="${words[i]}"
+        fi
+    done
+
+    if [[ "$cur" != -* ]]; then
+        case "$last_flag" in
+            -p|--profile|--profiles)
+                COMPREPLY=($(compgen -W "$(catalyst profile-ls 2>/dev/null)" -- "$cur"))
+                return
+                ;;
+            --ides)
+                COMPREPLY=($(compgen -W "vscode clion" -- "$cur"))
+                return
+                ;;
+            -G|--generators)
+                COMPREPLY=($(compgen -W "TGZ ZIP DEB RPM NSIS WIX DMG STGZ FREEBSD APK 7Z TXZ EXTERNAL" -- "$cur"))
+                return
+                ;;
+        esac
+    fi
+
+    case "$prev" in
+        -b|--backend)
+            COMPREPLY=($(compgen -W "ninja gmake cbe" -- "$cur"))
+            return
+            ;;
+        -e|--engine)
+            COMPREPLY=($(compgen -W "doxygen clang-doc jocasta" -- "$cur"))
+            return
+            ;;
+        -t|--type)
+            if [[ "${words[1]}" == "init" ]]; then
+                COMPREPLY=($(compgen -W "binary staticlib sharedlib interface" -- "$cur"))
+                return
+            fi
+            ;;
+    esac
 
     local subcommand=${words[1]}
 
@@ -82,7 +123,7 @@ _catalyst() {
                 COMPREPLY=($(compgen -W "-p --profiles -f --features -b --backend" -- "$cur"))
             fi
             ;;
-        ide_sync)
+        ide-sync)
             if [[ "$cur" == -* ]]; then
                 COMPREPLY=($(compgen -W "-p --profiles --ides -f --force-ide" -- "$cur"))
             fi
@@ -93,13 +134,9 @@ _catalyst() {
                     _filedir -d
                     return
                     ;;
-                -t|--type)
-                    COMPREPLY=($(compgen -W "library executable" -- "$cur"))
-                    return
-                    ;;
             esac
             if [[ "$cur" == -* ]]; then
-                COMPREPLY=($(compgen -W "-n --name --path -t --type -v --version -d --description --provides --cc --cxx --ccflags --cxxflags --ldflags --include-dirs --source-dirs --build-dir --ides -p --profile --force-ide" -- "$cur"))
+                COMPREPLY=($(compgen -W "-n --name --path -t --type -v --version -d --description --provides --cc --cxx --ccflags --cxxflags --ldflags --include-dirs --source-dirs --build-dir --ides -p --profile -f --force-ide" -- "$cur"))
             fi
             ;;
         install)

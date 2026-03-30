@@ -194,7 +194,7 @@ int dispatch(const catalyst::CliContext &ctx) {
     }
     if (*ctx.ide_sync_subc) {
         injectCommon(ctx.ide_sync_res->profiles);
-        return dispatchFN("ide_sync", *ctx.ide_sync_res, catalyst::ide_sync::action);
+        return dispatchFN("ide-sync", *ctx.ide_sync_res, catalyst::ide_sync::action);
     }
     if (*ctx.init_subc)
         return dispatchFN("init", *ctx.init_res, catalyst::init::action);
