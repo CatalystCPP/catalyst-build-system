@@ -1,6 +1,7 @@
 site_name: Catalyst Build System Documentation
 theme:
   name: material
+  logo: assets/logo.svg
 
 nav:
   - Home: index.md
