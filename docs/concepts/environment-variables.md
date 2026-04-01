@@ -21,3 +21,10 @@ This prevents the `common` profile from being injected multiple times as depende
 Tracks which local dependency paths have already been visited during a recursive `fetch` operation. Set and propagated by Catalyst across child processes to detect and break dependency cycles.
 
 > **Note:** This variable is intended for internal use. Do not set it manually.
+
+## CATALYST_VERBOSE
+
+Type; Flag (any non-empty value is truthy)
+
+Set by Catalsyt when it's invoked with -V AND spawns a child Catalyst to fetch a local dependency.
+When present, the child catalyst is also made verbose.
