@@ -340,7 +340,7 @@ void mergeHelper(YAML::Node &composite, const std::string &new_profile_name, con
             } else if (hook.second.IsSequence()) {
                 for (const auto &item : hook.second)
                     dst[name].push_back(item);
-            } else if (hook.second.IsScalar()) {
+            } else if (hook.second.IsScalar() || hook.second.IsMap()) {
                 dst[name].push_back(hook.second);
             }
         }
