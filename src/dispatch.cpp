@@ -125,6 +125,9 @@ std::pair<int, bool> parseCli(int argc, char **argv, catalyst::CliContext &ctx) 
         return {ctx.app.exit(e), true};
     }
 
+    catalyst::logger.getVerboseLogging() = catalyst::logger.getVerboseLogging() || std::getenv("CATALYST_VERBOSE");
+    // check env var for verbose logging
+
     if (ctx.helped)
         return {0, true};
 
