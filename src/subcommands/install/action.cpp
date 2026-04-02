@@ -134,16 +134,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
                     "Installing headers from: {} -> {}", source_inc.string(), dest_include_dir.string());
                 try {
                     fs::create_directories(dest_include_dir);
-                    for (const auto &entry : fs::recursive_directory_iterator(source_inc)) {
-                        fs::path relative_path = fs::relative(entry.path(), source_inc);
-                        fs::path target_path = dest_include_dir / relative_path;
-                        if (fs::is_directory(entry)) {
-                            fs::create_directories(target_path);
-                        } else {
-                            fs::create_directories(target_path.parent_path());
-                            fs::copy_file(entry.path(), target_path, fs::copy_options::overwrite_existing);
-                        }
-                    }
+                    fs::copy(source_inc, dest_include_dir, fs::copy_options::recursive | fs::copy_options::overwrite_existing);
                 } catch (const fs::filesystem_error &e) {
                     return std::unexpected(std::format("Failed to install headers: {}", e.what()));
                 }

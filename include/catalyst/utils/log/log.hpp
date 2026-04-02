@@ -72,8 +72,7 @@ private:
     generateJsonLogEvent(const std::chrono::system_clock::time_point &now, LogLevel level, const std::string &message);
 
     mutable std::ofstream log_file;
-    mutable std::mutex log_file_mutex;
-    mutable std::mutex stdio_mutex;
+    mutable std::mutex logging_mt;
     mutable bool verbose_logging = false;
 };
 

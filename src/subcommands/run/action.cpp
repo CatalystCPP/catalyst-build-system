@@ -92,12 +92,14 @@ std::expected<void, std::string> action(const Parse &args) {
     if (!lib_path_res) {
         return std::unexpected("Failed to generate LD_LIBRARY_PATH");
     }
+
+    std::unordered_map<std::string, std::string> exec_env;
 #if defined(_WIN32)
-    _putenv_s("PATH", lib_path_res.value().c_str());
+    exec_env["PATH"] = lib_path_res.value();
 #elif defined(__APPLE__)
-    setenv("DYLD_LIBRARY_PATH", lib_path_res.value().c_str(), 1);
+    exec_env["DYLD_LIBRARY_PATH"] = lib_path_res.value();
 #else
-    setenv("LD_LIBRARY_PATH", lib_path_res.value().c_str(), 1);
+    exec_env["LD_LIBRARY_PATH"] = lib_path_res.value();
 #endif
 
     catalyst::logger.debug("Executing command: {}", command);
@@ -106,7 +108,7 @@ std::expected<void, std::string> action(const Parse &args) {
     exec_args.push_back(exe_path.string());
     exec_args.insert(exec_args.end(), args.params.begin(), args.params.end());
 
-    if (int res = catalyst::processExec(std::move(exec_args)).value().get(); res) {
+    if (int res = catalyst::processExec(std::move(exec_args), std::nullopt, exec_env).value().get(); res) {
         return std::unexpected(
             std::format("Target executable: {} exited with failure code: {}", exe_path.string(), res));
     }

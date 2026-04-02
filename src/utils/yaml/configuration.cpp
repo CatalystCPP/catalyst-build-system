@@ -9,7 +9,6 @@
 #include <functional>
 #include <optional>
 #include <sstream>
-#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -27,29 +26,32 @@ namespace fs = std::filesystem;
 namespace {
 
 YAML::Node getDefaultConfiguration() {
-    YAML::Node root;
-    root["meta"]["min_ver"] = "0.0.1";
-    root["meta"]["generator"] = "cbe";
-    root["manifest"]["name"] = "name";
-    root["manifest"]["type"] = "BINARY";
-    root["manifest"]["version"] = "0.0.1";
-    root["manifest"]["provides"] = "";
-    root["manifest"]["tooling"]["CC"] = "clang";
-    root["manifest"]["tooling"]["CXX"] = "clang++";
-    root["manifest"]["tooling"]["FMT"] = "clang-format";
-    root["manifest"]["tooling"]["LINTER"] = "clang-tidy";
-    root["manifest"]["tooling"]["CCFLAGS"] = "";
-    root["manifest"]["tooling"]["CXXFLAGS"] = "";
-    root["manifest"]["tooling"]["LDFLAGS"] = "";
-    root["manifest"]["tooling"]["doc"]["engine"] = "doxygen";
-    root["manifest"]["tooling"]["doc"]["config"] = "Doxyfile";
-    root["manifest"]["tooling"]["doc"]["out_dir"] = "docs/";
-    root["manifest"]["dirs"]["include"] = std::vector<std::string>{};
-    root["manifest"]["dirs"]["source"] = std::vector<std::string>{};
-    root["manifest"]["dirs"]["build"] = "";
-    root["dependencies"] = std::vector<YAML::Node>{};
-    root["features"] = YAML::Node(YAML::NodeType::Map);
-    return root;
+    static YAML::Node defaults = []() {
+        YAML::Node root;
+        root["meta"]["min_ver"] = "0.0.1";
+        root["meta"]["generator"] = "cbe";
+        root["manifest"]["name"] = "name";
+        root["manifest"]["type"] = "BINARY";
+        root["manifest"]["version"] = "0.0.1";
+        root["manifest"]["provides"] = "";
+        root["manifest"]["tooling"]["CC"] = "clang";
+        root["manifest"]["tooling"]["CXX"] = "clang++";
+        root["manifest"]["tooling"]["FMT"] = "clang-format";
+        root["manifest"]["tooling"]["LINTER"] = "clang-tidy";
+        root["manifest"]["tooling"]["CCFLAGS"] = "";
+        root["manifest"]["tooling"]["CXXFLAGS"] = "";
+        root["manifest"]["tooling"]["LDFLAGS"] = "";
+        root["manifest"]["tooling"]["doc"]["engine"] = "doxygen";
+        root["manifest"]["tooling"]["doc"]["config"] = "Doxyfile";
+        root["manifest"]["tooling"]["doc"]["out_dir"] = "docs/";
+        root["manifest"]["dirs"]["include"] = std::vector<std::string>{};
+        root["manifest"]["dirs"]["source"] = std::vector<std::string>{};
+        root["manifest"]["dirs"]["build"] = "";
+        root["dependencies"] = std::vector<YAML::Node>{};
+        root["features"] = YAML::Node(YAML::NodeType::Map);
+        return root;
+    }();
+    return YAML::Clone(defaults);
 }
 
 std::string verMax(std::string s1, std::string s2) {
@@ -188,15 +190,13 @@ void mergeHelper(YAML::Node &composite, const std::string &new_profile_name, con
 
     auto check_conflict = [&](const std::string &dotpath, const std::string &incoming_val) {
         try {
-            auto resolve = [](YAML::Node node, const std::string &path) -> std::string {
-                for (const auto &seg : splitPath(path))
-                    node = node[seg];
-                return node.as<std::string>();
-            };
-            std::string current_val = resolve(YAML::Clone(composite), dotpath);
-            std::string default_val = resolve(YAML::Clone(defaults), dotpath);
+            auto current_node = traverse(dotpath, composite);
+            auto default_node = traverse(dotpath, defaults);
 
-            if (current_val != incoming_val && current_val != default_val) {
+            std::string current_val = current_node ? current_node->as<std::string>() : "";
+            std::string default_val = default_node ? default_node->as<std::string>() : "";
+
+            if (!current_val.empty() && current_val != incoming_val && current_val != default_val) {
                 catalyst::logger.warn(
                     "Profile '{}' overrides '{}': '{}' -> '{}'", new_profile_name, dotpath, current_val, incoming_val);
             }
@@ -374,11 +374,12 @@ void merge(YAML::Node &composite, const std::string &profile_name, const fs::pat
 
 Configuration::Configuration(const std::vector<std::string> &profiles, const std::filesystem::path &root_dir) {
     std::vector<std::string> profile_names;
+    profile_names.reserve(profiles.size());
     for (const auto &p : profiles) {
-        if (std::ranges::find(profile_names, p) == profile_names.end()) {
-            profile_names.push_back(p);
+        if (!profile_names.empty() && profile_names.back() == p) {
+            catalyst::logger.warn("Adjacent duplicate profile '{}' ignored during composition.", p);
         } else {
-            catalyst::logger.warn("Duplicate profile '{}' ignored during composition.", p);
+            profile_names.push_back(p);
         }
     }
     catalyst::logger.debug("Composing profiles: {}.", profile_names);
@@ -394,16 +395,7 @@ Configuration::Configuration(const std::vector<std::string> &profiles, const std
 }
 
 bool Configuration::has(const std::string &key) const {
-    std::vector<std::string> segments = splitPath(key);
-    YAML::Node current = YAML::Clone(root);
-
-    for (const auto &segment : segments) {
-        if (!current[segment]) {
-            return false;
-        }
-        current = current[segment];
-    }
-    return true;
+    return traverse(key, root).has_value();
 }
 
 std::optional<std::string> Configuration::getString(const std::string &key) const {

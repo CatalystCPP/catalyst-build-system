@@ -74,6 +74,7 @@ std::expected<void, std::string> executeCatalystHook(const YAML::Node &item, con
         }
 
         std::string joined;
+        joined.reserve(128);
         for (const auto &a : args)
             joined += a + " ";
         catalyst::logger.debug("[Catalyst Hook: {}] Running catalyst: {}", hook_name, joined);
@@ -125,15 +126,19 @@ std::expected<void, std::string> executeCodegenHook(const YAML::Node &codegen_no
         }
     };
 
-    for (size_t i = 0; i < inputs.size(); ++i)
-        replace_all(cmd, std::format("$IN[{}]", i), inputs[i]);
-    for (size_t i = 0; i < outputs.size(); ++i)
-        replace_all(cmd, std::format("$OUT[{}]", i), outputs[i]);
+    if (cmd.contains("$IN[")) {
+        for (size_t i = 0; i < inputs.size(); ++i)
+            replace_all(cmd, "$IN[" + std::to_string(i) + "]", inputs[i]);
+    }
+    if (cmd.contains("$OUT[")) {
+        for (size_t i = 0; i < outputs.size(); ++i)
+            replace_all(cmd, "$OUT[" + std::to_string(i) + "]", outputs[i]);
+    }
 
-    if (cmd.find("$IN[") != std::string::npos) {
+    if (cmd.contains("$IN[")) {
         return std::unexpected(std::format("Hook '{}' codegen cmd references out-of-bounds $IN index", hook_name));
     }
-    if (cmd.find("$OUT[") != std::string::npos) {
+    if (cmd.contains("$OUT[")) {
         return std::unexpected(std::format("Hook '{}' codegen cmd references out-of-bounds $OUT index", hook_name));
     }
 

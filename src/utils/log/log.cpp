@@ -41,24 +41,24 @@ LogT::~LogT() {
 }
 
 bool LogT::isOpen() const {
-    std::lock_guard<std::mutex> lock(log_file_mutex);
+    std::lock_guard<std::mutex> lock(logging_mt);
     return log_file.is_open();
 }
 
 void LogT::flush() const {
-    std::lock_guard<std::mutex> lock(log_file_mutex);
+    std::lock_guard<std::mutex> lock(logging_mt);
     log_file.flush();
 }
 
 void LogT::close() const {
-    std::lock_guard<std::mutex> lock(log_file_mutex);
+    std::lock_guard<std::mutex> lock(logging_mt);
     if (log_file.is_open()) {
         log_file.close();
     }
 }
 
 void LogT::logImpl(LogLevel level, const std::string &message) const {
-    std::lock_guard<std::mutex> lock(log_file_mutex);
+    std::lock_guard<std::mutex> lock(logging_mt);
     if (!log_file.is_open()) {
         return;
     }
@@ -83,22 +83,18 @@ void LogT::logImpl(LogLevel level, const std::string &message) const {
                 break;
         }
 
-        if (level == LogLevel::ERROR) {
-            std::lock_guard<std::mutex> lock{stdio_mutex};
-            std::cerr << std::format("[{:%Y-%m-%d %H:%M:%S}] ", now) << color
-                      << std::format("[{}] {}", toString(level), message) << RESET << std::endl;
-        } else {
-            std::lock_guard<std::mutex> lock{stdio_mutex};
-            std::cout << std::format("[{:%Y-%m-%d %H:%M:%S}] ", now) << color
-                      << std::format("[{}] {}", toString(level), message) << RESET << std::endl;
-        }
+        std::ostream &sink = (level == LogLevel::ERROR) ? std::cerr : std::cout;
+        std::string time_str = std::format("{:%Y-%m-%d %H:%M:%S}", now);
+        std::string log_str = std::format("[{}] {}", toString(level), message);
+        sink << time_str << " " << color << log_str << RESET << '\n';
     }
 }
 
 std::string LogT::generateJsonLogEvent(const std::chrono::system_clock::time_point &now,
                                        LogLevel level,
                                        const std::string &message) {
-    nlohmann::json j;
+    static thread_local nlohmann::json j;
+    j.clear();
     j["timestamp"] = std::format("{:%Y-%m-%d %H:%M:%S}", now);
     j["level"] = toString(level);
     j["message"] = message;

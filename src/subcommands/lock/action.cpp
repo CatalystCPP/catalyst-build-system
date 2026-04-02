@@ -123,17 +123,39 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         catalyst::logger.info("Resolving dependencies for workspace...");
         lockfile_path = parse_args.workspace->getRoot() / "catalyst.lock";
 
-        for (const auto &[name, member] : parse_args.workspace->getMembers()) {
-            std::vector<std::string> profiles = member.profiles;
-            if (profiles.empty())
-                profiles = {"common"};
+        // Load configurations in parallel, then collect dependencies sequentially
+        // for deterministic resolution order
+        const auto &members = parse_args.workspace->getMembers();
+        struct MemberConfig {
+            std::string name;
+            std::optional<utils::yaml::Configuration> config;
+        };
+        std::vector<MemberConfig> configs(members.size());
+        std::vector<std::thread> threads;
 
-            try {
-                utils::yaml::Configuration config(profiles, member.path);
-                collectDependencies(config, locked_deps, parse_args.workspace);
-            } catch (const std::exception &e) {
-                catalyst::logger.warn("Failed to load configuration for member {}: {}", name, e.what());
-            }
+        size_t idx = 0;
+        for (const auto &[name, member] : members) {
+            configs[idx].name = name;
+            threads.emplace_back([&cfg = configs[idx], m = member]() {
+                std::vector<std::string> profiles = m.profiles;
+                if (profiles.empty())
+                    profiles = {"common"};
+
+                try {
+                    cfg.config.emplace(profiles, m.path);
+                } catch (const std::exception &e) {
+                    catalyst::logger.warn("Failed to load configuration for member {}: {}", cfg.name, e.what());
+                }
+            });
+            ++idx;
+        }
+        for (auto &t : threads) {
+            t.join();
+        }
+
+        for (const auto &mc : configs) {
+            if (mc.config)
+                collectDependencies(*mc.config, locked_deps, parse_args.workspace);
         }
     } else {
         utils::yaml::Configuration config(parse_args.profiles);
