@@ -17,19 +17,17 @@ namespace catalyst::download {
 
 namespace {
 std::string randomString(size_t length) {
-    auto randchar = []() -> char {
-        static std::random_device rd;
-        static std::mt19937 rng(rd());
+    std::random_device rd;
+    std::mt19937 rng(rd());
 
-        constexpr std::array<char, 63> CHARSET = {"0123456789"
-                                                  "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                                                  "abcdefghijklmnopqrstuvwxyz"};
-        const size_t max_index = CHARSET.size() - 1;
-        static std::uniform_int_distribution<size_t> dist(0, max_index - 1);
-        return CHARSET.at(dist(rng));
-    };
-    std::string str(length, 0);
-    std::generate_n(str.begin(), length, randchar);
+    constexpr std::string_view CHARSET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    const size_t max_index = CHARSET.size() - 1;
+    std::uniform_int_distribution<size_t> dist(0, max_index);
+
+    std::string str(length, '\0');
+    for (size_t i = 0; i < length; ++i) {
+        str[i] = CHARSET[dist(rng)];
+    }
     return str;
 }
 } // namespace

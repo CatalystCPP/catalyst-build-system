@@ -79,10 +79,9 @@ std::expected<void, std::string> action(const Parse &parse_args) {
                 }
                 linter_args.push_back(file_to_process.string());
                 if (int res = catalyst::processExec(std::move(linter_args)).value().get(); res != 0) {
-                    err_log_mt.lock();
+                    std::lock_guard<std::mutex> lock{err_log_mt};
                     catalyst::logger.error("Linter failed for {}: exit code {}", file_to_process.string(), res);
                     has_errors = true;
-                    err_log_mt.unlock();
                 }
             }
         });

@@ -93,7 +93,8 @@ ProcessExecutor::processExecStdout(const std::vector<std::string> &args,
 }
 
 namespace {
-std::shared_ptr<IProcessExecutor> g_executor = std::make_shared<ProcessExecutor>();
+std::shared_ptr<IProcessExecutor> g_executor_owner = std::make_shared<ProcessExecutor>();
+IProcessExecutor* g_executor = g_executor_owner.get();
 }
 
 IProcessExecutor &getProcessExecutor() {
@@ -101,7 +102,8 @@ IProcessExecutor &getProcessExecutor() {
 }
 
 void setProcessExecutor(std::shared_ptr<IProcessExecutor> executor) {
-    g_executor = std::move(executor);
+    g_executor_owner = std::move(executor);
+    g_executor = g_executor_owner.get();
 }
 
 std::expected<std::future<int>, std::string>

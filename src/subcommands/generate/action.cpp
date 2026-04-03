@@ -24,7 +24,7 @@ namespace fs = std::filesystem;
 
 namespace {
 
-bool isEnabled(bool default_enabled, const std::string &feature, const std::vector<std::string> &enabled_features);
+bool isEnabled(bool default_enabled, const std::string &feature, const std::unordered_set<std::string> &enabled_features);
 
 void writeVariables(const catalyst::utils::yaml::Configuration &config,
                     catalyst::generate::buildwriters::BaseWriter &writer,
@@ -257,6 +257,7 @@ void writeVariables(const catalyst::utils::yaml::Configuration &config,
         logger.warn("VCPKG_ROOT environment variable is not defined.");
     }
 
+    std::unordered_set<std::string> enabled_features_set(enabled_features.begin(), enabled_features.end());
     if (const auto &features_node = config.getRoot()["features"]; features_node && features_node.IsMap()) {
         for (auto it = features_node.begin(); it != features_node.end(); ++it) {
             auto feature = it->first.as<std::string>();
@@ -270,7 +271,7 @@ void writeVariables(const catalyst::utils::yaml::Configuration &config,
             std::string flag = std::format(" -DFF_{}__{}={}",
                                            config.getString("manifest.name").value_or("name"),
                                            feature,
-                                           isEnabled(default_enabled, feature, enabled_features) ? "1" : "0");
+                                           isEnabled(default_enabled, feature, enabled_features_set) ? "1" : "0");
             cxxflags += flag;
             ccflags += flag;
         }
@@ -330,6 +331,7 @@ void writeRules(catalyst::generate::buildwriters::BaseWriter &writer) {
 void featureFilter(std::unordered_set<fs::path> &source_set,
                    const catalyst::utils::yaml::Configuration &config,
                    const std::vector<std::string> &enabled_features) {
+    std::unordered_set<std::string> enabled_features_set(enabled_features.begin(), enabled_features.end());
     std::unordered_set<std::string> inactive_features;
     if (const auto &features_node = config.getRoot()["features"]; features_node && features_node.IsMap()) {
         for (auto it = features_node.begin(); it != features_node.end(); ++it) {
@@ -341,7 +343,7 @@ void featureFilter(std::unordered_set<fs::path> &source_set,
                 default_enabled = it->second.as<bool>();
             }
 
-            if (!isEnabled(default_enabled, feature, enabled_features))
+            if (!isEnabled(default_enabled, feature, enabled_features_set))
                 inactive_features.insert(feature);
         }
     }
@@ -365,9 +367,9 @@ void featureFilter(std::unordered_set<fs::path> &source_set,
     }
 }
 
-bool isEnabled(bool default_enabled, const std::string &feature, const std::vector<std::string> &enabled_features) {
-    bool explicitly_enabled = std::ranges::find(enabled_features, feature) != enabled_features.end();
-    bool explicitly_disabled = std::ranges::find(enabled_features, "no-" + feature) != enabled_features.end();
+bool isEnabled(bool default_enabled, const std::string &feature, const std::unordered_set<std::string> &enabled_features) {
+    bool explicitly_enabled = enabled_features.contains(feature);
+    bool explicitly_disabled = enabled_features.contains("no-" + feature);
 
     bool is_enabled = default_enabled;
     if (explicitly_enabled) {
