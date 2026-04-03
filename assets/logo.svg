@@ -1,0 +1,63 @@
+<svg class="logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+<!-- Prism Body - Shifted right to make room for sub-dependencies -->
+<defs>
+<linearGradient id="prismGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+<stop offset="0%" style="stop-color:#4F46E5;" /> <!-- Indigo -->
+<stop offset="100%" style="stop-color:#7C3AED;" /> <!-- Purple -->
+</linearGradient>
+
+<!-- Gradient for the pink refracted line -->
+<linearGradient id="refractedPink" gradientUnits="userSpaceOnUse" x1="35" y1="35" x2="70" y2="50">
+<stop offset="0%" style="stop-color:#F472B6"/>
+<stop offset="100%" style="stop-color:#F9FAFB"/>
+</linearGradient>
+
+<!-- Gradient for the emerald refracted line -->
+<linearGradient id="refractedEmerald" gradientUnits="userSpaceOnUse" x1="35" y1="50" x2="70" y2="50">
+<stop offset="0%" style="stop-color:#34D399"/>
+<stop offset="100%" style="stop-color:#F9FAFB"/>
+</linearGradient>
+
+<!-- Gradient for the amber refracted line -->
+<linearGradient id="refractedAmber" gradientUnits="userSpaceOnUse" x1="35" y1="65" x2="70" y2="50">
+<stop offset="0%" style="stop-color:#FBBF24"/>
+<stop offset="100%" style="stop-color:#F9FAFB"/>
+</linearGradient>
+</defs>
+<path d="M 35,25 L 85,50 L 35,75 Z" fill="url(#prismGradient)" opacity="0.6"/>
+<path d="M 35,25 L 85,50 L 35,75 Z" stroke="#A5B4FC" stroke-width="0.75" fill="none"/>
+
+<!-- Dependency 1 (Pink) with its sub-dependencies -->
+<path d="M -10,28 L 15,28" stroke="#F472B6" stroke-width="0.5" opacity="0.7"/>
+<path d="M -10,36 L 15,36" stroke="#F472B6" stroke-width="0.5" opacity="0.7"/>
+<path d="M 15,28 L 20,32" stroke="#F472B6" stroke-width="1"/>
+<path d="M 15,36 L 20,32" stroke="#F472B6" stroke-width="1"/>
+<path d="M 20,32 L 35,35" stroke="#F472B6" stroke-width="1.5" filter="drop-shadow(0 0 2px #F472B6)"/>
+
+<!-- Dependency 2 (Emerald) with its sub-dependencies -->
+<path d="M -10,46 L 15,46" stroke="#34D399" stroke-width="0.5" opacity="0.7"/>
+<path d="M -10,54 L 15,54" stroke="#34D399" stroke-width="0.5" opacity="0.7"/>
+<path d="M 15,46 L 20,50" stroke="#34D399" stroke-width="1"/>
+<path d="M 15,54 L 20,50" stroke="#34D399" stroke-width="1"/>
+<path d="M 20,50 L 35,50" stroke="#34D399" stroke-width="1.5" filter="drop-shadow(0 0 2px #34D399)"/>
+
+<!-- Dependency 3 (Amber) with its sub-dependencies -->
+<path d="M -10,64 L 15,64" stroke="#FBBF24" stroke-width="0.5" opacity="0.7"/>
+<path d="M -10,72 L 15,72" stroke="#FBBF24" stroke-width="0.5" opacity="0.7"/>
+<path d="M 15,64 L 20,68" stroke="#FBBF24" stroke-width="1"/>
+<path d="M 15,72 L 20,68" stroke="#FBBF24" stroke-width="1"/>
+<path d="M 20,68 L 35,65" stroke="#FBBF24" stroke-width="1.5" filter="drop-shadow(0 0 2px #FBBF24)"/>
+
+<!-- Refracted Lines (inside the prism) -->
+<path d="M 35,35 L 70,50" stroke="url(#refractedPink)" stroke-width="1" opacity="0.9"/>
+<path d="M 35,50 L 70,50" stroke="url(#refractedEmerald)" stroke-width="1" opacity="0.9"/>
+<path d="M 35,65 L 70,50" stroke="url(#refractedAmber)" stroke-width="1" opacity="0.9"/>
+
+
+
+<!-- Convergence Point -->
+<circle cx="70" cy="50" r="1.5" fill="#67E8F9"/> <!-- Cyan -->
+
+<!-- Outgoing Unified Beam -->
+<path d="M 70,50 L 120,50" stroke="#67E8F9" fill="none" style="animation: beam-pulse 2s infinite ease-in-out;"/>
+</svg>

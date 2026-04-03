@@ -82,8 +82,7 @@
   <nav class="md-header__inner md-grid" aria-label="Header">
     <a href="../.." title="Catalyst Build System Documentation" class="md-header__button md-logo" aria-label="Catalyst Build System Documentation" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+  <img src="../../assets/logo.svg" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -180,8 +179,7 @@
   <label class="md-nav__title" for="__drawer">
     <a href="../.." title="Catalyst Build System Documentation" class="md-nav__button md-logo" aria-label="Catalyst Build System Documentation" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+  <img src="../../assets/logo.svg" alt="logo">
 
     </a>
     Catalyst Build System Documentation
@@ -573,6 +571,73 @@
       
     </span>
   </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#catalyst-hooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Catalyst Hooks
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Catalyst Hooks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#short-form" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Short Form
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#structured-form" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Structured Form
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#codegen-hooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Codegen Hooks
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Codegen Hooks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#variable-substitution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Variable Substitution
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -1502,6 +1567,73 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#catalyst-hooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Catalyst Hooks
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Catalyst Hooks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#short-form" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Short Form
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#structured-form" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Structured Form
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#codegen-hooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Codegen Hooks
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Codegen Hooks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#variable-substitution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Variable Substitution
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1662,11 +1794,12 @@
 <h2 id="configuring-hooks">Configuring Hooks</h2>
 <p>You can define hooks in your <code>catalyst.yaml</code> or any profile-specific <code>catalyst_*.yaml</code> file. Hooks are defined under the <code>hooks</code> key. You can specify a single command or a list of commands to execute for each hook.</p>
 <h3 id="hook-types">Hook Types</h3>
-<p>Catalyst supports three types of hooks:</p>
+<p>Catalyst supports four types of hooks:</p>
 <ol>
 <li><strong><code>command</code></strong>: Executes a standard shell command (via <code>sh -c</code> or <code>cmd /c</code>).</li>
 <li><strong><code>script</code></strong>: Executes a script file (via <code>sh -c</code> or <code>cmd /c</code>).</li>
 <li><strong><code>catalyst</code></strong>: Dispatches a Catalyst subcommand internally. This is preferred for invoking other Catalyst commands (like <code>test</code> after a <code>build</code>) because it avoids shelling out to a new process, shares the current configuration context, and enforces recursion protection (depth limit of 4).</li>
+<li><strong><code>codegen</code></strong>: Executes a command for code generation with optional dependency tracking. When <code>input</code> and <code>output</code> fields are both specified, the command only runs if any output file is missing or any input file is newer than the oldest output file. This enables incremental builds by skipping generation when outputs are already up-to-date.</li>
 </ol>
 <p>The <code>catalyst</code> hook type supports both a short string form and a structured map form:</p>
 <p><strong>Example <code>catalyst.yaml</code>:</strong></p>
@@ -1683,6 +1816,141 @@
   on-build-failure:
     - command: &quot;echo 'Build failed!'&quot;
 
+</code></pre>
+<h3 id="catalyst-hooks">Catalyst Hooks</h3>
+<p>The <code>catalyst</code> hook type dispatches a Catalyst subcommand internally without spawning a child process. This means the hook shares the current configuration context and workspace state with the parent invocation. Recursive invocation is protected by a maximum dispatch depth of 4, and direct recursion (e.g. a <code>pre-build</code> hook that triggers <code>build</code>) is always rejected.</p>
+<h4 id="short-form">Short Form</h4>
+<p>A single string parsed the same way as the CLI:</p>
+<pre><code class="language-yaml">hooks:
+  post-build:
+    - catalyst: &quot;test -p release&quot;
+    - catalyst: &quot;-V generate --backend ninja&quot;
+</code></pre>
+<h4 id="structured-form">Structured Form</h4>
+<p>An explicit map with named fields:</p>
+<pre><code class="language-yaml">hooks:
+  post-build:
+    - catalyst:
+        subcommand: test
+        profiles: [release]
+        args: [&quot;--verbose&quot;]
+  pre-build:
+    - catalyst:
+        subcommand: generate
+        global_args: [&quot;-V&quot;]
+        args: [&quot;--backend&quot;, &quot;ninja&quot;]
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>subcommand</code></td>
+<td><code>string</code></td>
+<td>Yes</td>
+<td>The Catalyst subcommand to invoke (e.g., <code>test</code>).</td>
+</tr>
+<tr>
+<td><code>args</code></td>
+<td><code>list[string]</code></td>
+<td>No</td>
+<td>Arguments passed to the subcommand.</td>
+</tr>
+<tr>
+<td><code>global_args</code></td>
+<td><code>list[string]</code></td>
+<td>No</td>
+<td>Arguments passed before the subcommand (e.g., <code>-V</code>).</td>
+</tr>
+<tr>
+<td><code>profiles</code></td>
+<td><code>list[string]</code></td>
+<td>No</td>
+<td>Shorthand for <code>-p &lt;profile&gt;</code> arguments.</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>[!NOTE]
+A <code>catalyst</code> hook does <strong>not</strong> inherit the parent invocation's global flags or profiles. Each hook invocation is independent.</p>
+</blockquote>
+<h3 id="codegen-hooks">Codegen Hooks</h3>
+<p>The <code>codegen</code> hook type is designed for code generation tasks that benefit from incremental builds. It accepts the following fields:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cmd</code></td>
+<td>Yes</td>
+<td>The shell command to execute.</td>
+</tr>
+<tr>
+<td><code>input</code></td>
+<td>No</td>
+<td>A file path or list of file paths that the command reads from.</td>
+</tr>
+<tr>
+<td><code>output</code></td>
+<td>No</td>
+<td>A file path or list of file paths that the command produces.</td>
+</tr>
+</tbody>
+</table>
+<p>When both <code>input</code> and <code>output</code> are specified, Catalyst checks file modification times to determine whether
+the command needs to run. The command is skipped if all output files exist and are newer than every input file. If
+either field is omitted, the command runs unconditionally on every invocation.</p>
+<h4 id="variable-substitution">Variable Substitution</h4>
+<p>The <code>cmd</code> field supports variable substitution to reference declared inputs and outputs, avoiding path duplication:</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Replaced With</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>$IN[i]</code></td>
+<td>The input file at index <code>i</code> (zero-based).</td>
+</tr>
+<tr>
+<td><code>$OUT[i]</code></td>
+<td>The output file at index <code>i</code> (zero-based).</td>
+</tr>
+<tr>
+<td><code>$IN</code></td>
+<td>All input files, space-joined.</td>
+</tr>
+<tr>
+<td><code>$OUT</code></td>
+<td>All output files, space-joined.</td>
+</tr>
+</tbody>
+</table>
+<p>An out-of-bounds index (e.g. <code>$IN[2]</code> when only two inputs are declared) is treated as an error.</p>
+<p><strong>Example:</strong></p>
+<pre><code class="language-yaml">hooks:
+  pre-generate:
+    - codegen:
+        cmd: &quot;python3 tools/gen_version.py $IN[0] $OUT[0]&quot;
+        input: [&quot;version.txt&quot;]
+        output: [&quot;include/version.h&quot;]
+    - codegen:
+        cmd: &quot;protoc --cpp_out=src/ $IN&quot;
+        input: [&quot;proto/messages.proto&quot;]
+        output: [&quot;src/messages.pb.cc&quot;, &quot;src/messages.pb.h&quot;]
 </code></pre>
 <h2 id="available-hooks">Available Hooks</h2>
 <p>Here is a comprehensive list of the available hooks in Catalyst, organized by when they are triggered.</p>

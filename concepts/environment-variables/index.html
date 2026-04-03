@@ -82,8 +82,7 @@
   <nav class="md-header__inner md-grid" aria-label="Header">
     <a href="../.." title="Catalyst Build System Documentation" class="md-header__button md-logo" aria-label="Catalyst Build System Documentation" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+  <img src="../../assets/logo.svg" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -180,8 +179,7 @@
   <label class="md-nav__title" for="__drawer">
     <a href="../.." title="Catalyst Build System Documentation" class="md-nav__button md-logo" aria-label="Catalyst Build System Documentation" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+  <img src="../../assets/logo.svg" alt="logo">
 
     </a>
     Catalyst Build System Documentation
@@ -537,10 +535,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#catalyst_visited" class="md-nav__link">
+  <a href="#catalyst_verbose" class="md-nav__link">
     <span class="md-ellipsis">
       
-        CATALYST_VISITED
+        CATALYST_VERBOSE
       
     </span>
   </a>
@@ -1352,10 +1350,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#catalyst_visited" class="md-nav__link">
+  <a href="#catalyst_verbose" class="md-nav__link">
     <span class="md-ellipsis">
       
-        CATALYST_VISITED
+        CATALYST_VERBOSE
       
     </span>
   </a>
@@ -1389,11 +1387,14 @@
 <p><strong>Note:</strong> This variable is intended for internal use. Setting it manually will suppress <code>common</code> profile injection for that invocation.</p>
 </blockquote>
 <hr />
-<h2 id="catalyst_visited"><code>CATALYST_VISITED</code></h2>
-<p><strong>Type:</strong> Colon-separated list of absolute paths</p>
-<p>Tracks which local dependency paths have already been visited during a recursive <code>fetch</code> operation. Set and propagated by Catalyst across child processes to detect and break dependency cycles.</p>
+<h2 id="catalyst_verbose"><code>CATALYST_VERBOSE</code></h2>
+<p><strong>Type:</strong> Flag (any non-empty value is truthy)</p>
+<p>Set by Catalyst when it spawns a child Catalyst process to build a local dependency
+while verbose logging (<code>-V</code>) is enabled. When present, the child process enables verbose logging
+automatically, even without the <code>-V</code> flag on its command line.</p>
+<p>This ensures that debug-level log output propagates through the entire dependency build chain.</p>
 <blockquote>
-<p><strong>Note:</strong> This variable is intended for internal use. Do not set it manually.</p>
+<p><strong>Note:</strong> This variable is intended for internal use. Setting it manually will enable verbose logging for that invocation.</p>
 </blockquote>
 
 
