@@ -101,7 +101,12 @@ std::expected<void, std::string> fetchLocal(const FetchLocalArgs &fn_args) {
     const std::string &name = fn_args.name;
     const std::string &path = fn_args.path;
     const std::vector<std::string> &profiles = fn_args.profiles;
-    fs::path local_path = fs::weakly_canonical(path);
+    std::error_code ec;
+    fs::path local_path = fs::weakly_canonical(path, ec);
+    if (ec) {
+        return std::unexpected(
+            std::format("Failed to resolve path '{}' for local dependency '{}': {}", path, name, ec.message()));
+    }
     std::string local_path_str = local_path.string();
     const char *visited_env_tmp = std::getenv("CATALYST_VISITED");
     std::string visited_env = visited_env_tmp ? visited_env_tmp : "";
