@@ -1912,7 +1912,7 @@ A <code>catalyst</code> hook does <strong>not</strong> inherit the parent invoca
 the command needs to run. The command is skipped if all output files exist and are newer than every input file. If
 either field is omitted, the command runs unconditionally on every invocation.</p>
 <h4 id="variable-substitution">Variable Substitution</h4>
-<p>The <code>cmd</code> field supports variable substitution to reference declared inputs and outputs, avoiding path duplication:</p>
+<p>The <code>cmd</code> field supports variable substitution to reference declared inputs and outputs, avoiding path duplication. Catalyst handles escaping paths containing spaces automatically when variables are substituted.</p>
 <table>
 <thead>
 <tr>
@@ -1926,31 +1926,46 @@ either field is omitted, the command runs unconditionally on every invocation.</
 <td>The input file at index <code>i</code> (zero-based).</td>
 </tr>
 <tr>
-<td><code>$OUT[i]</code></td>
-<td>The output file at index <code>i</code> (zero-based).</td>
+<td><code>$IN[-k]</code></td>
+<td>The input file at position <code>len - k</code> (e.g., <code>$IN[-1]</code> is the last input).</td>
+</tr>
+<tr>
+<td><code>$IN[start:stop]</code></td>
+<td>Input files from <code>start</code> to <code>stop</code> (exclusive), space-joined.</td>
+</tr>
+<tr>
+<td><code>$IN[start:stop:step]</code></td>
+<td>Every <code>step</code>-th input file from <code>start</code> to <code>stop</code> (exclusive), space-joined.</td>
 </tr>
 <tr>
 <td><code>$IN</code></td>
-<td>All input files, space-joined.</td>
-</tr>
-<tr>
-<td><code>$OUT</code></td>
-<td>All output files, space-joined.</td>
+<td>All input files, space-joined (equivalent to <code>$IN[:]</code>).</td>
 </tr>
 </tbody>
 </table>
-<p>An out-of-bounds index (e.g. <code>$IN[2]</code> when only two inputs are declared) is treated as an error.</p>
+<p>The same syntax applies identically to <code>$OUT</code>.</p>
+<p><strong>Slice Semantics:</strong>
+Catalyst uses Python-like slice resolution:
+- Missing bounds default to the extremes (e.g., <code>$IN[1:]</code> means index 1 to the end).
+- Negative bounds count from the end of the list.
+- A negative step iterates backwards (e.g., <code>$IN[::-1]</code>).
+- Out-of-bounds slice indices are safely clamped, yielding fewer elements or an empty string without failing the build.</p>
+<p><strong>Errors &amp; Escaping:</strong>
+- An out-of-bounds strict index (e.g., <code>$IN[5]</code> when only two inputs exist) is treated as an error.
+- A step of zero (<code>$IN[::0]</code>) is treated as an error.
+- To prevent substitution and pass the literal string to the shell, prefix the variable with an extra <code>$</code> (e.g., <code>$$IN</code> becomes <code>$IN</code>).</p>
 <p><strong>Example:</strong></p>
 <pre><code class="language-yaml">hooks:
   pre-generate:
     - codegen:
-        cmd: &quot;python3 tools/gen_version.py $IN[0] $OUT[0]&quot;
-        input: [&quot;version.txt&quot;]
-        output: [&quot;include/version.h&quot;]
+        cmd: &quot;python3 tools/generate.py --config $IN[0] --sources $IN[1:]&quot;
+        input: [&quot;config.yaml&quot;, &quot;src/a.proto&quot;, &quot;src/b.proto&quot;, &quot;src/c.proto&quot;]
+        output: [&quot;gen/output.cc&quot;]
+
     - codegen:
-        cmd: &quot;protoc --cpp_out=src/ $IN&quot;
-        input: [&quot;proto/messages.proto&quot;]
-        output: [&quot;src/messages.pb.cc&quot;, &quot;src/messages.pb.h&quot;]
+        cmd: &quot;python3 tools/codegen.py $IN --outputs $OUT[:-1] --manifest $OUT[-1]&quot;
+        input: [&quot;schema.json&quot;]
+        output: [&quot;gen/types.h&quot;, &quot;gen/types.cc&quot;, &quot;gen/manifest.txt&quot;]
 </code></pre>
 <h2 id="available-hooks">Available Hooks</h2>
 <p>Here is a comprehensive list of the available hooks in Catalyst, organized by when they are triggered.</p>
