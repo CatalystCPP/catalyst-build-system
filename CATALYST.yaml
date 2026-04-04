@@ -72,7 +72,8 @@ release:
     tooling:
       CCFLAGS: -O3 -DNDEBUG --std=c++23 -Wall -Wextra -Wpedantic
       CXXFLAGS: -O3 -DNDEBUG --std=c++23 -Wall -Wextra -Wpedantic
-      LDFLAGS: -static
+      LDFLAGS: -static -fuse-ld=mold -flto=full -Wl,-O3 -Wl,--gc-sections -Wl,--icf=safe -Wl,--as-needed -Wl, --no-undefined -Wl,-z,relro,-z,now -Wl,--hash-style=gnu -Wl,--build-id=sha1 -Wl,--strip-all
+
 linux_x86_64:
   manifest:
     tooling:
@@ -88,7 +89,6 @@ windows_x86_64:
     tooling:
       CC: x86_64-w64-mingw32-gcc
       CXX: x86_64-w64-mingw32-g++
-      LDFLAGS: -static
 macos_x86_64:
   manifest:
     tooling:
