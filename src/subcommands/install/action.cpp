@@ -134,7 +134,9 @@ std::expected<void, std::string> action(const Parse &parse_args) {
                     "Installing headers from: {} -> {}", source_inc.string(), dest_include_dir.string());
                 try {
                     fs::create_directories(dest_include_dir);
-                    fs::copy(source_inc, dest_include_dir, fs::copy_options::recursive | fs::copy_options::overwrite_existing);
+                    fs::copy(source_inc,
+                             dest_include_dir,
+                             fs::copy_options::recursive | fs::copy_options::overwrite_existing);
                 } catch (const fs::filesystem_error &e) {
                     return std::unexpected(std::format("Failed to install headers: {}", e.what()));
                 }

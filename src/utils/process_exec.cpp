@@ -94,8 +94,8 @@ ProcessExecutor::processExecStdout(const std::vector<std::string> &args,
 
 namespace {
 std::shared_ptr<IProcessExecutor> g_executor_owner = std::make_shared<ProcessExecutor>();
-IProcessExecutor* g_executor = g_executor_owner.get();
-}
+IProcessExecutor *g_executor = g_executor_owner.get();
+} // namespace
 
 IProcessExecutor &getProcessExecutor() {
     return *g_executor;

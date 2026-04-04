@@ -5,9 +5,9 @@
 
 #include <catalyst/hooks.hpp>
 #include <catalyst/subcommands/clean.hpp>
-#include "catalyst/dir_guard.hpp"
 #include <yaml-cpp/node/node.h>
 
+#include "catalyst/dir_guard.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"

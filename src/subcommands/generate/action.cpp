@@ -24,7 +24,9 @@ namespace fs = std::filesystem;
 
 namespace {
 
-bool isEnabled(bool default_enabled, const std::string &feature, const std::unordered_set<std::string> &enabled_features);
+bool isEnabled(bool default_enabled,
+               const std::string &feature,
+               const std::unordered_set<std::string> &enabled_features);
 
 void writeVariables(const catalyst::utils::yaml::Configuration &config,
                     catalyst::generate::buildwriters::BaseWriter &writer,
@@ -367,7 +369,9 @@ void featureFilter(std::unordered_set<fs::path> &source_set,
     }
 }
 
-bool isEnabled(bool default_enabled, const std::string &feature, const std::unordered_set<std::string> &enabled_features) {
+bool isEnabled(bool default_enabled,
+               const std::string &feature,
+               const std::unordered_set<std::string> &enabled_features) {
     bool explicitly_enabled = enabled_features.contains(feature);
     bool explicitly_disabled = enabled_features.contains("no-" + feature);
 

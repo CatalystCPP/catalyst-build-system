@@ -103,7 +103,7 @@ std::expected<void, std::string> fetchLocal(const FetchLocalArgs &fn_args) {
     const std::vector<std::string> &profiles = fn_args.profiles;
     fs::path local_path = fs::weakly_canonical(path);
     std::string local_path_str = local_path.string();
-    const char* visited_env_tmp = std::getenv("CATALYST_VISITED");
+    const char *visited_env_tmp = std::getenv("CATALYST_VISITED");
     std::string visited_env = visited_env_tmp ? visited_env_tmp : "";
 
     // Cycle detection
@@ -111,7 +111,8 @@ std::expected<void, std::string> fetchLocal(const FetchLocalArgs &fn_args) {
     size_t start = 0;
     while (start < visited_view.length()) {
         size_t end = visited_view.find(':', start);
-        if (end == std::string_view::npos) end = visited_view.length();
+        if (end == std::string_view::npos)
+            end = visited_view.length();
         std::string_view segment = visited_view.substr(start, end - start);
         if (!segment.empty()) {
             std::error_code ec;
@@ -161,18 +162,18 @@ struct LockedDep {
     std::string path;
 };
 
-std::expected<void, std::string> fetchDependency(
-    const YAML::Node &dep,
-    const std::string &build_dir,
-    const std::unordered_map<std::string, LockedDep> &lockfile_deps,
-    const Parse &parse_args) {
+std::expected<void, std::string> fetchDependency(const YAML::Node &dep,
+                                                 const std::string &build_dir,
+                                                 const std::unordered_map<std::string, LockedDep> &lockfile_deps,
+                                                 const Parse &parse_args) {
 
     auto name = dep["name"].as<std::string>();
     auto source = dep["source"].as<std::string>();
 
     if (parse_args.workspace) {
         if (auto member = parse_args.workspace->findPackage(name)) {
-            catalyst::logger.info("Dependency '{}' found in workspace at '{}'. Linking...", name, member->path.string());
+            catalyst::logger.info(
+                "Dependency '{}' found in workspace at '{}'. Linking...", name, member->path.string());
             fs::path lib_path = fs::path(build_dir) / "catalyst-libs" / name;
 
             try {
