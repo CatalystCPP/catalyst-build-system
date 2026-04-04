@@ -72,6 +72,7 @@ release:
     tooling:
       CCFLAGS: -O3 -DNDEBUG --std=c++23 -Wall -Wextra -Wpedantic
       CXXFLAGS: -O3 -DNDEBUG --std=c++23 -Wall -Wextra -Wpedantic
+      LDFLAGS: -static
 linux_x86_64:
   manifest:
     tooling:

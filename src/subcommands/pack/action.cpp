@@ -133,6 +133,8 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         cpack_out << "set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)\n";
         cpack_out << std::format("set(CPACK_INSTALLED_DIRECTORIES \"{}\" \".\")\n",
                                  escape_cmake(fs::absolute(staging_dir).generic_string()));
+        cpack_out << "set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION \"/bin\" \"/usr\" \"/usr/bin\" \"/usr/lib\" "
+                     "\"/usr/lib64\" \"/etc\")\n";
     }
 
     // 4. Run cpack

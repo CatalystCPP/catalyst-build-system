@@ -280,7 +280,7 @@ void mergeHelper(YAML::Node &composite, const std::string &new_profile_name, con
             "generator",
             src,
             "meta.generator",
-            [](const std::string &v) { return v == "ninja" || v == "cbe"; },
+            [](const std::string &v) { return v == "ninja" || v == "cbe" || v == "gmake" || v == "make"; },
             /*fallback_on_null=*/"cbe");
     });
 

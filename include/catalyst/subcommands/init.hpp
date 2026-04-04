@@ -18,8 +18,14 @@ struct Parse {
     std::string description{"Your description goes here."};
     std::string provides;
     struct {
-        std::string cc{"clang"};
-        std::string cxx{"clang++"};
+#ifdef _WIN32
+        std::string cc{"msvc"};
+        std::string cxx{"msvc"};
+#else
+
+        std::string cc{"cc"};
+        std::string cxx{"c++"};
+#endif // _WIN32
         std::string ccflags;
         std::string cxxflags;
         std::string ldflags;
