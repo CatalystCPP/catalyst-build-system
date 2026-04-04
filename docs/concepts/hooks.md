@@ -94,16 +94,29 @@ either field is omitted, the command runs unconditionally on every invocation.
 
 #### Variable Substitution
 
-The `cmd` field supports variable substitution to reference declared inputs and outputs, avoiding path duplication:
+The `cmd` field supports variable substitution to reference declared inputs and outputs, avoiding path duplication. Catalyst handles escaping paths containing spaces automatically when variables are substituted.
 
-| Variable   | Replaced With                                      |
-| ---------- | -------------------------------------------------- |
-| `$IN[i]`   | The input file at index `i` (zero-based).          |
-| `$OUT[i]`  | The output file at index `i` (zero-based).         |
-| `$IN`      | All input files, space-joined.                     |
-| `$OUT`     | All output files, space-joined.                    |
+| Variable                 | Replaced With                                                                |
+| ------------------------ | ---------------------------------------------------------------------------- |
+| `$IN[i]`                 | The input file at index `i` (zero-based).                                    |
+| `$IN[-k]`                | The input file at position `len - k` (e.g., `$IN[-1]` is the last input).      |
+| `$IN[start:stop]`        | Input files from `start` to `stop` (exclusive), space-joined.                |
+| `$IN[start:stop:step]`   | Every `step`-th input file from `start` to `stop` (exclusive), space-joined.   |
+| `$IN`                    | All input files, space-joined (equivalent to `$IN[:]`).                      |
 
-An out-of-bounds index (e.g. `$IN[2]` when only two inputs are declared) is treated as an error.
+The same syntax applies identically to `$OUT`.
+
+**Slice Semantics:**
+Catalyst uses Python-like slice resolution:
+- Missing bounds default to the extremes (e.g., `$IN[1:]` means index 1 to the end).
+- Negative bounds count from the end of the list.
+- A negative step iterates backwards (e.g., `$IN[::-1]`).
+- Out-of-bounds slice indices are safely clamped, yielding fewer elements or an empty string without failing the build.
+
+**Errors & Escaping:**
+- An out-of-bounds strict index (e.g., `$IN[5]` when only two inputs exist) is treated as an error.
+- A step of zero (`$IN[::0]`) is treated as an error.
+- To prevent substitution and pass the literal string to the shell, prefix the variable with an extra `$` (e.g., `$$IN` becomes `$IN`).
 
 **Example:**
 
@@ -111,13 +124,14 @@ An out-of-bounds index (e.g. `$IN[2]` when only two inputs are declared) is trea
 hooks:
   pre-generate:
     - codegen:
-        cmd: "python3 tools/gen_version.py $IN[0] $OUT[0]"
-        input: ["version.txt"]
-        output: ["include/version.h"]
+        cmd: "python3 tools/generate.py --config $IN[0] --sources $IN[1:]"
+        input: ["config.yaml", "src/a.proto", "src/b.proto", "src/c.proto"]
+        output: ["gen/output.cc"]
+
     - codegen:
-        cmd: "protoc --cpp_out=src/ $IN"
-        input: ["proto/messages.proto"]
-        output: ["src/messages.pb.cc", "src/messages.pb.h"]
+        cmd: "python3 tools/codegen.py $IN --outputs $OUT[:-1] --manifest $OUT[-1]"
+        input: ["schema.json"]
+        output: ["gen/types.h", "gen/types.cc", "gen/manifest.txt"]
 ```
 
 ## Available Hooks
