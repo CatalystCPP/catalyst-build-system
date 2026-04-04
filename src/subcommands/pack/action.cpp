@@ -19,10 +19,14 @@ namespace {
 std::string escape_cmake(const std::string &str) {
     std::string res;
     for (char c : str) {
-        if (c == '\\' || c == '"') {
+        if (c == '\\' || c == '"' || c == ';') {
             res += '\\';
+            res += c;
+        } else if (c == '\n') {
+            res += "\\n";
+        } else {
+            res += c;
         }
-        res += c;
     }
     return res;
 }
