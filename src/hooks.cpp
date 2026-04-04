@@ -1,96 +1,71 @@
 #include <expected>
+#include <filesystem>
 #include <format>
+#include <regex>
 #include <string>
 #include <vector>
 
 #include <catalyst/hooks.hpp>
 #include <yaml-cpp/yaml.h>
 
-#include "catalyst/utils/log/log.hpp"
 #include "catalyst/dispatch.hpp"
 #include "catalyst/process_exec.hpp"
+#include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 
 #include "yaml-cpp/node/node.h"
 
 namespace catalyst::hooks {
+std::vector<std::string> shellCmd(const std::string &cmd) {
+#if defined(_WIN32)
+    return {"cmd", "/c", cmd};
+#else
+    return {"/bin/sh", "-c", cmd};
+#endif
+}
+} // namespace catalyst::hooks
 
 namespace {
+
 std::expected<void, std::string> executeHook(const YAML::Node &profile_comp, const std::string &hook_name) {
     catalyst::logger.debug("Executing hook: {}", hook_name);
     if (!profile_comp["hooks"] || !profile_comp["hooks"][hook_name]) {
         catalyst::logger.debug("No hook defined for: {}", hook_name);
-        return {}; // No hook defined, so we do nothing.
+        return {};
     }
 
-    auto shell_cmd = [](const std::string &cmd) -> std::vector<std::string> {
-#if defined(_WIN32)
-        return {"cmd", "/c", cmd};
-#else
-        return {"/bin/sh", "-c", cmd};
-#endif
-    };
-
     const YAML::Node &hook_node = profile_comp["hooks"][hook_name];
+
+    // Normalize: if the hook is a bare map (not wrapped in a sequence), treat it as a single-element sequence.
+    std::vector<YAML::Node> items;
     if (hook_node.IsSequence()) {
-        for (const auto &item : hook_node) {
+        for (const auto &item : hook_node)
+            items.push_back(item);
+    } else if (hook_node.IsMap()) {
+        items.push_back(hook_node);
+    }
+
+    if (!items.empty()) {
+        for (const auto &item : items) {
+            std::expected<void, std::string> res;
             if (item["command"]) {
-                auto command = item["command"].as<std::string>();
-                catalyst::logger.debug("[Catalyst Hook: {}] Running command: {}", hook_name, command);
-                if (catalyst::processExec(shell_cmd(command)).value().get() != 0) {
-                    return std::unexpected(std::format("Hook '{}' command failed: {}", hook_name, command));
-                }
+                res = catalyst::hooks::executeCommandHook(item, hook_name);
             } else if (item["script"]) {
-                auto script = item["script"].as<std::string>();
-                catalyst::logger.debug("[Catalyst Hook: {}] Running script: {}", hook_name, script);
-                if (catalyst::processExec(shell_cmd(script)).value().get() != 0) {
-                    return std::unexpected(std::format("Hook '{}' script failed: {}", hook_name, script));
-                }
+                res = catalyst::hooks::executeScriptHook(item, hook_name);
             } else if (item["catalyst"]) {
-                auto cat_node = item["catalyst"];
-                if (cat_node.IsScalar()) {
-                    auto args = cat_node.as<std::string>();
-                    catalyst::logger.debug("[Catalyst Hook: {}] Running catalyst: {}", hook_name, args);
-                    auto res = catalyst::dispatchHook("catalyst " + args);
-                    if (!res) {
-                        return std::unexpected(std::format("Hook '{}' catalyst dispatch failed: {}", hook_name, res.error()));
-                    }
-                } else if (cat_node.IsMap()) {
-                    if (!cat_node["subcommand"]) {
-                        return std::unexpected(std::format("Hook '{}' catalyst missing required 'subcommand' field", hook_name));
-                    }
-                    std::vector<std::string> args;
-                    if (cat_node["global_args"]) {
-                        for (const auto &a : cat_node["global_args"]) args.push_back(a.as<std::string>());
-                    }
-                    args.push_back(cat_node["subcommand"].as<std::string>());
-                    if (cat_node["profiles"]) {
-                        for (const auto &p : cat_node["profiles"]) {
-                            args.push_back("-p");
-                            args.push_back(p.as<std::string>());
-                        }
-                    }
-                    if (cat_node["args"]) {
-                        for (const auto &a : cat_node["args"]) args.push_back(a.as<std::string>());
-                    }
-                    
-                    std::string joined;
-                    for (const auto &a : args) joined += a + " ";
-                    catalyst::logger.debug("[Catalyst Hook: {}] Running catalyst: {}", hook_name, joined);
-                    
-                    auto res = catalyst::dispatchHook(args);
-                    if (!res) {
-                        return std::unexpected(std::format("Hook '{}' catalyst dispatch failed: {}", hook_name, res.error()));
-                    }
-                } else {
-                    return std::unexpected(std::format("Hook '{}' catalyst has invalid type", hook_name));
-                }
+                res = catalyst::hooks::executeCatalystHook(item, hook_name);
+            } else if (item["codegen"]) {
+                res = catalyst::hooks::executeCodegenHook(item["codegen"], hook_name);
+            }
+            if (!res) {
+                return res;
             }
         }
     } else if (hook_node.IsScalar()) {
         auto command = hook_node.as<std::string>();
         catalyst::logger.debug("[Catalyst Hook: {}] Running command: {}", hook_name, command);
-        if (catalyst::processExec(shell_cmd(command)).value().get() != 0) {
+        std::vector<std::string> cmd = catalyst::hooks::shellCmd(command);
+        if (auto res = catalyst::processExec(std::move(cmd)); !res || !res->get()) {
             return std::unexpected("Hook '" + hook_name + "' command failed: " + command);
         }
     }
@@ -98,7 +73,10 @@ std::expected<void, std::string> executeHook(const YAML::Node &profile_comp, con
     catalyst::logger.debug("Hook finished successfully: {}", hook_name);
     return {};
 }
+
 } // namespace
+
+namespace catalyst::hooks {
 
 std::expected<void, std::string> preClean(const YAML::Node &profile_comp) {
     return executeHook(profile_comp, "pre-clean");

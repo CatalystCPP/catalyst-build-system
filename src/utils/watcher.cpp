@@ -1,21 +1,22 @@
 #include "catalyst/utils/watcher.hpp"
-#include "catalyst/utils/log/log.hpp"
+
 #include <chrono>
 #include <filesystem>
 #include <thread>
+
+#include "catalyst/utils/log/log.hpp"
 
 namespace catalyst::utils::watcher {
 
 namespace fs = std::filesystem;
 
-Watcher::Watcher(std::vector<fs::path> watch_paths)
-    : watch_paths(std::move(watch_paths)) {
+Watcher::Watcher(std::vector<fs::path> watch_paths) : watch_paths(std::move(watch_paths)) {
     // Initial scan to populate file_times_
     std::filesystem::path dummy;
     checkChanges(dummy);
 }
 
-void Watcher::watch(const std::function<void(const fs::path&)>& on_change) {
+void Watcher::watch(const std::function<void(const fs::path &)> &on_change) {
     running = true;
     while (running) {
         fs::path changed_path;
@@ -30,12 +31,13 @@ void Watcher::stop() {
     running = false;
 }
 
-bool Watcher::checkChanges(fs::path& changed_path) {
+bool Watcher::checkChanges(fs::path &changed_path) {
     bool changed = false;
     std::unordered_map<std::string, fs::file_time_type> current_times;
 
-    for (const auto& root : watch_paths) {
-        if (!fs::exists(root)) continue;
+    for (const auto &root : watch_paths) {
+        if (!fs::exists(root))
+            continue;
 
         if (fs::is_regular_file(root)) {
             try {
@@ -47,14 +49,17 @@ bool Watcher::checkChanges(fs::path& changed_path) {
                         changed_path = root;
                     }
                 }
-            } catch (...) {}
+            } catch (...) {
+            }
             continue;
         }
 
-        for (const auto& entry : fs::recursive_directory_iterator(root, fs::directory_options::skip_permission_denied)) {
-            if (!entry.is_regular_file()) continue;
+        for (const auto &entry :
+             fs::recursive_directory_iterator(root, fs::directory_options::skip_permission_denied)) {
+            if (!entry.is_regular_file())
+                continue;
 
-            const auto& path = entry.path();
+            const auto &path = entry.path();
             try {
                 auto time = fs::last_write_time(path);
                 current_times[path.string()] = time;
@@ -75,7 +80,7 @@ bool Watcher::checkChanges(fs::path& changed_path) {
 
     // Check for deleted files
     if (!file_times.empty()) {
-        for (const auto& [path, time] : file_times) {
+        for (const auto &[path, time] : file_times) {
             if (!current_times.contains(path)) {
                 changed = true;
                 changed_path = path;

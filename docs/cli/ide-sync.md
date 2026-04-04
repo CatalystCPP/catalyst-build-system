@@ -1,8 +1,8 @@
-# catalyst ide_sync
+# catalyst ide-sync
 
 ```
 Sync IDE configuration files for an existing project.
-Usage: catalyst ide_sync [OPTIONS]
+Usage: catalyst ide-sync [OPTIONS]
 
 Options:
   -h,--help                   Print this help message and exit
@@ -15,31 +15,31 @@ Options:
 
 ## Details
 
-The `ide_sync` command regenerates IDE project files (such as VS Code or CLion configurations) based on the current Catalyst configuration. This is useful when you've modified your project's structure, dependencies, or build settings and need to update your IDE integration.
+The `ide-sync` command regenerates IDE project files (such as VS Code or CLion configurations) based on the current Catalyst configuration. This is useful when you've modified your project's structure, dependencies, or build settings and need to update your IDE integration.
 
 ## Examples
 
 **Sync IDE configurations:**
 ```bash
-catalyst ide_sync
+catalyst ide-sync
 ```
 
 **Sync for specific IDE:**
 ```bash
-catalyst ide_sync --ides vscode
+catalyst ide-sync --ides vscode
 ```
 
 **Force regenerate IDE config:**
 ```bash
-catalyst ide_sync --force-ide
+catalyst ide-sync --force-ide
 ```
 
 **Sync with specific profiles:**
 ```bash
-catalyst ide_sync --profiles common debug
+catalyst ide-sync --profiles common debug
 ```
 
 **Sync for multiple IDEs:**
 ```bash
-catalyst ide_sync --ides vscode clion
+catalyst ide-sync --ides vscode clion
 ```

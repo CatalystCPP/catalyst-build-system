@@ -7,8 +7,8 @@
 #include <yaml-cpp/node/node.h>
 
 #include "catalyst/globals.hpp"
-#include "catalyst/utils/log/log.hpp"
 #include "catalyst/subcommands/init.hpp"
+#include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/yaml/profile_write_back.hpp"
 
 namespace catalyst::init {

@@ -3,14 +3,13 @@
 #include <string>
 #include <vector>
 
+#include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/doc.hpp"
 #include "catalyst/utils/log/log.hpp"
-#include "catalyst/process_exec.hpp"
 
 namespace catalyst::doc {
 
-template <>
-std::expected<void, std::string> DerivedRunner<DocEngine::Doxygen>::run() {
+template <> std::expected<void, std::string> DerivedRunner<DocEngine::Doxygen>::run() {
     catalyst::logger.info("Running Doxygen documentation engine");
 
     std::string config_file = config.getString("manifest.tooling.doc.config").value_or("Doxyfile");
@@ -30,7 +29,7 @@ std::expected<void, std::string> DerivedRunner<DocEngine::Doxygen>::run() {
         // A minimal Doxyfile content could be generated here
         // For simplicity, we create a basic one.
         std::string tmp_config = "INPUT = src/ include/\nOUTPUT_DIRECTORY = " + out_dir + "\n";
-        FILE* f = fopen("Doxyfile.tmp", "w");
+        FILE *f = fopen("Doxyfile.tmp", "w");
         if (f) {
             fwrite(tmp_config.c_str(), 1, tmp_config.size(), f);
             fclose(f);

@@ -4,9 +4,9 @@
 
 #include <yaml-cpp/node/node.h>
 
-#include "catalyst/utils/log/log.hpp"
 #include "catalyst/subcommands/ide_sync.hpp"
 #include "catalyst/subcommands/init.hpp"
+#include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 
 namespace catalyst::ide_sync {

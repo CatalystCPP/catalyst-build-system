@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cctype>
 #include <expected>
 #include <filesystem>
@@ -8,10 +9,10 @@
 #include <yaml-cpp/yaml.h>
 
 #include "catalyst/hooks.hpp"
-#include "catalyst/utils/log/log.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/subcommands/run.hpp"
+#include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 
 namespace fs = std::filesystem;
@@ -54,7 +55,7 @@ std::expected<void, std::string> action(const Parse &args) {
     std::string build_dir;
     auto str_to_lower = [](std::string &input) -> void {
         auto lower = [](const char c) -> char { return static_cast<char>(std::tolower(c)); };
-        std::transform(input.begin(), input.end(), input.begin(), lower);
+        std::ranges::transform(input, input.begin(), lower);
         return;
     };
     std::string target_type = profile_comp["manifest"]["type"].Scalar();
@@ -68,12 +69,13 @@ std::expected<void, std::string> action(const Parse &args) {
             "Profile: {} defines 'manifest.type' = {}. Expected 'manifest.type' = BINARY", args.profile, target_type));
     }
 
-    if (!profile_comp["manifest"]["dirs"]["build"]) {
-        return std::unexpected(std::format("Build directory is not defined in profile: {}.", args.profile));
+    std::string build_dir_base = "build";
+    if (profile_comp["manifest"]["dirs"]["build"]) {
+        build_dir_base = profile_comp["manifest"]["dirs"]["build"].as<std::string>();
+        if (build_dir_base.empty())
+            build_dir_base = "build";
     }
-    build_dir = catalyst::utils::yaml::multiplexedBuildDir(
-                    profile_comp["manifest"]["dirs"]["build"].as<std::string>(), profiles)
-                    .string();
+    build_dir = catalyst::utils::yaml::multiplexedBuildDir(build_dir_base, profiles).string();
 
     if (profile_comp["manifest"]["provides"] && profile_comp["manifest"]["provides"].as<std::string>() != "") {
         exe = profile_comp["manifest"]["provides"].as<std::string>();
@@ -90,12 +92,14 @@ std::expected<void, std::string> action(const Parse &args) {
     if (!lib_path_res) {
         return std::unexpected("Failed to generate LD_LIBRARY_PATH");
     }
+
+    std::unordered_map<std::string, std::string> exec_env;
 #if defined(_WIN32)
-    _putenv_s("PATH", lib_path_res.value().c_str());
+    exec_env["PATH"] = lib_path_res.value();
 #elif defined(__APPLE__)
-    setenv("DYLD_LIBRARY_PATH", lib_path_res.value().c_str(), 1);
+    exec_env["DYLD_LIBRARY_PATH"] = lib_path_res.value();
 #else
-    setenv("LD_LIBRARY_PATH", lib_path_res.value().c_str(), 1);
+    exec_env["LD_LIBRARY_PATH"] = lib_path_res.value();
 #endif
 
     catalyst::logger.debug("Executing command: {}", command);
@@ -104,7 +108,7 @@ std::expected<void, std::string> action(const Parse &args) {
     exec_args.push_back(exe_path.string());
     exec_args.insert(exec_args.end(), args.params.begin(), args.params.end());
 
-    if (int res = catalyst::processExec(std::move(exec_args)).value().get(); res) {
+    if (int res = catalyst::processExec(std::move(exec_args), std::nullopt, exec_env).value().get(); res) {
         return std::unexpected(
             std::format("Target executable: {} exited with failure code: {}", exe_path.string(), res));
     }

@@ -42,8 +42,8 @@ void workingDir(const std::optional<std::string> &working_dir, reproc::options &
 
 std::expected<std::future<int>, std::string>
 ProcessExecutor::processExec(std::vector<std::string> &&args,
-            std::optional<std::string> working_dir,
-            std::optional<std::unordered_map<std::string, std::string>> env) {
+                             std::optional<std::string> working_dir,
+                             std::optional<std::unordered_map<std::string, std::string>> env) {
     if (args.empty()) {
         return std::unexpected("Cannot execute empty command");
     }
@@ -69,8 +69,8 @@ ProcessExecutor::processExec(std::vector<std::string> &&args,
 
 std::expected<std::string, std::string>
 ProcessExecutor::processExecStdout(const std::vector<std::string> &args,
-                  const std::optional<std::string> &working_dir,
-                  const std::optional<std::unordered_map<std::string, std::string>> &env) {
+                                   const std::optional<std::string> &working_dir,
+                                   const std::optional<std::unordered_map<std::string, std::string>> &env) {
     if (args.empty()) {
         return std::unexpected("Cannot execute empty command");
     }
@@ -93,15 +93,17 @@ ProcessExecutor::processExecStdout(const std::vector<std::string> &args,
 }
 
 namespace {
-    std::shared_ptr<IProcessExecutor> g_executor = std::make_shared<ProcessExecutor>();
-}
+std::shared_ptr<IProcessExecutor> g_executor_owner = std::make_shared<ProcessExecutor>();
+IProcessExecutor *g_executor = g_executor_owner.get();
+} // namespace
 
-IProcessExecutor& getProcessExecutor() {
+IProcessExecutor &getProcessExecutor() {
     return *g_executor;
 }
 
 void setProcessExecutor(std::shared_ptr<IProcessExecutor> executor) {
-    g_executor = std::move(executor);
+    g_executor_owner = std::move(executor);
+    g_executor = g_executor_owner.get();
 }
 
 std::expected<std::future<int>, std::string>

@@ -38,9 +38,16 @@ Defines the project's identity, build settings, and directory structure.
 | `type` | String | `BINARY` | Artifact type: `BINARY`, `STATICLIB`, `SHAREDLIB`, `INTERFACE`. |
 | `version` | String | `0.0.1` | Project version string. |
 | `description`| String | ... | Human-readable description. |
+| `author` | String | "" | Project author. Used by the `pack` subcommand. |
+| `maintainer` | String | "" | Project maintainer. Used by the `pack` subcommand. |
+| `vendor` | String | "Catalyst" | Project vendor. Used by the `pack` subcommand. |
+| `license_file` | String | "" | Path to the license file. Used by the `pack` subcommand. |
+| `readme_file` | String | "" | Path to the readme file. Used by the `pack` subcommand. |
 | `provides` | String | - | Output artifact name pattern (e.g., `*.so`). |
 | `tooling` | Object | - | Compiler toolchain overrides. |
 | `dirs` | Object | - | Source and build directory configuration. |
+
+> **Note**: Fields like `author`, `maintainer`, `vendor`, `license_file`, and `readme_file` are currently only utilized by the `catalyst pack` subcommand to generate package metadata.
 
 ### `manifest.tooling`
 

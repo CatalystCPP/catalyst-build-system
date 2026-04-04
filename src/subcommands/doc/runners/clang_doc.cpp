@@ -3,14 +3,13 @@
 #include <string>
 #include <vector>
 
+#include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/doc.hpp"
 #include "catalyst/utils/log/log.hpp"
-#include "catalyst/process_exec.hpp"
 
 namespace catalyst::doc {
 
-template <>
-std::expected<void, std::string> DerivedRunner<DocEngine::ClangDoc>::run() {
+template <> std::expected<void, std::string> DerivedRunner<DocEngine::ClangDoc>::run() {
     catalyst::logger.info("Running clang-doc documentation engine");
 
     std::string out_dir = config.getString("manifest.tooling.doc.out_dir").value_or("docs/");
@@ -24,10 +23,13 @@ std::expected<void, std::string> DerivedRunner<DocEngine::ClangDoc>::run() {
 
     std::string compile_commands = "build/compile_commands.json";
     if (!std::filesystem::exists(compile_commands)) {
-        return std::unexpected("compile_commands.json not found in build/ directory. Please run `catalyst generate` first.");
+        return std::unexpected(
+            "compile_commands.json not found in build/ directory. Please run `catalyst generate` first.");
     }
 
-    auto res = catalyst::processExec({"clang-doc", "--executor=all-TUs", compile_commands, "--output=" + out_dir, "--format=md"}, std::filesystem::current_path().string());
+    auto res = catalyst::processExec(
+        {"clang-doc", "--executor=all-TUs", compile_commands, "--output=" + out_dir, "--format=md"},
+        std::filesystem::current_path().string());
 
     if (!res || res.value().get() != 0) {
         return std::unexpected("clang-doc failed. Make sure clang-doc is installed and the project compiles.");
@@ -37,13 +39,13 @@ std::expected<void, std::string> DerivedRunner<DocEngine::ClangDoc>::run() {
         std::string index_path = (std::filesystem::path(out_dir) / "index.md").string();
         if (std::filesystem::exists(index_path)) {
             catalyst::logger.info("Opening {}", index_path);
-    #ifdef __APPLE__
+#ifdef __APPLE__
             catalyst::processExec({"open", index_path}, std::filesystem::current_path().string());
-    #elif __linux__
+#elif __linux__
             catalyst::processExec({"xdg-open", index_path}, std::filesystem::current_path().string());
-    #elif _WIN32
+#elif _WIN32
             catalyst::processExec({"start", index_path}, std::filesystem::current_path().string());
-    #endif
+#endif
         } else {
             catalyst::logger.warn("Could not find index.html to open.");
         }

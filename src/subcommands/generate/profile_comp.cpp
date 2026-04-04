@@ -9,8 +9,8 @@
 
 #include <yaml-cpp/yaml.h>
 
-#include "catalyst/utils/log/log.hpp"
 #include "catalyst/subcommands/generate.hpp"
+#include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 
 #include "yaml-cpp/node/node.h"

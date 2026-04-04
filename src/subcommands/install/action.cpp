@@ -4,8 +4,8 @@
 #include <vector>
 
 #include "catalyst/dir_guard.hpp"
-#include "catalyst/utils/log/log.hpp"
 #include "catalyst/subcommands/install.hpp"
+#include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 
 namespace catalyst::install {
@@ -130,9 +130,8 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         for (const auto &inc_dir : *include_dirs) {
             fs::path source_inc = fs::path(inc_dir); // Relative to current path (which is source_path)
             if (fs::exists(source_inc) && fs::is_directory(source_inc)) {
-                catalyst::logger.info("Installing headers from: {} -> {}",
-                                     source_inc.string(),
-                                     dest_include_dir.string());
+                catalyst::logger.info(
+                    "Installing headers from: {} -> {}", source_inc.string(), dest_include_dir.string());
                 try {
                     fs::create_directories(dest_include_dir);
                     for (const auto &entry : fs::recursive_directory_iterator(source_inc)) {

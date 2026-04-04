@@ -2,11 +2,13 @@
 #include <expected>
 #include <filesystem>
 #include <format>
+#include <future>
 #include <iostream>
 #include <print>
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include <yaml-cpp/yaml.h>
@@ -99,19 +101,34 @@ std::expected<void, std::string> fetchLocal(const FetchLocalArgs &fn_args) {
     const std::string &name = fn_args.name;
     const std::string &path = fn_args.path;
     const std::vector<std::string> &profiles = fn_args.profiles;
-    fs::path local_path = fs::absolute(path);
-    std::string visited_env = std::getenv("CATALYST_VISITED") ? std::getenv("CATALYST_VISITED") : "";
+    std::error_code ec;
+    fs::path local_path = fs::weakly_canonical(path, ec);
+    if (ec) {
+        return std::unexpected(
+            std::format("Failed to resolve path '{}' for local dependency '{}': {}", path, name, ec.message()));
+    }
+    std::string local_path_str = local_path.string();
+    const char *visited_env_tmp = std::getenv("CATALYST_VISITED");
+    std::string visited_env = visited_env_tmp ? visited_env_tmp : "";
 
     // Cycle detection
-    std::stringstream ss(visited_env);
-    std::string segment;
-    while (std::getline(ss, segment, ':')) {
-        if (!segment.empty() && fs::equivalent(fs::path(segment), local_path)) {
-            return std::unexpected(std::format("Dependency cycle detected involving {}", local_path.string()));
+    std::string_view visited_view(visited_env);
+    size_t start = 0;
+    while (start < visited_view.length()) {
+        size_t end = visited_view.find(':', start);
+        if (end == std::string_view::npos)
+            end = visited_view.length();
+        std::string_view segment = visited_view.substr(start, end - start);
+        if (!segment.empty()) {
+            std::error_code ec;
+            if (fs::equivalent(fs::path(segment), local_path, ec) || (!ec && segment == local_path_str)) {
+                return std::unexpected(std::format("Dependency cycle detected involving {}", local_path_str));
+            }
         }
+        start = end + 1;
     }
 
-    std::string new_visited = visited_env.empty() ? local_path.string() : visited_env + ":" + local_path.string();
+    std::string new_visited = visited_env.empty() ? local_path_str : visited_env + ":" + local_path_str;
 
     catalyst::logger.debug("Recursively building local dependency: {} at {}", name, local_path.string());
     std::println(std::cout, "Building local dependency: {} at {}", name, local_path.string());
@@ -126,6 +143,9 @@ std::expected<void, std::string> fetchLocal(const FetchLocalArgs &fn_args) {
 
     std::unordered_map<std::string, std::string> env_map;
     env_map["CATALYST_VISITED"] = new_visited;
+    env_map["CATALYST_MACHINE"] = "1";
+    if (catalyst::logger.getVerboseLogging())
+        env_map["CATALYST_VERBOSE"] = "1";
 
     auto res = catalyst::processExec(std::move(args), local_path.string(), env_map);
     if (!res) {
@@ -146,6 +166,125 @@ struct LockedDep {
     std::string triplet;
     std::string path;
 };
+
+std::expected<void, std::string> fetchDependency(const YAML::Node &dep,
+                                                 const std::string &build_dir,
+                                                 const std::unordered_map<std::string, LockedDep> &lockfile_deps,
+                                                 const Parse &parse_args) {
+
+    auto name = dep["name"].as<std::string>();
+    auto source = dep["source"].as<std::string>();
+
+    if (parse_args.workspace) {
+        if (auto member = parse_args.workspace->findPackage(name)) {
+            catalyst::logger.info(
+                "Dependency '{}' found in workspace at '{}'. Linking...", name, member->path.string());
+            fs::path lib_path = fs::path(build_dir) / "catalyst-libs" / name;
+
+            try {
+                if (fs::exists(lib_path) || fs::is_symlink(lib_path)) {
+                    if (fs::is_symlink(lib_path)) {
+                        if (fs::read_symlink(lib_path) != member->path) {
+                            fs::remove(lib_path);
+                            fs::create_directory_symlink(member->path, lib_path);
+                        }
+                    } else {
+                        fs::remove_all(lib_path);
+                        fs::create_directory_symlink(member->path, lib_path);
+                    }
+                } else {
+                    fs::create_directories(lib_path.parent_path());
+                    fs::create_directory_symlink(member->path, lib_path);
+                }
+            } catch (const std::exception &e) {
+                return std::unexpected(e.what());
+            }
+            return {};
+        }
+    }
+
+    catalyst::logger.debug("Fetching dependency '{}' from '{}'", name, source);
+
+    // Check if locked
+    std::string locked_hash;
+    std::string locked_url;
+    std::string locked_version;
+    std::string locked_triplet;
+    std::string locked_path;
+    if (lockfile_deps.contains(name)) {
+        locked_hash = lockfile_deps.at(name).hash;
+        locked_url = lockfile_deps.at(name).url;
+        locked_version = lockfile_deps.at(name).version;
+        locked_triplet = lockfile_deps.at(name).triplet;
+        locked_path = lockfile_deps.at(name).path;
+        catalyst::logger.debug("Dependency '{}' is locked.", name);
+    }
+
+    if (source == "vcpkg") {
+        std::string version;
+        if (!locked_version.empty())
+            version = locked_version;
+        else if (dep["version"])
+            version = dep["version"].as<std::string>();
+        else
+            return std::unexpected(std::format("vcpkg dependency '{}' is missing version.", name));
+
+        std::string triplet;
+        if (!locked_triplet.empty())
+            triplet = locked_triplet;
+        else if (dep["triplet"])
+            triplet = dep["triplet"].as<std::string>();
+        else
+            return std::unexpected(std::format("vcpkg dependency '{}' is missing triplet.", name));
+
+        if (auto res = fetchVcpkg(name); !res)
+            return std::unexpected(res.error());
+
+    } else if (source == "system") {
+        if (auto res = fetchSystem(name); !res)
+            return std::unexpected(res.error());
+    } else if (source == "local") {
+        std::string path;
+        if (!locked_path.empty())
+            path = locked_path;
+        else if (dep["path"])
+            path = dep["path"].as<std::string>();
+        else
+            return std::unexpected(std::format("Local dependency '{}' is missing path.", name));
+
+        std::vector<std::string> profiles_vec;
+        if (dep["profiles"] && dep["profiles"].IsSequence()) {
+            profiles_vec = dep["profiles"].as<std::vector<std::string>>();
+        }
+        if (auto res = fetchLocal({.name = name, .path = path, .profiles = profiles_vec}); !res)
+            return std::unexpected(res.error());
+    } else {
+        fs::path dep_path = fs::path(build_dir) / "catalyst-libs" / name;
+        if (fs::exists(dep_path)) {
+            std::println(std::cout, "Skipping fetch for existing git dependency: {}", name);
+        } else {
+            std::string version;
+            if (!locked_version.empty())
+                version = locked_version;
+            else if (dep["version"])
+                version = dep["version"].as<std::string>();
+            else
+                version = "latest";
+
+            std::string url;
+            if (!locked_url.empty())
+                url = locked_url;
+            else if (source == "git" && dep["url"])
+                url = dep["url"].as<std::string>();
+            else
+                url = source;
+
+            if (auto res = fetchGit(build_dir, name, url, version, locked_hash); !res)
+                return std::unexpected(res.error());
+        }
+    }
+    return {};
+}
 
 } // namespace
 
@@ -195,6 +334,10 @@ std::expected<void, std::string> action(const Parse &parse_args) {
 
     std::string build_dir = config.getBuildDir().string();
     if (auto deps = config.getRoot()["dependencies"]; deps && deps.IsSequence()) {
+        std::vector<YAML::Node> parallel_deps;
+        std::vector<YAML::Node> serial_deps;
+        std::unordered_set<std::string> seen_deps;
+
         for (int ii = 0; auto dep : deps) {
             if (!dep["name"]) {
                 return std::unexpected(std::format("Dependency: {} does not define field: name", ii));
@@ -204,119 +347,63 @@ std::expected<void, std::string> action(const Parse &parse_args) {
                 return std::unexpected(
                     std::format("Dependency: {} does not define field: source", dep["name"].as<std::string>()));
             }
-            auto name = dep["name"].as<std::string>();
-            auto source = dep["source"].as<std::string>();
 
-            if (parse_args.workspace) {
-                if (auto member = parse_args.workspace->findPackage(name)) {
-                    catalyst::logger.info("Dependency '{}' found in workspace at '{}'. Linking...",
-                                         name,
-                                         member->path.string());
-                    fs::path lib_path = fs::path(build_dir) / "catalyst-libs" / name;
+            std::string name = dep["name"].as<std::string>();
 
-                    try {
-                        if (fs::exists(lib_path) || fs::is_symlink(lib_path)) {
-                            if (fs::is_symlink(lib_path)) {
-                                if (fs::read_symlink(lib_path) != member->path) {
-                                    fs::remove(lib_path);
-                                    fs::create_directory_symlink(member->path, lib_path);
-                                }
-                            } else {
-                                fs::remove_all(lib_path);
-                                fs::create_directory_symlink(member->path, lib_path);
-                            }
-                        } else {
-                            fs::create_directories(lib_path.parent_path());
-                            fs::create_directory_symlink(member->path, lib_path);
-                        }
-                    } catch (const std::exception &e) {
-                        return std::unexpected(e.what());
-                    }
-                    continue;
-                }
+            // 1. Deduplicate by logical target name
+            if (seen_deps.contains(name)) {
+                catalyst::logger.debug("Skipping duplicate dependency entry: {}", name);
+                ++ii;
+                continue;
             }
+            seen_deps.insert(name);
 
-            catalyst::logger.debug("Fetching dependency '{}' from '{}'", name, source);
+            std::string source = dep["source"].as<std::string>();
+            bool is_workspace_member = parse_args.workspace && parse_args.workspace->findPackage(name).has_value();
 
-            // Check if locked
-            std::string locked_hash;
-            std::string locked_url;
-            std::string locked_version;
-            std::string locked_triplet;
-            std::string locked_path;
-            if (lockfile_deps.contains(name)) {
-                locked_hash = lockfile_deps[name].hash;
-                locked_url = lockfile_deps[name].url;
-                locked_version = lockfile_deps[name].version;
-                locked_triplet = lockfile_deps[name].triplet;
-                locked_path = lockfile_deps[name].path;
-                catalyst::logger.debug("Dependency '{}' is locked.", name);
-            }
-
-            if (source == "vcpkg") {
-                std::string version;
-                if (!locked_version.empty())
-                    version = locked_version;
-                else if (dep["version"])
-                    version = dep["version"].as<std::string>();
-                else
-                    return std::unexpected(std::format("vcpkg dependency '{}' is missing version.", name));
-
-                std::string triplet;
-                if (!locked_triplet.empty())
-                    triplet = locked_triplet;
-                else if (dep["triplet"])
-                    triplet = dep["triplet"].as<std::string>();
-                else
-                    return std::unexpected(std::format("vcpkg dependency '{}' is missing triplet.", name));
-
-                if (auto res = fetchVcpkg(name); !res)
-                    return std::unexpected(res.error());
-
-            } else if (source == "system") {
-                if (auto res = fetchSystem(name); !res)
-                    return std::unexpected(res.error());
-            } else if (source == "local") {
-                std::string path;
-                if (!locked_path.empty())
-                    path = locked_path;
-                else if (dep["path"])
-                    path = dep["path"].as<std::string>();
-                else
-                    return std::unexpected(std::format("Local dependency '{}' is missing path.", name));
-
-                std::vector<std::string> profiles_vec;
-                if (dep["profiles"] && dep["profiles"].IsSequence()) {
-                    profiles_vec = dep["profiles"].as<std::vector<std::string>>();
-                }
-                if (auto res = fetchLocal({.name = name, .path = path, .profiles = profiles_vec}); !res)
-                    return std::unexpected(res.error());
+            // 2. Categorize by safety
+            // Workspace links, vcpkg installs, and local builds mutate shared state
+            if (is_workspace_member || source == "vcpkg" || source == "local") {
+                serial_deps.push_back(dep);
             } else {
-                fs::path dep_path = fs::path(build_dir) / "catalyst-libs" / name;
-                if (fs::exists(dep_path)) {
-                    std::println(std::cout, "Skipping fetch for existing git dependency: {}", name);
-                } else {
-                    std::string version;
-                    if (!locked_version.empty())
-                        version = locked_version;
-                    else if (dep["version"])
-                        version = dep["version"].as<std::string>();
-                    else
-                        version = "latest";
-
-                    std::string url;
-                    if (!locked_url.empty())
-                        url = locked_url;
-                    else if (source == "git" && dep["url"])
-                        url = dep["url"].as<std::string>();
-                    else
-                        url = source;
-
-                    if (auto res = fetchGit(build_dir, name, url, version, locked_hash); !res)
-                        return std::unexpected(res.error());
-                }
+                parallel_deps.push_back(dep);
             }
             ++ii;
+        }
+
+        // 3. Execute parallel-safe (git, system)
+        if (!parallel_deps.empty()) {
+            std::vector<std::future<std::expected<void, std::string>>> futures;
+            for (auto dep : parallel_deps) {
+                // Launch fetch in parallel
+                futures.push_back(std::async(std::launch::async, [dep, build_dir, &lockfile_deps, &parse_args]() {
+                    return fetchDependency(dep, build_dir, lockfile_deps, parse_args);
+                }));
+            }
+
+            // Wait for all fetches and collect errors
+            std::vector<std::string> errors;
+            for (auto &f : futures) {
+                if (auto res = f.get(); !res) {
+                    errors.push_back(res.error());
+                }
+            }
+
+            if (!errors.empty()) {
+                std::string combined_error = "Parallel fetch failed with the following errors:\n";
+                for (const auto &err : errors) {
+                    combined_error += " - " + err + "\n";
+                }
+                return std::unexpected(combined_error);
+            }
+        }
+
+        // 4. Execute serial-only (vcpkg, local, workspace link)
+        // Maintain fail-fast semantics for these
+        for (auto dep : serial_deps) {
+            if (auto res = fetchDependency(dep, build_dir, lockfile_deps, parse_args); !res) {
+                return res; // Fail fast
+            }
         }
     }
 

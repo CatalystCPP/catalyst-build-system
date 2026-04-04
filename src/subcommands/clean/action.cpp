@@ -7,6 +7,7 @@
 #include <catalyst/subcommands/clean.hpp>
 #include <yaml-cpp/node/node.h>
 
+#include "catalyst/dir_guard.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
@@ -19,10 +20,9 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     catalyst::logger.debug("Clean subcommand invoked.");
 
     if (parse_args.workspace) {
-        fs::path current = fs::current_path();
         bool is_root = false;
         try {
-            is_root = fs::equivalent(parse_args.workspace->getRoot(), current);
+            is_root = fs::equivalent(parse_args.workspace->getRoot(), fs::current_path());
         } catch (...) {
             std::ignore;
         }
@@ -33,7 +33,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
 
             for (const auto &[name, member] : parse_args.workspace->getMembers()) {
                 catalyst::logger.info("Cleaning member: {}", name);
-                fs::current_path(member.path);
+                catalyst::DirectoryChangeGuard dir_guard(member.path);
 
                 Parse member_args = parse_args;
                 member_args.workspace = std::nullopt; // Prevent recursion loop
@@ -42,7 +42,6 @@ std::expected<void, std::string> action(const Parse &parse_args) {
                     catalyst::logger.error("Clean failed for member: {}", name);
                     any_failed = true;
                 }
-                fs::current_path(current);
             }
             if (any_failed)
                 return std::unexpected("Clean failed for some members.");

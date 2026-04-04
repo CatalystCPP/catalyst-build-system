@@ -15,6 +15,10 @@
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
 
+namespace {
+std::expected<void, std::string> execBatch(std::vector<std::basic_string<char>> args);
+}
+
 namespace catalyst::fmt {
 std::expected<void, std::string> action(const Parse &parse_args) {
     catalyst::logger.debug("Fmt subcommand invoked.");
@@ -65,30 +69,45 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         }
     }
 
-    std::atomic<bool> formatting_error = false;
-    std::string error_message;
-    std::mutex error_mutex;
-
-    std::for_each(std::execution::par, files_to_format.begin(), files_to_format.end(), [&](const auto &file) -> void {
-        if (formatting_error) {
-            return;
-        }
-        catalyst::logger.debug("Formatting {}", file.string());
-        if (int res = catalyst::processExec({formatter, "-i", file.string()}).value().get(); res) {
-            std::lock_guard<std::mutex> lock(error_mutex);
-            if (!formatting_error) {
-                error_message = "Error running clang-format on " + file.string();
-                catalyst::logger.error("{}", error_message);
-                formatting_error = true;
-            }
-        }
-    });
-
-    if (formatting_error) {
-        return std::unexpected(error_message);
+    if (files_to_format.empty()) {
+        return {};
     }
+
+    constexpr size_t MAX_ARG_BYTES = 1 << (10 + 7); // 128 KiB limit
+    size_t current_bytes = formatter.size() + 3;    // formatter + " -i"
+    std::vector<std::string> args = {formatter, "-i"};
+
+    for (const fs::path &file_to_format : files_to_format) {
+        std::string file_str = file_to_format.string();
+        size_t entry_size = file_str.size() + 1; // +1 for separator/null
+
+        if (args.size() > 2 && current_bytes + entry_size > MAX_ARG_BYTES) {
+            if (auto res = execBatch(std::move(args)); !res)
+                return res;
+            args = {formatter, "-i"};
+            current_bytes = formatter.size() + 3;
+        }
+
+        args.push_back(std::move(file_str));
+        current_bytes += entry_size;
+    }
+
+    if (args.size() > 2)
+        if (auto res = execBatch(std::move(args)); !res)
+            return res;
 
     catalyst::logger.debug("Fmt subcommand finished successfully.");
     return {};
 }
 } // namespace catalyst::fmt
+
+namespace {
+std::expected<void, std::string> execBatch(std::vector<std::basic_string<char>> args) {
+    if (int res = catalyst::processExec(std::forward<decltype(args)>(args)).value().get(); res) {
+        std::string error_message = "Error running clang-format. Exit code: " + std::to_string(res);
+        catalyst::logger.error("{}", error_message);
+        return std::unexpected(error_message);
+    }
+    return {};
+}
+} // namespace

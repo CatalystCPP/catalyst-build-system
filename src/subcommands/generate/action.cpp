@@ -1,6 +1,7 @@
 #include <sys/wait.h>
 
 #include <algorithm>
+#include <cstdint>
 #include <expected>
 #include <filesystem>
 #include <fstream>
@@ -23,7 +24,9 @@ namespace fs = std::filesystem;
 
 namespace {
 
-bool isEnabled(bool default_enabled, const std::string &feature, const std::vector<std::string> &enabled_features);
+bool isEnabled(bool default_enabled,
+               const std::string &feature,
+               const std::unordered_set<std::string> &enabled_features);
 
 void writeVariables(const catalyst::utils::yaml::Configuration &config,
                     catalyst::generate::buildwriters::BaseWriter &writer,
@@ -145,6 +148,17 @@ std::expected<void, std::string> action(const Parse &parse_args) {
 }
 
 namespace {
+constexpr uint64_t fnv1aHash(const std::string &text) {
+    constexpr uint64_t FNV1A_BIAS = 0xcbf29ce484222325ULL;
+    constexpr uint64_t FNV1A_PRIME = 0x100000001b3ULL;
+    uint64_t hash = FNV1A_BIAS;
+    for (char c : text) {
+        hash ^= static_cast<uint64_t>(c);
+        hash *= FNV1A_PRIME;
+    }
+    return hash;
+}
+
 std::vector<std::string> intermediateTargets(catalyst::generate::buildwriters::BaseWriter &writer,
                                              const std::unordered_set<std::filesystem::path> &source_set) {
     catalyst::logger.debug("Generate subcommand invoked.");
@@ -153,10 +167,8 @@ std::vector<std::string> intermediateTargets(catalyst::generate::buildwriters::B
     std::vector<std::string> object_files;
     for (const auto &src : source_set) {
         fs::path relative_src_path = fs::relative(src, current_dir);
-        std::string obj_name = relative_src_path.string();
-        std::ranges::replace(obj_name, '/', '_');
-        std::ranges::replace(obj_name, '\\', '_'); // For Windows paths
-        obj_name = obj_name.substr(0, obj_name.find_last_of('.')) + ".o";
+        std::string obj_name =
+            std::format("{}_{:016x}.o", relative_src_path.stem().string(), fnv1aHash(relative_src_path.string()));
         object_files.push_back((fs::path{"obj"} / obj_name).string());
         void(writer.addBuild({object_files.back()},
                              ((src.extension() == ".c" || src.extension() == ".cu") ? "cc_compile" : "cxx_compile"),
@@ -247,6 +259,7 @@ void writeVariables(const catalyst::utils::yaml::Configuration &config,
         logger.warn("VCPKG_ROOT environment variable is not defined.");
     }
 
+    std::unordered_set<std::string> enabled_features_set(enabled_features.begin(), enabled_features.end());
     if (const auto &features_node = config.getRoot()["features"]; features_node && features_node.IsMap()) {
         for (auto it = features_node.begin(); it != features_node.end(); ++it) {
             auto feature = it->first.as<std::string>();
@@ -260,7 +273,7 @@ void writeVariables(const catalyst::utils::yaml::Configuration &config,
             std::string flag = std::format(" -DFF_{}__{}={}",
                                            config.getString("manifest.name").value_or("name"),
                                            feature,
-                                           isEnabled(default_enabled, feature, enabled_features) ? "1" : "0");
+                                           isEnabled(default_enabled, feature, enabled_features_set) ? "1" : "0");
             cxxflags += flag;
             ccflags += flag;
         }
@@ -320,6 +333,7 @@ void writeRules(catalyst::generate::buildwriters::BaseWriter &writer) {
 void featureFilter(std::unordered_set<fs::path> &source_set,
                    const catalyst::utils::yaml::Configuration &config,
                    const std::vector<std::string> &enabled_features) {
+    std::unordered_set<std::string> enabled_features_set(enabled_features.begin(), enabled_features.end());
     std::unordered_set<std::string> inactive_features;
     if (const auto &features_node = config.getRoot()["features"]; features_node && features_node.IsMap()) {
         for (auto it = features_node.begin(); it != features_node.end(); ++it) {
@@ -331,7 +345,7 @@ void featureFilter(std::unordered_set<fs::path> &source_set,
                 default_enabled = it->second.as<bool>();
             }
 
-            if (!isEnabled(default_enabled, feature, enabled_features))
+            if (!isEnabled(default_enabled, feature, enabled_features_set))
                 inactive_features.insert(feature);
         }
     }
@@ -355,9 +369,11 @@ void featureFilter(std::unordered_set<fs::path> &source_set,
     }
 }
 
-bool isEnabled(bool default_enabled, const std::string &feature, const std::vector<std::string> &enabled_features) {
-    bool explicitly_enabled = std::ranges::find(enabled_features, feature) != enabled_features.end();
-    bool explicitly_disabled = std::ranges::find(enabled_features, "no-" + feature) != enabled_features.end();
+bool isEnabled(bool default_enabled,
+               const std::string &feature,
+               const std::unordered_set<std::string> &enabled_features) {
+    bool explicitly_enabled = enabled_features.contains(feature);
+    bool explicitly_disabled = enabled_features.contains("no-" + feature);
 
     bool is_enabled = default_enabled;
     if (explicitly_enabled) {
