@@ -42,6 +42,9 @@ common:
       triplet: x64-linux
       version: latest
       linkage: interface
+  hooks:
+    pre-build:
+      - catalyst: fmt
 ccache:
   manifest:
     tooling:
@@ -73,6 +76,9 @@ release:
       CCFLAGS: -O3 -DNDEBUG --std=c++23 -Wall -Wextra -Wpedantic
       CXXFLAGS: -O3 -DNDEBUG --std=c++23 -Wall -Wextra -Wpedantic
       LDFLAGS: -static -fuse-ld=mold -flto=full -Wl,-O3 -Wl,--gc-sections -Wl,--icf=safe -Wl,--as-needed -Wl, --no-undefined -Wl,-z,relro,-z,now -Wl,--hash-style=gnu -Wl,--build-id=sha1 -Wl,--strip-all
+  hooks:
+    post-build:
+      - catalyst: pack -p common ccache release -a
 
 linux_x86_64:
   manifest:
