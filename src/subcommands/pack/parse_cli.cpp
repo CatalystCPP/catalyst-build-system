@@ -37,6 +37,8 @@ std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app) {
             "CPack generators to use: 7Z, APK, DEB, DMG, EXTERNAL, FREEBSD, NSIS, RPM, STGZ, TGZ, TXZ, WIX, ZIP")
         ->transform(CLI::CheckedTransformer(gen_map, CLI::ignore_case).description(""));
 
+    pack->add_flag("-a,--all", ret->all_generators, "Run all available CPack generators");
+
     return {pack, std::move(ret)};
 }
 } // namespace catalyst::pack

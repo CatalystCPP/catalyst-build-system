@@ -138,50 +138,53 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     }
 
     // 4. Run cpack
-    std::vector<std::string> cpack_cmd{"cpack", "--config", cpack_config_path.string(), "-B", target_path.string()};
-    if (!parse_args.generators.empty()) {
-        std::string gens;
-        auto gen_to_string = [](Generator g) -> std::string {
-            switch (g) {
-                case Generator::TGZ:
-                    return "TGZ";
-                case Generator::ZIP:
-                    return "ZIP";
-                case Generator::DEB:
-                    return "DEB";
-                case Generator::RPM:
-                    return "RPM";
-                case Generator::NSIS:
-                    return "NSIS";
-                case Generator::WIX:
-                    return "WIX";
-                case Generator::DMG:
-                    return "DragNDrop";
-                case Generator::STGZ:
-                    return "STGZ";
-                case Generator::FREEBSD:
-                    return "FREEBSD";
-                case Generator::APK:
-                    return "APK";
-                case Generator::SEVEN_ZIP:
-                    return "7Z";
-                case Generator::TXZ:
-                    return "TXZ";
-                case Generator::EXTERNAL:
-                    return "External";
-                default:
-                    return "TGZ";
-            }
-        };
-
-        for (size_t i = 0; i < parse_args.generators.size(); ++i) {
-            gens += gen_to_string(parse_args.generators[i]);
-            if (i + 1 < parse_args.generators.size()) {
-                gens += ";";
-            }
+    auto gen_to_string = [](Generator g) -> std::string {
+        switch (g) {
+            case Generator::TGZ:
+                return "TGZ";
+            case Generator::ZIP:
+                return "ZIP";
+            case Generator::DEB:
+                return "DEB";
+            case Generator::RPM:
+                return "RPM";
+            case Generator::NSIS:
+                return "NSIS";
+            case Generator::WIX:
+                return "WIX";
+            case Generator::DMG:
+                return "DragNDrop";
+            case Generator::STGZ:
+                return "STGZ";
+            case Generator::FREEBSD:
+                return "FREEBSD";
+            case Generator::APK:
+                return "APK";
+            case Generator::SEVEN_ZIP:
+                return "7Z";
+            case Generator::TXZ:
+                return "TXZ";
+            case Generator::EXTERNAL:
+                return "External";
+            default:
+                return "TGZ";
         }
-        cpack_cmd.emplace_back("-G");
-        cpack_cmd.push_back(gens);
+    };
+
+    std::vector<Generator> active_generators = parse_args.generators;
+    if (parse_args.all_generators) {
+        active_generators = {Generator::TGZ,
+                             Generator::ZIP,
+                             Generator::DEB,
+                             Generator::RPM,
+                             Generator::NSIS,
+                             Generator::WIX,
+                             Generator::DMG,
+                             Generator::STGZ,
+                             Generator::FREEBSD,
+                             Generator::APK,
+                             Generator::SEVEN_ZIP,
+                             Generator::TXZ};
     }
 
     try {
@@ -190,12 +193,60 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         return std::unexpected(std::format("Failed to create target directory: {}", e.what()));
     }
 
-    catalyst::logger.info("Running cpack to assemble package in {}", target_path.string());
-    if (auto res = catalyst::processExec(std::move(cpack_cmd)); !res) {
-        return std::unexpected(std::format("Failed to execute cpack: {}", res.error()));
+    std::vector<std::string> base_cpack_cmd{
+        "cpack", "--config", cpack_config_path.string(), "-B", target_path.string()};
+
+    if (active_generators.empty()) {
+        catalyst::logger.info("Running cpack to assemble package in {}", target_path.string());
+        if (auto res = catalyst::processExec(std::vector<std::string>(base_cpack_cmd)); !res) {
+            return std::unexpected(std::format("Failed to execute cpack: {}", res.error()));
+        } else {
+            if (int code = res.value().get(); code != 0) {
+                return std::unexpected(std::format("cpack failed with exit code {}", code));
+            }
+        }
     } else {
-        if (int code = res.value().get(); code != 0) {
-            return std::unexpected(std::format("cpack failed with exit code {}", code));
+        catalyst::logger.info("Running cpack generators in parallel to assemble packages in {}", target_path.string());
+        std::vector<std::future<int>> futures;
+        std::vector<std::string> gen_names;
+
+        for (auto g : active_generators) {
+            std::string gen_str = gen_to_string(g);
+            gen_names.push_back(gen_str);
+            std::vector<std::string> cmd = base_cpack_cmd;
+            cmd.push_back("-G");
+            cmd.push_back(gen_str);
+
+            auto res = catalyst::processExec(std::move(cmd));
+            if (!res) {
+                return std::unexpected(std::format("Failed to spawn cpack for generator {}: {}", gen_str, res.error()));
+            }
+            futures.push_back(std::move(res.value()));
+        }
+
+        bool has_error = false;
+        int success_count = 0;
+        for (size_t i = 0; i < futures.size(); ++i) {
+            int code = futures[i].get();
+            if (code != 0) {
+                if (parse_args.all_generators) {
+                    catalyst::logger.warn(
+                        "cpack generator {} failed with exit code {} (ignored due to --all)", gen_names[i], code);
+                } else {
+                    catalyst::logger.error("cpack generator {} failed with exit code {}", gen_names[i], code);
+                    has_error = true;
+                }
+            } else {
+                success_count++;
+            }
+        }
+
+        if (has_error) {
+            return std::unexpected("One or more cpack generators failed.");
+        }
+
+        if (parse_args.all_generators && success_count == 0) {
+            return std::unexpected("All cpack generators failed.");
         }
     }
 

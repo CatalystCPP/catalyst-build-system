@@ -28,6 +28,7 @@ struct Parse {
     std::filesystem::path source_path{std::filesystem::current_path()};
     std::filesystem::path target_path{"build/pack"};
     std::vector<Generator> generators;
+    bool all_generators{false};
 };
 
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);
