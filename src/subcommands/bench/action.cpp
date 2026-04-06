@@ -119,6 +119,15 @@ std::expected<void, std::string> action(const Parse &args) {
     std::string command = commandStr(exe_path, args.params);
 
     catalyst::toolchain::ToolchainDef tc;
+    if (profile_comp["manifest"]["toolchain"] && profile_comp["manifest"]["toolchain"].IsScalar()) {
+        auto tc_path = profile_comp["manifest"]["toolchain"].as<std::string>();
+        auto parsed = catalyst::toolchain::parse_toolchain(tc_path);
+        if (!parsed) {
+            return std::unexpected(std::format("Failed to load toolchain {}: {}", tc_path, parsed.error()));
+        }
+        tc = std::move(*parsed);
+    }
+
     std::expected<std::string, std::string> lib_path_res = catalyst::generate::libPath(profile_comp, profiles, tc);
     if (!lib_path_res) {
         return std::unexpected("Failed to generate LD_LIBRARY_PATH");

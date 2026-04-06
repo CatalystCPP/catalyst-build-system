@@ -1,5 +1,7 @@
 #pragma once
 
+#include <expected>
+#include <filesystem>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -53,5 +55,8 @@ struct ToolchainDef {
 
 // Expands a template string replacing {key} with the corresponding value from vars
 std::string expand_template(std::string_view tmpl, const std::unordered_map<std::string_view, std::string> &vars);
+
+// Parse a ToolchainDef from a YAML file
+std::expected<ToolchainDef, std::string> parse_toolchain(const std::filesystem::path &path);
 
 } // namespace catalyst::toolchain
