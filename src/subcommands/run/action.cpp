@@ -88,7 +88,8 @@ std::expected<void, std::string> action(const Parse &args) {
 
     fs::path exe_path = fs::absolute(fs::path(std::format("{}/{}", build_dir, exe)));
     std::string command = commandStr(exe_path, args.params);
-    std::expected<std::string, std::string> lib_path_res = catalyst::generate::libPath(profile_comp, profiles);
+    catalyst::toolchain::ToolchainDef tc;
+    std::expected<std::string, std::string> lib_path_res = catalyst::generate::libPath(profile_comp, profiles, tc);
     if (!lib_path_res) {
         return std::unexpected("Failed to generate LD_LIBRARY_PATH");
     }

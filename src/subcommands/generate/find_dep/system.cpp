@@ -9,7 +9,7 @@
 namespace catalyst::generate {
 std::optional<FindRes> findSystemFromPkgConfig(const std::string &dep_name);
 
-std::expected<FindRes, std::string> findSystem(const YAML::Node &dep) {
+std::expected<FindRes, std::string> findSystem(const YAML::Node &dep, const catalyst::toolchain::ToolchainDef &tc) {
     auto dep_name = dep["name"].as<std::string>();
     catalyst::logger.debug("Resolving system dependency: {}", dep_name);
 
@@ -28,17 +28,19 @@ std::expected<FindRes, std::string> findSystem(const YAML::Node &dep) {
     std::string libs;
 
     if (has_explicit_include) {
-        inc_path += std::format(" -I{}", dep["include"].as<std::string>());
+        inc_path += " " + catalyst::toolchain::expand_template(tc.flags.include_dir,
+                                                               {{"path", dep["include"].as<std::string>()}});
     }
 
     if (has_explicit_lib) {
-        lib_path += std::format(" -L{}", dep["lib"].as<std::string>());
+        lib_path +=
+            " " + catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", dep["lib"].as<std::string>()}});
     }
 
     if (has_explicit_include && has_explicit_lib) {
         // Fully explicit, just add library name
         if (linkage == "static" || linkage == "shared") {
-            libs = std::format(" -l{}", dep_name);
+            libs = " " + catalyst::toolchain::expand_template(tc.flags.lib, {{"name", dep_name}});
         }
         return FindRes{.lib_path = lib_path, .inc_path = inc_path, .libs = libs};
     }
@@ -77,23 +79,23 @@ std::expected<FindRes, std::string> findSystem(const YAML::Node &dep) {
     if (!has_explicit_include) {
 #if defined(_WIN32)
 #elif defined(__APPLE__)
-        inc_path += " -I/usr/local/include";
+        inc_path += " " + catalyst::toolchain::expand_template(tc.flags.include_dir, {{"path", "/usr/local/include"}});
 #else
-        inc_path += " -I/usr/include";
+        inc_path += " " + catalyst::toolchain::expand_template(tc.flags.include_dir, {{"path", "/usr/include"}});
 #endif
     }
 
     if (!has_explicit_lib) {
 #if defined(_WIN32)
 #elif defined(__APPLE__)
-        lib_path += " -L/usr/local/lib";
+        lib_path += " " + catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", "/usr/local/lib"}});
 #else
-        lib_path += " -L/usr/lib";
+        lib_path += " " + catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", "/usr/lib"}});
 #endif
     }
 
     if (linkage == "static" || linkage == "shared") {
-        libs += std::format(" -l{}", dep_name);
+        libs += " " + catalyst::toolchain::expand_template(tc.flags.lib, {{"name", dep_name}});
     }
     return FindRes{.lib_path = lib_path, .inc_path = inc_path, .libs = libs};
 }

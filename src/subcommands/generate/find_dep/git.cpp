@@ -13,7 +13,8 @@
 namespace catalyst::generate {
 namespace fs = std::filesystem;
 
-std::expected<FindRes, std::string> findGit(const std::string &build_dir, const YAML::Node &dep) {
+std::expected<FindRes, std::string>
+findGit(const std::string &build_dir, const YAML::Node &dep, const catalyst::toolchain::ToolchainDef &tc) {
     auto dep_name = dep["name"].as<std::string>();
     catalyst::logger.debug("Resolving git dependency: {}", dep_name);
 
@@ -40,7 +41,8 @@ std::expected<FindRes, std::string> findGit(const std::string &build_dir, const 
         for (const auto &include_dir : dep_includes_node.as<std::vector<std::string>>()) {
             fs::path abs_include_path = fs::absolute(dep_path / include_dir);
             catalyst::logger.debug("Adding include path: {}", abs_include_path.string());
-            include_path_flags += std::format(" -I{}", abs_include_path.string());
+            include_path_flags +=
+                " " + catalyst::toolchain::expand_template(tc.flags.include_dir, {{"path", abs_include_path.string()}});
         }
     }
 
@@ -50,14 +52,15 @@ std::expected<FindRes, std::string> findGit(const std::string &build_dir, const 
             catalyst::utils::yaml::multiplexedBuildDir(dep_build_dir_node.as<std::string>(), profiles);
         fs::path lib_path = fs::absolute(dep_path / dep_build_dir);
         catalyst::logger.debug("Adding library path: {}", lib_path.string());
-        library_path_flags += std::format(" -L{}", lib_path.string());
+        library_path_flags +=
+            " " + catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", lib_path.string()}});
     }
 
     std::string libs_flags;
     if (auto dep_name_node = profile["manifest"]["name"]) {
         auto lib_name = dep_name_node.as<std::string>();
         catalyst::logger.debug("Adding library: {}", lib_name);
-        libs_flags += std::format(" -l{}", lib_name);
+        libs_flags += " " + catalyst::toolchain::expand_template(tc.flags.lib, {{"name", lib_name}});
     }
 
     return FindRes{.lib_path = library_path_flags, .inc_path = include_path_flags, .libs = libs_flags};

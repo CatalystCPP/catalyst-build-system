@@ -11,7 +11,7 @@
 #include "catalyst/utils/log/log.hpp"
 
 namespace catalyst::generate {
-std::expected<FindRes, std::string> findVcpkg(const YAML::Node &dep) {
+std::expected<FindRes, std::string> findVcpkg(const YAML::Node &dep, const catalyst::toolchain::ToolchainDef &tc) {
     auto triplet = dep["triplet"].as<std::string>();
     std::string linkage;
     if (dep["linkage"] && dep["linkage"].IsScalar()) {
@@ -78,11 +78,11 @@ std::expected<FindRes, std::string> findVcpkg(const YAML::Node &dep) {
         if (!fs::exists(lib_path) || !fs::is_directory(lib_path)) {
             catalyst::logger.warn(
                 "Could not find library directory for vcpkg package '{}' at: {}", dep_name, lib_path.string());
-            libs += std::format(" -l{}", dep_name);
+            libs += " " + catalyst::toolchain::expand_template(tc.flags.lib, {{"name", dep_name}});
         }
     }
 
-    library_path += std::format(" -L{}", lib_path.string());
+    library_path += " " + catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", lib_path.string()}});
     catalyst::logger.debug("Adding library path: {}", lib_path.string());
 
     if (linkage == "static" || linkage == "shared") {
@@ -109,7 +109,7 @@ std::expected<FindRes, std::string> findVcpkg(const YAML::Node &dep) {
                         if (stem.rfind("lib", 0) == 0) { // Check if it starts with "lib"
                             stem = stem.substr(3);
                         }
-                        libs += std::format(" -l{}", stem);
+                        libs += " " + catalyst::toolchain::expand_template(tc.flags.lib, {{"name", stem}});
                         catalyst::logger.debug("Found and added library: {}", stem);
                         break; // Found a matching extension, move to the next file
                     }
