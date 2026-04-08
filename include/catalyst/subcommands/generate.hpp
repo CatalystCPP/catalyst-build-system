@@ -23,6 +23,7 @@ struct FindRes {
     std::string lib_path;
     std::string inc_path;
     std::string libs;
+    std::vector<std::string> lib_dirs;
 };
 
 std::expected<YAML::Node, std::string> profileComposition(const std::vector<std::string> &profiles);

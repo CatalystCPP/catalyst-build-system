@@ -1,6 +1,5 @@
 // a helper function to just get ldlibs for use in run/action.cpp
 #include <filesystem>
-#include <sstream>
 #include <string>
 #include <vector>
 
@@ -13,41 +12,14 @@
 namespace fs = std::filesystem;
 namespace catalyst::generate {
 
-namespace {
-std::string ld_filter(std::string &ldflags) {
-    std::stringstream ss(ldflags);
-    std::string item;
-    std::vector<std::string> tokens;
-    while (std::getline(ss, item, ' ')) {
-        if (item.rfind("-L", 0) == 0) {
-            tokens.push_back(fs::absolute(item.substr(2)).string());
-        }
-    }
-
-    std::string result;
-    for (size_t i = 0; i < tokens.size(); ++i) {
-        result += tokens[i];
-        if (i < tokens.size() - 1) {
-#if defined(_WIN32)
-            result += ";";
-#else
-            result += ":";
-#endif
-        }
-    }
-    return result;
-}
-} // namespace
-
 // NOTE: used for run::action. Needs to be updated to use find_*.
 std::expected<std::string, std::string> libPath(const YAML::Node &profile,
                                                 const std::vector<std::string> &profiles,
                                                 const catalyst::toolchain::ToolchainDef &tc) {
     catalyst::logger.debug("Calculating LD_LIBRARY_PATH.");
-    fs::path current_dir = fs::current_path();
     fs::path build_dir =
         catalyst::utils::yaml::multiplexedBuildDir(profile["manifest"]["dirs"]["build"].as<std::string>(), profiles);
-    std::string ldflags = "-Lcatalyst-libs";
+    std::vector<std::string> lib_dirs{fs::absolute("catalyst-libs").string()};
 
     if (const char *vcpkg_root = std::getenv("VCPKG_ROOT"); vcpkg_root != nullptr) {
 #if defined(_WIN32)
@@ -57,9 +29,7 @@ std::expected<std::string, std::string> libPath(const YAML::Node &profile,
 #else
         const char *triplet = "x64-linux";
 #endif
-        ldflags +=
-            " " + catalyst::toolchain::expand_template(
-                      tc.flags.lib_dir, {{"path", (fs::path(vcpkg_root) / "installed" / triplet / "lib").string()}});
+        lib_dirs.push_back((fs::path(vcpkg_root) / "installed" / triplet / "lib").string());
     } else {
         logger.warn("VCPKG_ROOT environment variable is not defined.");
     }
@@ -70,11 +40,23 @@ std::expected<std::string, std::string> libPath(const YAML::Node &profile,
                 catalyst::logger.error(
                     "Failed to resolve dependency {}: {}", dep["name"].as<std::string>(), res.error());
             } else {
-                ldflags += " " + res.value().lib_path;
+                lib_dirs.insert(lib_dirs.end(), res->lib_dirs.begin(), res->lib_dirs.end());
             }
         }
     }
-    return ld_filter(ldflags);
+
+    std::string result;
+    for (size_t i = 0; i < lib_dirs.size(); ++i) {
+        result += lib_dirs[i];
+        if (i + 1 < lib_dirs.size()) {
+#if defined(_WIN32)
+            result += ";";
+#else
+            result += ":";
+#endif
+        }
+    }
+    return result;
 }
 
 } // namespace catalyst::generate

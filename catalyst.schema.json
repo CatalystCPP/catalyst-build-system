@@ -65,6 +65,10 @@
               "type": "string",
               "description": "Output artifact name pattern (e.g., *.so)."
             },
+            "toolchain": {
+              "type": "string",
+              "description": "Path to a Catalyst toolchain definition YAML file."
+            },
             "tooling": {
               "type": "object",
               "properties": {

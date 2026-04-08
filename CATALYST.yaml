@@ -6,7 +6,7 @@ common:
     name: catalyst
     type: BINARY
     version: 1.4.0
-    description: Catalyst is a Declarative C++ Package Manager
+    description: Catalyst is a Declarative C++ Build System
     provides: catalyst
     tooling:
       CC: clang

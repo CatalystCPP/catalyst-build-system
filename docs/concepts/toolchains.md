@@ -1,70 +1,158 @@
 # Toolchains
 
-Catalyst relies on **toolchains** to decouple the core generation engine from hardcoded compiler and linker syntaxes. By abstracting compiler commands, flag formatting, and file extensions into configurable templates, Catalyst supports arbitrary languages and toolchains without requiring C++ source code modifications.
+Catalyst toolchains are standalone YAML files that describe how Catalyst should
+format compiler, linker, and archiver commands for a target environment. They let
+projects override the built-in `gcc`/`clang`-style defaults without modifying
+Catalyst source code.
 
-## Concept
+## Overview
 
-When you run `catalyst build` or `catalyst run`, Catalyst parses the `manifest.toolchain` field from your project's configuration to identify how it should compile, link, and manage dependencies for the specific target environment. If no toolchain is specified, Catalyst uses a default set of templates compatible with `gcc` and `clang`.
-
-## Toolchain Definition File
-
-A toolchain is defined via a standalone YAML file containing key metadata, file extension mappings, flag formatting templates, and compilation commands. Variables can be interpolated into strings using `{placeholder}` formatting. 
-
-Here is the schema for a custom `toolchain.yaml` definition:
+Projects opt into a custom toolchain by setting `manifest.toolchain` in their
+configuration:
 
 ```yaml
-# my_toolchain.yaml
-toolchain:
-  name: "msvc"
+manifest:
+  toolchain: msvc.yaml
+```
 
-  # 1. File Extensions and Prefixes
+If `manifest.toolchain` is omitted, Catalyst uses its default `gcc_clang`
+toolchain definition.
+
+---
+
+## Schema Overview
+
+A Catalyst toolchain definition consists of one top-level section:
+
+```yaml
+toolchain:
+  name:        # Toolchain identifier
+  extensions:  # Output file extensions and prefixes
+  flags:       # Include/lib/define formatting templates
+  compiler:    # C and C++ compilation commands
+  linker:      # Executable and shared library link commands
+  archiver:    # Static library archive command
+```
+
+---
+
+## `toolchain`
+
+Defines the metadata and command templates Catalyst will use during generation.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `name` | String | `gcc_clang` | Toolchain identifier. |
+| `extensions` | Object | - | Output file extensions and library prefixes. |
+| `flags` | Object | - | Templates for include paths, library paths, library names, and preprocessor defines. |
+| `compiler` | Object | - | C and C++ compiler executables and command templates. |
+| `linker` | Object | - | Executable and shared library linker templates. |
+| `archiver` | Object | - | Static library archive template. |
+
+### `toolchain.extensions`
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `object` | String | `.o` | Object file extension. |
+| `executable` | String | `""` | Executable file extension. |
+| `static_lib` | String | `.a` | Static library extension. |
+| `shared_lib` | String | `.so` | Shared library extension. |
+| `static_lib_prefix` | String | `lib` | Prefix used for static library filenames. |
+| `shared_lib_prefix` | String | `lib` | Prefix used for shared library filenames. |
+
+### `toolchain.flags`
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `include_dir` | String | `-I{path}` | Template for an include directory flag. |
+| `lib_dir` | String | `-L{path}` | Template for a library search path flag. |
+| `lib` | String | `-l{name}` | Template for a library token. |
+| `define` | String | `-D{name}={value}` | Template for a preprocessor define with a value. |
+| `define_empty` | String | `-D{name}` | Template for a value-less preprocessor define. |
+
+> **Note**: `flags` templates interpolate `{path}`, `{name}`, and `{value}` placeholders.
+
+### `toolchain.compiler`
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `c` | Object | - | C compiler executable and command template. |
+| `cxx` | Object | - | C++ compiler executable and command template. |
+
+### `toolchain.compiler.c`
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `executable` | String | `clang` | C compiler executable. |
+| `command` | String | `{cc} {cflags} -MMD -MF {object}.d -c {source} -o {object} {includes} {defines}` | Command template for compiling C sources. |
+
+### `toolchain.compiler.cxx`
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `executable` | String | `clang++` | C++ compiler executable. |
+| `command` | String | `{cxx} {cxxflags} -MMD -MF {object}.d -c {source} -o {object} {includes} {defines}` | Command template for compiling C++ sources. |
+
+> **Note**: Compiler command templates interpolate `{cc}` or `{cxx}`, plus
+> `{cflags}` or `{cxxflags}`, `{source}`, `{object}`, `{includes}`, and `{defines}`.
+
+### `toolchain.linker`
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `executable` | String | `clang++` | Linker executable. |
+| `executable_command` | String | `{linker} {objects} -o {output} {ldflags} {lib_dirs} {libs}` | Command template for building executables. |
+| `shared_lib_command` | String | `{linker} -shared {objects} -o {output} {ldflags} {lib_dirs} {libs}` | Command template for building shared libraries. |
+
+> **Note**: Linker command templates interpolate `{linker}`, `{objects}`,
+> `{output}`, `{ldflags}`, `{lib_dirs}`, and `{libs}`.
+
+### `toolchain.archiver`
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `executable` | String | `ar` | Archive tool executable. |
+| `command` | String | `{archiver} rcs {output} {objects}` | Command template for building static libraries. |
+
+> **Note**: Archiver command templates interpolate `{archiver}`, `{output}`,
+> and `{objects}`.
+
+---
+
+## Example
+
+```yaml
+toolchain:
+  name: msvc
   extensions:
-    object: ".obj"
-    executable: ".exe"
-    static_lib: ".lib"
-    shared_lib: ".dll"
+    object: .obj
+    executable: .exe
+    static_lib: .lib
+    shared_lib: .dll
     static_lib_prefix: ""
     shared_lib_prefix: ""
-
-  # 2. Flag Templates
   flags:
-    include_dir: "/I\"{path}\""
-    lib_dir: "/LIBPATH:\"{path}\""
+    include_dir: /I"{path}"
+    lib_dir: /LIBPATH:"{path}"
     lib: "{name}.lib"
-    define: "/D{name}={value}"
-    define_empty: "/D{name}"
-
-  # 3. Compilation Commands
+    define: /D{name}={value}
+    define_empty: /D{name}
   compiler:
     c:
-      executable: "cl.exe"
-      command: "{cc} /c {source} /Fo\"{object}\" {cflags} {includes} {defines}"
+      executable: cl.exe
+      command: '{cc} /c {source} /Fo"{object}" {cflags} {includes} {defines}'
     cxx:
-      executable: "cl.exe"
-      command: "{cxx} /EHsc /c {source} /Fo\"{object}\" {cxxflags} {includes} {defines}"
-
-  # 4. Linking Commands
+      executable: cl.exe
+      command: '{cxx} /EHsc /c {source} /Fo"{object}" {cxxflags} {includes} {defines}'
   linker:
-    executable: "link.exe"
-    executable_command: "{linker} {objects} /OUT:\"{output}\" {ldflags} {lib_dirs} {libs}"
-    shared_lib_command: "{linker} /DLL {objects} /OUT:\"{output}\" {ldflags} {lib_dirs} {libs}"
-
-  # 5. Archiving Commands
+    executable: link.exe
+    executable_command: '{linker} {objects} /OUT:"{output}" {ldflags} {lib_dirs} {libs}'
+    shared_lib_command: '{linker} /DLL {objects} /OUT:"{output}" {ldflags} {lib_dirs} {libs}'
   archiver:
-    executable: "lib.exe"
-    command: "{archiver} /OUT:\"{output}\" {objects}"
+    executable: lib.exe
+    command: '{archiver} /OUT:"{output}" {objects}'
 ```
 
-## Using a Toolchain
-
-To apply your custom toolchain to a Catalyst project, configure your `catalyst.yaml` to point to the file via the `manifest.toolchain` key. 
-
-```yaml
-common:
-  manifest:
-    name: my_project
-    type: BINARY
-    toolchain: my_toolchain.yaml
-```
-
-During dependency resolution and rule generation, Catalyst automatically loads the specified toolchain file, parses the templates, and maps native flags and command lines dynamically onto the generated build configurations (e.g. `build.ninja`, `Makefile`, etc.).
+Fields omitted from a toolchain file retain their built-in defaults, so custom
+toolchains only need to override the pieces that differ from the default
+`gcc_clang` behavior.

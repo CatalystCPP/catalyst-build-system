@@ -1,8 +1,9 @@
 #include <catch2/catch_test_macros.hpp>
-#include <fstream>
 #include <filesystem>
+#include <fstream>
 
 #include "catalyst/utils/toolchain.hpp"
+#include "catalyst/utils/yaml/configuration.hpp"
 
 using namespace catalyst::toolchain;
 
@@ -70,4 +71,30 @@ toolchain:
     REQUIRE(tc.extensions.static_lib == ".a");
 
     std::filesystem::remove(temp_yaml);
+}
+
+TEST_CASE("Configuration preserves manifest.toolchain", "[toolchain][configuration]") {
+    namespace fs = std::filesystem;
+
+    fs::path temp_root = fs::temp_directory_path() / "catalyst_toolchain_config_test";
+    fs::create_directories(temp_root);
+
+    std::ofstream out(temp_root / "CATALYST.yaml");
+    out << R"(
+common:
+  manifest:
+    name: "demo"
+    toolchain: "msvc.yaml"
+    dirs:
+      source: ["src"]
+      include: []
+      build: "build"
+)";
+    out.close();
+
+    catalyst::utils::yaml::Configuration config({"common"}, temp_root);
+    REQUIRE(config.getString("manifest.toolchain").has_value());
+    REQUIRE(config.getString("manifest.toolchain").value() == "msvc.yaml");
+
+    fs::remove_all(temp_root);
 }

@@ -47,6 +47,7 @@ findGit(const std::string &build_dir, const YAML::Node &dep, const catalyst::too
     }
 
     std::string library_path_flags;
+    std::vector<std::string> lib_dirs;
     if (auto dep_build_dir_node = profile["manifest"]["dirs"]["build"]) {
         fs::path dep_build_dir =
             catalyst::utils::yaml::multiplexedBuildDir(dep_build_dir_node.as<std::string>(), profiles);
@@ -54,6 +55,7 @@ findGit(const std::string &build_dir, const YAML::Node &dep, const catalyst::too
         catalyst::logger.debug("Adding library path: {}", lib_path.string());
         library_path_flags +=
             " " + catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", lib_path.string()}});
+        lib_dirs.push_back(lib_path.string());
     }
 
     std::string libs_flags;
@@ -63,6 +65,7 @@ findGit(const std::string &build_dir, const YAML::Node &dep, const catalyst::too
         libs_flags += " " + catalyst::toolchain::expand_template(tc.flags.lib, {{"name", lib_name}});
     }
 
-    return FindRes{.lib_path = library_path_flags, .inc_path = include_path_flags, .libs = libs_flags};
+    return FindRes{
+        .lib_path = library_path_flags, .inc_path = include_path_flags, .libs = libs_flags, .lib_dirs = lib_dirs};
 }
 } // namespace catalyst::generate

@@ -56,11 +56,13 @@ std::expected<FindRes, std::string> findLocal(const YAML::Node &dep, const catal
 
     // Add library directory
     std::string library_path;
+    std::vector<std::string> lib_dirs;
     if (auto build_dir_node = profile["manifest"]["dirs"]["build"]) {
         fs::path build_dir = catalyst::utils::yaml::multiplexedBuildDir(build_dir_node.as<std::string>(), profiles);
         auto lib_path = fs::absolute(dep_path / build_dir);
         catalyst::logger.debug("Adding library path: {}", lib_path.string());
         library_path += " " + catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", lib_path.string()}});
+        lib_dirs.push_back(lib_path.string());
     }
 
     // Add library
@@ -71,6 +73,6 @@ std::expected<FindRes, std::string> findLocal(const YAML::Node &dep, const catal
         libs += " " + catalyst::toolchain::expand_template(tc.flags.lib, {{"name", dep_name}});
     }
 
-    return FindRes{.lib_path = library_path, .inc_path = include_path, .libs = libs};
+    return FindRes{.lib_path = library_path, .inc_path = include_path, .libs = libs, .lib_dirs = lib_dirs};
 }
 } // namespace catalyst::generate
