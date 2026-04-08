@@ -5,6 +5,9 @@ _catalyst() {
     typeset -A opt_args
 
     _arguments -C \
+        '(-h --help)'{-h,--help}'[Print this help message and exit]' \
+        '(-v --version)'{-v,--version}'[current version]' \
+        '(-V --verbose)'{-V,--verbose}'[verbose stdout logging output]' \
         '1: :->cmds' \
         '*:: :->args'
 
@@ -12,24 +15,26 @@ _catalyst() {
         cmds)
             local -a subcommands
             subcommands=(
-                'add:add a dependency'
-                'bench:execute benchmarks'
-                'build:build the project'
-                'clean:clean artifacts'
-                'doc:build documentation'
-                'download:install a configured package from git'
-                'fetch:fetch dependencies'
-                'fmt:format source files'
-                'generate:generate a build file'
-                'ide-sync:sync IDE configuration files'
-                'init:initialize a profile'
-                'install:install the build artifacts'
-                'lock:resolve and pin dependencies'
-                'pack:assemble the local package for distribution'
+                'add:Add a dependency.'
+                'build:Build the project.'
+                'clean:Clean artifacts.'
+                'download:Install a catalyst configured package from git.'
+                'fetch:Fetch all dependencies for a profile composition.'
+                'fmt:Format project source files.'
+                'generate:Generate a build file.'
+                'ide-sync:Sync IDE configuration files for an existing project.'
+                'init:Initialize a new catalyst profile.'
+                'install:Install the build artifacts'
+                'lock:Resolve and pin dependencies to a catalyst.lock file.'
+                'run:Run a built executable.'
+                'test:Run the test executable.'
+                'bench:Execute all benchmarks of a local package.'
+                'tidy:Run linting on source code.'
+                'pack:Assemble the local package for distribution.'
+                'doc:Build a package'\''s documentation.'
                 'profile-ls:list all profiles'
-                'run:run a built executable'
-                'test:run the test executable'
-                'tidy:run linting'
+                'feature-ls:list all features across all profiles'
+                'help:Display help information for a subcommand.'
             )
             _describe -t commands 'catalyst command' subcommands
             ;;
@@ -53,14 +58,20 @@ _catalyst() {
                 download)
                     _catalyst_download
                     ;;
+                feature-ls)
+                    _catalyst_feature_ls
+                    ;;
                 fetch)
                     _catalyst_fetch
                     ;;
                 fmt)
-                    # no flags
+                    _catalyst_fmt
                     ;;
                 generate)
                     _catalyst_generate
+                    ;;
+                help)
+                    _catalyst_help
                     ;;
                 ide-sync)
                     _catalyst_ide_sync
@@ -96,7 +107,7 @@ _catalyst() {
 
 _catalyst_features() {
     local -a features
-    features=(${(f)"$(catalyst feature-ls 2>/dev/null)"})
+    features=(${(f)"$(catalyst feature-ls --inverse 2>/dev/null)"})
     _describe -t features 'features' features
 }
 
@@ -111,6 +122,7 @@ _catalyst_add() {
     typeset -A opt_args
 
     _arguments -C \
+        '(-h --help)'{-h,--help}'[Print this help message and exit]' \
         '1: :->cmds' \
         '*:: :->args'
 
@@ -129,21 +141,24 @@ _catalyst_add() {
             case $line[1] in
                 git)
                     _arguments \
+                        '(-h --help)'{-h,--help}'[Print this help message and exit]' \
                         '(-n --name)'{-n,--name}'[name]:name:' \
                         '(-v --version)'{-v,--version}'[version]:version:' \
-                        '(-f --features)'{-f,--features}'[features]:features:_catalyst_features' \
+                        '*'{-f,--features}'[features]:features:_catalyst_features' \
                         '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles' \
                         '1:remote:'
                     ;;
                 local)
                     _arguments \
-                        '(-f --features)'{-f,--features}'[features]:features:_catalyst_features' \
+                        '(-h --help)'{-h,--help}'[Print this help message and exit]' \
+                        '*'{-f,--features}'[features]:features:_catalyst_features' \
                         '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles' \
                         '1:name:' \
                         '2:path:_directories'
                     ;;
                 system)
                     _arguments \
+                        '(-h --help)'{-h,--help}'[Print this help message and exit]' \
                         '(-l --lib)'{-l,--lib}'[lib]:lib:' \
                         '(-i --inc)'{-i,--inc}'[inc]:inc:' \
                         '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles' \
@@ -151,9 +166,10 @@ _catalyst_add() {
                     ;;
                 vcpkg)
                     _arguments \
+                        '(-h --help)'{-h,--help}'[Print this help message and exit]' \
                         '(-t --triplet)'{-t,--triplet}'[triplet]:triplet:' \
                         '(-v --version)'{-v,--version}'[version]:version:' \
-                        '(-f --features)'{-f,--features}'[features]:features:_catalyst_features' \
+                        '*'{-f,--features}'[features]:features:_catalyst_features' \
                         '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles' \
                         '1:name:'
                     ;;
@@ -164,124 +180,158 @@ _catalyst_add() {
 
 _catalyst_bench() {
     _arguments \
-        '(-P --params)'{-P,--params}'[params]:params:'
+        '(-h --help)'{-h,--help}'[Print this help message and exit]' \
+        '*'{-P,--params}'[params]:params:'
 }
 
 _catalyst_build() {
     _arguments \
-        '(-r --regen)'{-r,--regen}'[regenerate the build file]' \
-        '(-b --force-rebuild)'{-b,--force-rebuild}'[recompile dependencies]' \
-        '--force-refetch[refetch dependencies]' \
-        '(--workspace --all)'{--workspace,--all}'[build all members in the workspace]' \
-        '(-P --package)'{-P,--package}'[package]:package:' \
-        '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles' \
-        '(-f --features)'{-f,--features}'[features]:features:_catalyst_features' \
-        '--backend[backend]:backend:(ninja gmake cbe)' \
-        '(-w --watch)'{-w,--watch}'[watch for file changes and rebuild]'
+        '(-h --help)'{-h,--help}'[Print this help message and exit]' \
+        '(-r --regen)'{-r,--regen}'[Regenerate the build file.]' \
+        '(-b --force-rebuild)'{-b,--force-rebuild}'[Recompile dependencies.]' \
+        '--force-refetch[Refetch dependencies.]' \
+        '(--workspace --all)'{--workspace,--all}'[Build all members in the workspace.]' \
+        '(-w --watch)'{-w,--watch}'[Continuous build mode. Rebuilds on source file changes.]' \
+        '(-P --package)'{-P,--package}'[Build a specific package from the root.]:package:' \
+        '*'{-p,--profiles}'[Profile composition to build.]:*:profiles:_catalyst_profiles' \
+        '*'{-f,--features}'[Features to enable.]:features:_catalyst_features' \
+        '--backend[Backend to use for generation (ninja, gmake, cbe).]:backend:(ninja gmake cbe)'
 }
 
 _catalyst_clean() {
     _arguments \
+        '(-h --help)'{-h,--help}'[Print this help message and exit]' \
         '*'{-p,--profile}'[profile]:*:profile:_catalyst_profiles'
 }
 
 _catalyst_doc() {
     _arguments \
-        '(-e --engine)'{-e,--engine}'[engine]:engine:(doxygen clang-doc jocasta)' \
-        '--open[open documentation in browser]' \
-        '--clean[clean output directory before generation]'
+        '(-h --help)'{-h,--help}'[Print this help message and exit]' \
+        '(-e --engine)'{-e,--engine}'[Override the documentation engine (doxygen, clang-doc, jocasta)]:engine:(doxygen clang-doc jocasta)' \
+        '--open[Open the generated documentation in the default browser upon completion]' \
+        '--clean[Clean the existing output directory before generation]'
 }
 
 _catalyst_download() {
     _arguments \
-        '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles' \
-        '(-f --features)'{-f,--features}'[features]:features:_catalyst_features' \
-        '(-t --target)'{-t,--target}'[target]:target:_directories' \
+        '(-h --help)'{-h,--help}'[Print this help message and exit]' \
+        '*'{-p,--profiles}'[the profiles to compose in the build artifact]:*:profiles:_catalyst_profiles' \
+        '*'{-f,--features}'[the features to enable in the build]:features:_catalyst_features' \
+        '(-t --target)'{-t,--target}'[the path to install to]:target:_directories' \
         '1:remote:' \
         '2:branch:'
 }
 
+_catalyst_feature_ls() {
+    _arguments \
+        '(-h --help)'{-h,--help}'[Print this help message and exit]' \
+        '--inverse[list no-features as well]'
+}
+
 _catalyst_fetch() {
     _arguments \
+        '(-h --help)'{-h,--help}'[Print this help message and exit]' \
         '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles'
+}
+
+_catalyst_fmt() {
+    _arguments \
+        '(-h --help)'{-h,--help}'[Print this help message and exit]'
 }
 
 _catalyst_generate() {
     _arguments \
+        '(-h --help)'{-h,--help}'[Print this help message and exit]' \
         '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles' \
-        '(-f --features)'{-f,--features}'[features]:features:_catalyst_features' \
-        '(-b --backend)'{-b,--backend}'[backend]:backend:(ninja gmake cbe)'
+        '*'{-f,--features}'[features]:features:_catalyst_features' \
+        '(-b --backend)'{-b,--backend}'[Backend to use for generation (ninja, gmake, cbe).]:backend:(ninja gmake cbe)'
+}
+
+_catalyst_help() {
+    _arguments \
+        '(-h --help)'{-h,--help}'[Print this help message and exit]' \
+        '1:command:(add bench build clean doc download feature-ls fetch fmt generate ide-sync init install lock pack profile-ls run test tidy)'
 }
 
 _catalyst_ide_sync() {
     _arguments \
-        '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles' \
-        '--ides[ides]:ides:(vscode clion)' \
-        '(-f --force-ide)'{-f,--force-ide}'[force emitting IDE config]'
+        '(-h --help)'{-h,--help}'[Print this help message and exit]' \
+        '*'{-p,--profiles}'[Profiles to use from the configuration file]:*:profiles:_catalyst_profiles' \
+        '*--ides[IDEs to generate project files for: vscode, clion]:ides:(vscode clion)' \
+        '(-f --force-ide)'{-f,--force-ide}'[force emitting IDE config even if one already exists]'
 }
 
 _catalyst_init() {
     _arguments \
-        '(-n --name)'{-n,--name}'[name]:name:' \
-        '--path[path]:path:_directories' \
-        '(-t --type)'{-t,--type}'[type]:type:(binary staticlib sharedlib interface)' \
-        '(-v --version)'{-v,--version}'[version]:version:' \
-        '(-d --description)'{-d,--description}'[description]:description:' \
-        '--provides[provides]:provides:' \
-        '--cc[c compiler]:c_compiler:_command_names -e' \
-        '--cxx[cxx compiler]:cxx_compiler:_command_names -e' \
+        '(-h --help)'{-h,--help}'[Print this help message and exit]' \
+        '(-n --name)'{-n,--name}'[the name of the project]:name:' \
+        '--path[the default path for the project]:path:_directories' \
+        '(-t --type)'{-t,--type}'[the project type binary, staticlib, sharedlib, or interface]:type:(binary staticlib sharedlib interface)' \
+        '(-v --version)'{-v,--version}'[the project version]:version:' \
+        '(-d --description)'{-d,--description}'[a description for the project]:description:' \
+        '--provides[Artifact provided by this project.]:provides:' \
+        '--cc[the c compiler to use]:c_compiler:_command_names -e' \
+        '--cxx[the cxx compiler to use]:cxx_compiler:_command_names -e' \
         '--ccflags[c compiler flags]:c_compiler_flags:' \
         '--cxxflags[cxx compiler flags]:cxx_compiler_flags:' \
         '--ldflags[linker flags]:linker_flags:' \
-        '--include-dirs[include dirs]:include_dirs:_directories' \
-        '--source-dirs[source dirs]:source_dirs:_directories' \
-        '--build-dir[build dir]:build_dir:_directories' \
-        '--ides[ides]:ides:(vscode clion)' \
-        '*'{-p,--profile}'[profile]:*:profile:_catalyst_profiles' \
-        '(-f --force-ide)'{-f,--force-ide}'[force emitting IDE config]'
+        '*--include-dirs[include directories]:include_dirs:_directories' \
+        '*--source-dirs[source directories]:source_dirs:_directories' \
+        '--build-dir[build directory]:build_dir:_directories' \
+        '*--ides[IDEs to generate project files for]:ides:(vscode clion)' \
+        '*'{-p,--profile}'[the profile to initialize]:*:profile:_catalyst_profiles' \
+        '(-f --force-ide)'{-f,--force-ide}'[force emitting IDE config even if one already exists]'
 }
 
 _catalyst_install() {
     _arguments \
-        '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles' \
-        '(-s --source)'{-s,--source}'[source]:source:_directories' \
-        '(-t --target)'{-t,--target}'[target]:target:_directories'
+        '(-h --help)'{-h,--help}'[Print this help message and exit]' \
+        '*'{-p,--profiles}'[the profiles to compose in the build artifact]:*:profiles:_catalyst_profiles' \
+        '(-s --source)'{-s,--source}'[the source of the path to build]:source:_directories' \
+        '(-t --target)'{-t,--target}'[the path to install to]:target:_directories'
 }
 
 _catalyst_lock() {
     _arguments \
-        '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles'
+        '(-h --help)'{-h,--help}'[Print this help message and exit]' \
+        '*'{-p,--profiles}'[Profile composition to use for dependency resolution.]:*:profiles:_catalyst_profiles'
 }
 
 _catalyst_pack() {
     _arguments \
-        '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles' \
-        '(-s --source)'{-s,--source}'[source]:source:_directories' \
-        '(-t --target)'{-t,--target}'[target]:target:_directories' \
-        '(-G --generators)'{-G,--generators}'[generators]:generators:(TGZ ZIP DEB RPM NSIS WIX DMG STGZ FREEBSD APK 7Z TXZ EXTERNAL)'
+        '(-h --help)'{-h,--help}'[Print this help message and exit]' \
+        '*'{-p,--profiles}'[the profiles to compose for packing]:*:profiles:_catalyst_profiles' \
+        '(-s --source)'{-s,--source}'[the source path to pack]:source:_directories' \
+        '(-t --target)'{-t,--target}'[the output directory for the package]:target:_directories' \
+        '*'{-G,--generators}'[CPack generators to use]:generators:(7Z APK DEB DMG EXTERNAL FREEBSD NSIS RPM STGZ TGZ TXZ WIX ZIP)' \
+        '(-a --all)'{-a,--all}'[Run all available CPack generators]'
 }
 
 _catalyst_profile_ls() {
-    # no flags
+    _arguments \
+        '(-h --help)'{-h,--help}'[Print this help message and exit]'
 }
 
 _catalyst_run() {
     _arguments \
+        '(-h --help)'{-h,--help}'[Print this help message and exit]' \
         '*'{-p,--profile}'[profile]:*:profile:_catalyst_profiles' \
-        '(-P --params)'{-P,--params}'[params]:params:' \
+        '*'{-P,--params}'[params]:params:' \
         '*:target:'
 }
 
 _catalyst_test() {
     _arguments \
-        '(-P --params)'{-P,--params}'[params]:params:' \
+        '(-h --help)'{-h,--help}'[Print this help message and exit]' \
+        '*'{-P,--params}'[Params to pass to the test executable.]:params:' \
         '*:test:'
 }
 
 _catalyst_tidy() {
     _arguments \
-        '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles' \
-        '--fix[automatically fix lint warnings]'
+        '(-h --help)'{-h,--help}'[Print this help message and exit]' \
+        '*'{-p,--profiles}'[The profile composition to lint]:*:profiles:_catalyst_profiles' \
+        '--fix[Automatically fix lint warnings]'
 }
 
 _catalyst "$@"

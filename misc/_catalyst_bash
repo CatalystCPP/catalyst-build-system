@@ -4,10 +4,14 @@ _catalyst() {
     local cur prev words cword
     _init_completion || return
 
-    local subcommands="add bench build clean doc download fetch fmt generate ide-sync init install lock pack profile-ls run test tidy"
+    local subcommands="add bench build clean doc download feature-ls fetch fmt generate help ide-sync init install lock pack profile-ls run test tidy"
 
     if [[ $cword -eq 1 ]]; then
-        COMPREPLY=($(compgen -W "$subcommands" -- "$cur"))
+        if [[ "$cur" == -* ]]; then
+            COMPREPLY=($(compgen -W "-h --help -v --version -V --verbose" -- "$cur"))
+        else
+            COMPREPLY=($(compgen -W "$subcommands" -- "$cur"))
+        fi
         return
     fi
 
@@ -24,12 +28,16 @@ _catalyst() {
                 COMPREPLY=($(compgen -W "$(catalyst profile-ls 2>/dev/null)" -- "$cur"))
                 return
                 ;;
+            -f|--feature|--features)
+                COMPREPLY=($(compgen -W "$(catalyst feature-ls --inverse 2>/dev/null)" -- "$cur"))
+                return
+                ;;
             --ides)
                 COMPREPLY=($(compgen -W "vscode clion" -- "$cur"))
                 return
                 ;;
             -G|--generators)
-                COMPREPLY=($(compgen -W "TGZ ZIP DEB RPM NSIS WIX DMG STGZ FREEBSD APK 7Z TXZ EXTERNAL" -- "$cur"))
+                COMPREPLY=($(compgen -W "7Z APK DEB DMG EXTERNAL FREEBSD NSIS RPM STGZ TGZ TXZ WIX ZIP" -- "$cur"))
                 return
                 ;;
         esac
@@ -58,74 +66,88 @@ _catalyst() {
         add)
             local add_subcommands="git local system vcpkg"
             if [[ $cword -eq 2 ]]; then
-                COMPREPLY=($(compgen -W "$add_subcommands" -- "$cur"))
+                COMPREPLY=($(compgen -W "$add_subcommands -h --help" -- "$cur"))
                 return
             fi
             local add_sub=${words[2]}
             case "$add_sub" in
                 git)
                     if [[ "$cur" == -* ]]; then
-                        COMPREPLY=($(compgen -W "-n --name -v --version -f --features -p --profiles" -- "$cur"))
+                        COMPREPLY=($(compgen -W "-h --help -n --name -v --version -f --features -p --profiles" -- "$cur"))
                     fi
                     ;;
                 local)
                     if [[ "$cur" == -* ]]; then
-                        COMPREPLY=($(compgen -W "-p --profiles -f --features" -- "$cur"))
+                        COMPREPLY=($(compgen -W "-h --help -p --profiles -f --features" -- "$cur"))
                     fi
                     ;;
                 system)
                     if [[ "$cur" == -* ]]; then
-                        COMPREPLY=($(compgen -W "-l --lib -i --inc -p --profiles" -- "$cur"))
+                        COMPREPLY=($(compgen -W "-h --help -l --lib -i --inc -p --profiles" -- "$cur"))
                     fi
                     ;;
                 vcpkg)
                     if [[ "$cur" == -* ]]; then
-                        COMPREPLY=($(compgen -W "-t --triplet -v --version -p --profiles -f --features" -- "$cur"))
+                        COMPREPLY=($(compgen -W "-h --help -t --triplet -v --version -p --profiles -f --features" -- "$cur"))
                     fi
                     ;;
             esac
             ;;
         bench)
             if [[ "$cur" == -* ]]; then
-                COMPREPLY=($(compgen -W "-P --params" -- "$cur"))
+                COMPREPLY=($(compgen -W "-h --help -P --params" -- "$cur"))
             fi
             ;;
         build)
             if [[ "$cur" == -* ]]; then
-                COMPREPLY=($(compgen -W "-r --regen -b --force-rebuild --force-refetch --workspace --all -P --package -p --profiles -f --features --backend --watch -w" -- "$cur"))
+                COMPREPLY=($(compgen -W "-h --help -r --regen -b --force-rebuild --force-refetch --workspace --all -w --watch -P --package -p --profiles -f --features --backend" -- "$cur"))
             fi
             ;;
         clean)
             if [[ "$cur" == -* ]]; then
-                COMPREPLY=($(compgen -W "-p --profile" -- "$cur"))
+                COMPREPLY=($(compgen -W "-h --help -p --profile" -- "$cur"))
             fi
             ;;
         doc)
             if [[ "$cur" == -* ]]; then
-                COMPREPLY=($(compgen -W "-e --engine --open --clean" -- "$cur"))
+                COMPREPLY=($(compgen -W "-h --help -e --engine --open --clean" -- "$cur"))
             fi
             ;;
         download)
             if [[ "$cur" == -* ]]; then
-                COMPREPLY=($(compgen -W "-p --profiles -f --features -t --target" -- "$cur"))
+                COMPREPLY=($(compgen -W "-h --help -p --profiles -f --features -t --target" -- "$cur"))
+            fi
+            ;;
+        feature-ls)
+            if [[ "$cur" == -* ]]; then
+                COMPREPLY=($(compgen -W "-h --help --inverse" -- "$cur"))
             fi
             ;;
         fetch)
             if [[ "$cur" == -* ]]; then
-                COMPREPLY=($(compgen -W "-p --profiles" -- "$cur"))
+                COMPREPLY=($(compgen -W "-h --help -p --profiles" -- "$cur"))
             fi
             ;;
         fmt)
-            # no flags
+            if [[ "$cur" == -* ]]; then
+                COMPREPLY=($(compgen -W "-h --help" -- "$cur"))
+            fi
             ;;
         generate)
             if [[ "$cur" == -* ]]; then
-                COMPREPLY=($(compgen -W "-p --profiles -f --features -b --backend" -- "$cur"))
+                COMPREPLY=($(compgen -W "-h --help -p --profiles -f --features -b --backend" -- "$cur"))
+            fi
+            ;;
+        help)
+            if [[ "$cur" == -* ]]; then
+                COMPREPLY=($(compgen -W "-h --help" -- "$cur"))
+            else
+                COMPREPLY=($(compgen -W "add bench build clean doc download feature-ls fetch fmt generate ide-sync init install lock pack profile-ls run test tidy" -- "$cur"))
             fi
             ;;
         ide-sync)
             if [[ "$cur" == -* ]]; then
-                COMPREPLY=($(compgen -W "-p --profiles --ides -f --force-ide" -- "$cur"))
+                COMPREPLY=($(compgen -W "-h --help -p --profiles --ides -f --force-ide" -- "$cur"))
             fi
             ;;
         init)
@@ -136,7 +158,7 @@ _catalyst() {
                     ;;
             esac
             if [[ "$cur" == -* ]]; then
-                COMPREPLY=($(compgen -W "-n --name --path -t --type -v --version -d --description --provides --cc --cxx --ccflags --cxxflags --ldflags --include-dirs --source-dirs --build-dir --ides -p --profile -f --force-ide" -- "$cur"))
+                COMPREPLY=($(compgen -W "-h --help -n --name --path -t --type -v --version -d --description --provides --cc --cxx --ccflags --cxxflags --ldflags --include-dirs --source-dirs --build-dir --ides -p --profile -f --force-ide" -- "$cur"))
             fi
             ;;
         install)
@@ -147,12 +169,12 @@ _catalyst() {
                     ;;
             esac
             if [[ "$cur" == -* ]]; then
-                COMPREPLY=($(compgen -W "-p --profiles -s --source -t --target" -- "$cur"))
+                COMPREPLY=($(compgen -W "-h --help -p --profiles -s --source -t --target" -- "$cur"))
             fi
             ;;
         lock)
             if [[ "$cur" == -* ]]; then
-                COMPREPLY=($(compgen -W "-p --profiles" -- "$cur"))
+                COMPREPLY=($(compgen -W "-h --help -p --profiles" -- "$cur"))
             fi
             ;;
         pack)
@@ -163,28 +185,27 @@ _catalyst() {
                     ;;
             esac
             if [[ "$cur" == -* ]]; then
-                COMPREPLY=($(compgen -W "-p --profiles -s --source -t --target -G --generators" -- "$cur"))
+                COMPREPLY=($(compgen -W "-h --help -p --profiles -s --source -t --target -G --generators -a --all" -- "$cur"))
             fi
             ;;
-        feature-ls)
-            # no flags
-            ;;
         profile-ls)
-            # no flags
+            if [[ "$cur" == -* ]]; then
+                COMPREPLY=($(compgen -W "-h --help" -- "$cur"))
+            fi
             ;;
         run)
             if [[ "$cur" == -* ]]; then
-                COMPREPLY=($(compgen -W "-p --profile -P --params" -- "$cur"))
+                COMPREPLY=($(compgen -W "-h --help -p --profile -P --params" -- "$cur"))
             fi
             ;;
         test)
             if [[ "$cur" == -* ]]; then
-                COMPREPLY=($(compgen -W "-P --params" -- "$cur"))
+                COMPREPLY=($(compgen -W "-h --help -P --params" -- "$cur"))
             fi
             ;;
         tidy)
             if [[ "$cur" == -* ]]; then
-                COMPREPLY=($(compgen -W "-p --profiles --fix" -- "$cur"))
+                COMPREPLY=($(compgen -W "-h --help -p --profiles --fix" -- "$cur"))
             fi
             ;;
     esac
