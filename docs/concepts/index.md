@@ -30,6 +30,10 @@ Catalyst automatically generates C++ macros from these features, bridging your c
 Create composable build configurations that can be merged to create specific target environments.
 This left-to-right merging strategy allows for powerful, modular settings for things like `linux + debug + asan`.
 
+### [Toolchains](toolchains.md)
+Configure and manage the compiler paths, flags, and build tools required for different environments.
+Define custom toolchains to cross-compile or use specific compiler versions seamlessly across your projects.
+
 ### [Workspaces](workspaces.md)
 Manage multiple related packages within a single repository using a centralized `WORKSPACE.yaml`.
 Enable seamless cross-project dependency resolution and consolidated version locking for entire monorepos.
