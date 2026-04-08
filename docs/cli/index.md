@@ -10,6 +10,7 @@ Catalyst provides a suite of subcommands to manage the entire project lifecycle.
 | [`clean`](clean.md) | Remove build artifacts. |
 | [`doc`](doc.md) | Build a package's documentation. |
 | [`download`](download.md) | Download, build, and install a project from git. |
+| [`feature-ls`](feature_ls.md) | List all available features across all profiles. |
 | [`fetch`](fetch.md) | Fetch remote dependencies. |
 | [`fmt`](fmt.md) | Format source code. |
 | [`generate`](generate.md) | Generate build scripts (Ninja, Make, etc.). |

@@ -27,6 +27,7 @@ nav:
     - clean: cli/clean.md
     - doc: cli/doc.md
     - download: cli/download.md
+    - feature_ls: cli/feature_ls.md
     - fetch: cli/fetch.md
     - fmt: cli/fmt.md
     - generate: cli/generate.md
