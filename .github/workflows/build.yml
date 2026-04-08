@@ -35,8 +35,11 @@ jobs:
         wget https://github.com/CatalystCPP/catalyst-build-system/releases/download/1.3.0/catalyst-1.3.0.deb
         sudo apt-get install -y ./catalyst-1.3.0.deb
 
+    - name: Fetch Catalyst Deps
+      run: catalyst -V fetch -p common release
+
     - name: Build Catalyst packages
-      run: catalyst -V build -p common release
+      run: catalyst -V build -p common release -r
 
     - name: Create packages
       run: catalyst -V pack -p common release -a
