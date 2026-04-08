@@ -57,3 +57,14 @@ Standard log entries contain the timestamp, level, and message:
 ```
 
 The structured JSON format ensures that even complex events are safely encapsulated and easy to interpret programmatically.
+
+### Machine Information
+
+> [!TIP] This feature can be enabled by building catalyst with `-f log_machine_info`
+
+When built with the `log_machine_info` feature flag, Catalyst will include the system `hostname` and process ID (`pid`) in all JSON output, including session markers and standard log entries:
+
+```json
+{"event":"begin_session","timestamp":"2026-04-08 21:10:58.527000000","hostname":"dev-workstation","pid":10425}
+{"timestamp":"2026-04-08 21:10:58.527553448","level":"INFO","message":"Test subcommand invoked.","hostname":"dev-workstation","pid":10425}
+```
