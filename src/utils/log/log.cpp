@@ -22,14 +22,21 @@ const char *toString(LogLevel level) {
 
 LogT::LogT() : log_file{".catalyst.log", std::ios_base::app} {
     auto now = std::chrono::system_clock::now();
+#if FF_catalyst__uniform_logs
+    log_file << generateJsonLogEvent(now, LogLevel::DEBUG, "begin session") << "\n";
+#else
     nlohmann::json j;
     j["event"] = "begin_session";
     j["timestamp"] = std::format("{:%Y-%m-%d %H:%M:%S}", now);
     log_file << j.dump() << "\n";
+#endif
 }
 
 LogT::~LogT() {
     auto now = std::chrono::system_clock::now();
+#if FF_catalyst__uniform_logs
+    log_file << generateJsonLogEvent(now, LogLevel::DEBUG, "end session") << "\n";
+#else
     // Destructor assumes single thread or end of life
     nlohmann::json j;
     j["event"] = "end_session";
@@ -38,6 +45,7 @@ LogT::~LogT() {
     if (log_file.is_open()) {
         log_file.close();
     }
+#endif
 }
 
 bool LogT::isOpen() const {

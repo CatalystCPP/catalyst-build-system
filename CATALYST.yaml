@@ -45,6 +45,8 @@ common:
   hooks:
     pre-build:
       - catalyst: fmt
+  features:
+    uniform_logs: false
 ccache:
   manifest:
     tooling:
