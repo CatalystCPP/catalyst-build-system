@@ -166,6 +166,9 @@ _catalyst() {
                 COMPREPLY=($(compgen -W "-p --profiles -s --source -t --target -G --generators" -- "$cur"))
             fi
             ;;
+        feature-ls)
+            # no flags
+            ;;
         profile-ls)
             # no flags
             ;;

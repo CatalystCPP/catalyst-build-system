@@ -94,6 +94,12 @@ _catalyst() {
     esac
 }
 
+_catalyst_features() {
+    local -a features
+    features=(${(f)"$(catalyst feature-ls 2>/dev/null)"})
+    _describe -t features 'features' features
+}
+
 _catalyst_profiles() {
     local -a profiles
     profiles=(${(f)"$(catalyst profile-ls 2>/dev/null)"})
@@ -125,13 +131,13 @@ _catalyst_add() {
                     _arguments \
                         '(-n --name)'{-n,--name}'[name]:name:' \
                         '(-v --version)'{-v,--version}'[version]:version:' \
-                        '(-f --features)'{-f,--features}'[features]:features:' \
+                        '(-f --features)'{-f,--features}'[features]:features:_catalyst_features' \
                         '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles' \
                         '1:remote:'
                     ;;
                 local)
                     _arguments \
-                        '(-f --features)'{-f,--features}'[features]:features:' \
+                        '(-f --features)'{-f,--features}'[features]:features:_catalyst_features' \
                         '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles' \
                         '1:name:' \
                         '2:path:_directories'
@@ -147,7 +153,7 @@ _catalyst_add() {
                     _arguments \
                         '(-t --triplet)'{-t,--triplet}'[triplet]:triplet:' \
                         '(-v --version)'{-v,--version}'[version]:version:' \
-                        '(-f --features)'{-f,--features}'[features]:features:' \
+                        '(-f --features)'{-f,--features}'[features]:features:_catalyst_features' \
                         '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles' \
                         '1:name:'
                     ;;
@@ -169,7 +175,7 @@ _catalyst_build() {
         '(--workspace --all)'{--workspace,--all}'[build all members in the workspace]' \
         '(-P --package)'{-P,--package}'[package]:package:' \
         '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles' \
-        '(-f --features)'{-f,--features}'[features]:features:' \
+        '(-f --features)'{-f,--features}'[features]:features:_catalyst_features' \
         '--backend[backend]:backend:(ninja gmake cbe)' \
         '(-w --watch)'{-w,--watch}'[watch for file changes and rebuild]'
 }
@@ -189,7 +195,7 @@ _catalyst_doc() {
 _catalyst_download() {
     _arguments \
         '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles' \
-        '(-f --features)'{-f,--features}'[features]:features:' \
+        '(-f --features)'{-f,--features}'[features]:features:_catalyst_features' \
         '(-t --target)'{-t,--target}'[target]:target:_directories' \
         '1:remote:' \
         '2:branch:'
@@ -203,7 +209,7 @@ _catalyst_fetch() {
 _catalyst_generate() {
     _arguments \
         '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles' \
-        '(-f --features)'{-f,--features}'[features]:features:' \
+        '(-f --features)'{-f,--features}'[features]:features:_catalyst_features' \
         '(-b --backend)'{-b,--backend}'[backend]:backend:(ninja gmake cbe)'
 }
 
