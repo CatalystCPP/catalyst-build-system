@@ -22,6 +22,10 @@ These ensure that profile injection and cycle detection work correctly across ne
 Execute custom shell commands or internal Catalyst subcommands at various stages of the build lifecycle.
 Automate tasks like post-build notifications or pre-test setup directly within your profile configuration.
 
+### [Log](log.md)
+Capture both structured data for automated analysis and colored terminal output for developers.
+Understand how session events and standard entries are recorded in the console and `.catalyst.log` file.
+
 ### [Preprocessor & Features](preprocessor.md)
 Toggle code sections and conditionally compile files using dynamic feature flags defined in your config.
 Catalyst automatically generates C++ macros from these features, bridging your configuration and source code.
