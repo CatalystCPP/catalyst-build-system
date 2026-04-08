@@ -3,6 +3,7 @@
 #include <expected>
 #include <filesystem>
 #include <format>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 
@@ -11,7 +12,38 @@
 #include "catalyst/utils/log/log.hpp"
 
 namespace catalyst::generate {
-std::expected<FindRes, std::string> findVcpkg(const YAML::Node &dep) {
+namespace fs = std::filesystem;
+
+namespace {
+void append_pkg_config_libs(FindRes &result,
+                            const std::string &lib_dirs_output,
+                            const std::string &libs_output,
+                            const catalyst::toolchain::ToolchainDef &tc) {
+    std::stringstream lib_dir_stream(lib_dirs_output);
+    std::stringstream libs_stream(libs_output);
+    std::string token;
+
+    while (lib_dir_stream >> token) {
+        if (token.rfind("-L", 0) == 0) {
+            std::string path = token.substr(2);
+            result.lib_path += " " + catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", path}});
+            result.lib_dirs.push_back(path);
+        } else {
+            result.lib_path += " " + token;
+        }
+    }
+
+    while (libs_stream >> token) {
+        if (token.rfind("-l", 0) == 0) {
+            result.libs += " " + catalyst::toolchain::expand_template(tc.flags.lib, {{"name", token.substr(2)}});
+        } else {
+            result.libs += " " + token;
+        }
+    }
+}
+} // namespace
+
+std::expected<FindRes, std::string> findVcpkg(const YAML::Node &dep, const catalyst::toolchain::ToolchainDef &tc) {
     auto triplet = dep["triplet"].as<std::string>();
     std::string linkage;
     if (dep["linkage"] && dep["linkage"].IsScalar()) {
@@ -31,8 +63,6 @@ std::expected<FindRes, std::string> findVcpkg(const YAML::Node &dep) {
 
     // Construct the path to the library directory within the specific package folder
     // $VCPKG_ROOT/packages/<package>_<triplet>/lib
-    namespace fs = std::filesystem;
-
     fs::path vcpkg_root(vcpkg_root_env);
     fs::path package_dir_name = std::format("{}_{}", dep_name, triplet);
     fs::path lib_path = vcpkg_root / "packages" / package_dir_name / "lib";
@@ -63,9 +93,9 @@ std::expected<FindRes, std::string> findVcpkg(const YAML::Node &dep) {
                 l_val.erase(last + 1);
 
             catalyst::logger.debug("Resolved via pkg-config: L='{}' l='{}'", L_val, l_val);
-            return FindRes{.lib_path = L_val,
-                           .inc_path = "", // already set in write_variables
-                           .libs = l_val};
+            FindRes result{.lib_path = "", .inc_path = "", .libs = "", .lib_dirs = {}};
+            append_pkg_config_libs(result, L_val, l_val, tc);
+            return result;
         } else {
             catalyst::logger.warn("pkg-config failed for {}, falling back.", dep_name);
         }
@@ -73,27 +103,37 @@ std::expected<FindRes, std::string> findVcpkg(const YAML::Node &dep) {
     catalyst::logger.debug("Did not find pkg-config file for {}: {}", dep_name, pc_file.string());
 
     std::string library_path, libs;
+    std::vector<std::string> lib_dirs;
 
     if (linkage == "static" || linkage == "shared") {
         if (!fs::exists(lib_path) || !fs::is_directory(lib_path)) {
             catalyst::logger.warn(
                 "Could not find library directory for vcpkg package '{}' at: {}", dep_name, lib_path.string());
-            libs += std::format(" -l{}", dep_name);
+            libs += " " + catalyst::toolchain::expand_template(tc.flags.lib, {{"name", dep_name}});
         }
     }
 
-    library_path += std::format(" -L{}", lib_path.string());
+    library_path += " " + catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", lib_path.string()}});
     catalyst::logger.debug("Adding library path: {}", lib_path.string());
+    lib_dirs.push_back(lib_path.string());
 
     if (linkage == "static" || linkage == "shared") {
-// Define the library file extensions based on the operating system.
+        std::vector<std::string> extensions;
+        if (!tc.extensions.static_lib.empty()) {
+            extensions.push_back(tc.extensions.static_lib);
+        }
+        if (!tc.extensions.shared_lib.empty() && tc.extensions.shared_lib != tc.extensions.static_lib) {
+            extensions.push_back(tc.extensions.shared_lib);
+        }
+        if (extensions.empty()) {
 #if defined(_WIN32)
-        const std::vector<std::string> extensions = {".lib"};
+            extensions.push_back(".lib");
 #elif defined(__APPLE__)
-        const std::vector<std::string> extensions = {".a", ".dylib"};
-#else // Linux and other Unix-like systems
-        const std::vector<std::string> extensions = {".a", ".so"};
+            extensions = {".a", ".dylib"};
+#else
+            extensions = {".a", ".so"};
 #endif
+        }
 
         // Iterate through the directory and find matching library files.
         for (const auto &entry : fs::directory_iterator(lib_path)) {
@@ -104,12 +144,18 @@ std::expected<FindRes, std::string> findVcpkg(const YAML::Node &dep) {
                 // Check if the file has one of the target extensions
                 for (const auto &expected_ext : extensions) {
                     if (file_ext == expected_ext) {
-                        // Convert file path to a linker flag (e.g., "libfmt.a" -> "-lfmt")
+                        // Convert the file name into the toolchain's configured library token.
                         std::string stem = file_path.stem().string();
-                        if (stem.rfind("lib", 0) == 0) { // Check if it starts with "lib"
+                        if (!tc.extensions.static_lib_prefix.empty() &&
+                            stem.rfind(tc.extensions.static_lib_prefix, 0) == 0) {
+                            stem = stem.substr(tc.extensions.static_lib_prefix.size());
+                        } else if (!tc.extensions.shared_lib_prefix.empty() &&
+                                   stem.rfind(tc.extensions.shared_lib_prefix, 0) == 0) {
+                            stem = stem.substr(tc.extensions.shared_lib_prefix.size());
+                        } else if (stem.rfind("lib", 0) == 0) {
                             stem = stem.substr(3);
                         }
-                        libs += std::format(" -l{}", stem);
+                        libs += " " + catalyst::toolchain::expand_template(tc.flags.lib, {{"name", stem}});
                         catalyst::logger.debug("Found and added library: {}", stem);
                         break; // Found a matching extension, move to the next file
                     }
@@ -120,6 +166,7 @@ std::expected<FindRes, std::string> findVcpkg(const YAML::Node &dep) {
 
     return FindRes{.lib_path = library_path,
                    .inc_path = "", // already set in write_variables
-                   .libs = libs};
+                   .libs = libs,
+                   .lib_dirs = lib_dirs};
 }
 } // namespace catalyst::generate

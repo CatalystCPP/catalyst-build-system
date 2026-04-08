@@ -12,7 +12,7 @@
 namespace catalyst::generate {
 namespace fs = std::filesystem;
 
-std::expected<FindRes, std::string> findLocal(const YAML::Node &dep) {
+std::expected<FindRes, std::string> findLocal(const YAML::Node &dep, const catalyst::toolchain::ToolchainDef &tc) {
     catalyst::logger.debug("Resolving local dependency: {}", dep["name"].as<std::string>());
 
     if (!dep["path"]) {
@@ -50,17 +50,19 @@ std::expected<FindRes, std::string> findLocal(const YAML::Node &dep) {
         for (const auto &dir : includes.as<std::vector<std::string>>()) {
             auto curr = fs::absolute(dep_path / dir);
             catalyst::logger.debug("Adding include path: {}", curr.string());
-            include_path += std::format(" -I{}", curr.string());
+            include_path += " " + catalyst::toolchain::expand_template(tc.flags.include_dir, {{"path", curr.string()}});
         }
     }
 
     // Add library directory
     std::string library_path;
+    std::vector<std::string> lib_dirs;
     if (auto build_dir_node = profile["manifest"]["dirs"]["build"]) {
         fs::path build_dir = catalyst::utils::yaml::multiplexedBuildDir(build_dir_node.as<std::string>(), profiles);
         auto lib_path = fs::absolute(dep_path / build_dir);
         catalyst::logger.debug("Adding library path: {}", lib_path.string());
-        library_path += std::format(" -L{}", lib_path.string());
+        library_path += " " + catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", lib_path.string()}});
+        lib_dirs.push_back(lib_path.string());
     }
 
     // Add library
@@ -68,9 +70,9 @@ std::expected<FindRes, std::string> findLocal(const YAML::Node &dep) {
     if (auto dep_name_node = profile["manifest"]["name"]) {
         auto dep_name = dep_name_node.as<std::string>();
         catalyst::logger.debug("Adding library: {}", dep_name);
-        libs += std::format(" -l{}", dep_name);
+        libs += " " + catalyst::toolchain::expand_template(tc.flags.lib, {{"name", dep_name}});
     }
 
-    return FindRes{.lib_path = library_path, .inc_path = include_path, .libs = libs};
+    return FindRes{.lib_path = library_path, .inc_path = include_path, .libs = libs, .lib_dirs = lib_dirs};
 }
 } // namespace catalyst::generate

@@ -1,15 +1,66 @@
 #include <expected>
 #include <optional>
+#include <sstream>
 #include <string>
+#include <vector>
 
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
 
 namespace catalyst::generate {
-std::optional<FindRes> findSystemFromPkgConfig(const std::string &dep_name);
+namespace {
+std::optional<FindRes> findSystemFromPkgConfig(const std::string &dep_name,
+                                               const catalyst::toolchain::ToolchainDef &tc) {
+    auto res_cflags = processExecStdout({"pkg-config", "--cflags", dep_name});
+    auto res_L = processExecStdout({"pkg-config", "--libs-only-L", dep_name});
+    auto res_l = processExecStdout({"pkg-config", "--libs-only-l", "--libs-only-other", dep_name});
 
-std::expected<FindRes, std::string> findSystem(const YAML::Node &dep) {
+    if (!(res_cflags && res_L && res_l)) {
+        return std::nullopt;
+    }
+
+    FindRes result{.lib_path = "", .inc_path = "", .libs = "", .lib_dirs = {}};
+    auto append_tokens = [&](const std::string &value, auto &&handler) {
+        std::stringstream stream(value);
+        std::string token;
+        while (stream >> token) {
+            handler(token);
+        }
+    };
+
+    append_tokens(*res_cflags, [&](const std::string &token) {
+        if (token.rfind("-I", 0) == 0) {
+            result.inc_path +=
+                " " + catalyst::toolchain::expand_template(tc.flags.include_dir, {{"path", token.substr(2)}});
+        } else {
+            result.inc_path += " " + token;
+        }
+    });
+    append_tokens(*res_L, [&](const std::string &token) {
+        if (token.rfind("-L", 0) == 0) {
+            std::string path = token.substr(2);
+            result.lib_path += " " + catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", path}});
+            result.lib_dirs.push_back(path);
+        } else {
+            result.lib_path += " " + token;
+        }
+    });
+    append_tokens(*res_l, [&](const std::string &token) {
+        if (token.rfind("-l", 0) == 0) {
+            result.libs += " " + catalyst::toolchain::expand_template(tc.flags.lib, {{"name", token.substr(2)}});
+        } else {
+            result.libs += " " + token;
+        }
+    });
+
+    catalyst::logger.debug(
+        "Resolved via pkg-config: cflags='{}' L='{}' l='{}'", result.inc_path, result.lib_path, result.libs);
+    return result;
+}
+} // namespace
+
+std::expected<FindRes, std::string> findSystem(const YAML::Node &dep, const catalyst::toolchain::ToolchainDef &tc) {
     auto dep_name = dep["name"].as<std::string>();
     catalyst::logger.debug("Resolving system dependency: {}", dep_name);
 
@@ -26,49 +77,39 @@ std::expected<FindRes, std::string> findSystem(const YAML::Node &dep) {
     std::string inc_path;
     std::string lib_path;
     std::string libs;
+    std::vector<std::string> lib_dirs;
 
     if (has_explicit_include) {
-        inc_path += std::format(" -I{}", dep["include"].as<std::string>());
+        inc_path += " " + catalyst::toolchain::expand_template(tc.flags.include_dir,
+                                                               {{"path", dep["include"].as<std::string>()}});
     }
 
     if (has_explicit_lib) {
-        lib_path += std::format(" -L{}", dep["lib"].as<std::string>());
+        auto explicit_lib = dep["lib"].as<std::string>();
+        lib_path += " " + catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", explicit_lib}});
+        lib_dirs.push_back(explicit_lib);
     }
 
     if (has_explicit_include && has_explicit_lib) {
         // Fully explicit, just add library name
         if (linkage == "static" || linkage == "shared") {
-            libs = std::format(" -l{}", dep_name);
+            libs = " " + catalyst::toolchain::expand_template(tc.flags.lib, {{"name", dep_name}});
         }
-        return FindRes{.lib_path = lib_path, .inc_path = inc_path, .libs = libs};
+        return FindRes{.lib_path = lib_path, .inc_path = inc_path, .libs = libs, .lib_dirs = lib_dirs};
     }
 
     // Try pkg-config if not fully explicit
 
-    if (auto res = findSystemFromPkgConfig(dep_name); res) {
-        std::string cflags_val = res->lib_path;
-        std::string lib_path_val = res->lib_path;
-        std::string libs_val = res->libs;
-        auto trim = [](std::string &s) {
-            if (auto last = s.find_last_not_of(" \t\n"); last != std::string::npos)
-                s.erase(last + 1);
-        };
-
-        trim(cflags_val);
-        trim(lib_path_val);
-        trim(libs_val);
-
-        catalyst::logger.debug(
-            "Resolved via pkg-config: cflags='{}' L='{}' l='{}'", cflags_val, lib_path_val, libs_val);
-
-        if (!has_explicit_include)
-            inc_path += " " + cflags_val;
-        if (!has_explicit_lib)
-            lib_path += " " + lib_path_val;
-
-        libs += " " + libs_val;
-
-        return FindRes{.lib_path = lib_path, .inc_path = inc_path, .libs = libs};
+    if (auto res = findSystemFromPkgConfig(dep_name, tc); res) {
+        if (!has_explicit_include) {
+            inc_path += " " + res->inc_path;
+        }
+        if (!has_explicit_lib) {
+            lib_path += " " + res->lib_path;
+            lib_dirs.insert(lib_dirs.end(), res->lib_dirs.begin(), res->lib_dirs.end());
+        }
+        libs += " " + res->libs;
+        return FindRes{.lib_path = lib_path, .inc_path = inc_path, .libs = libs, .lib_dirs = lib_dirs};
     }
 
     catalyst::logger.debug("pkg-config failed for {}, falling back to default paths.", dep_name);
@@ -77,50 +118,26 @@ std::expected<FindRes, std::string> findSystem(const YAML::Node &dep) {
     if (!has_explicit_include) {
 #if defined(_WIN32)
 #elif defined(__APPLE__)
-        inc_path += " -I/usr/local/include";
+        inc_path += " " + catalyst::toolchain::expand_template(tc.flags.include_dir, {{"path", "/usr/local/include"}});
 #else
-        inc_path += " -I/usr/include";
+        inc_path += " " + catalyst::toolchain::expand_template(tc.flags.include_dir, {{"path", "/usr/include"}});
 #endif
     }
 
     if (!has_explicit_lib) {
 #if defined(_WIN32)
 #elif defined(__APPLE__)
-        lib_path += " -L/usr/local/lib";
+        lib_path += " " + catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", "/usr/local/lib"}});
+        lib_dirs.push_back("/usr/local/lib");
 #else
-        lib_path += " -L/usr/lib";
+        lib_path += " " + catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", "/usr/lib"}});
+        lib_dirs.push_back("/usr/lib");
 #endif
     }
 
     if (linkage == "static" || linkage == "shared") {
-        libs += std::format(" -l{}", dep_name);
+        libs += " " + catalyst::toolchain::expand_template(tc.flags.lib, {{"name", dep_name}});
     }
-    return FindRes{.lib_path = lib_path, .inc_path = inc_path, .libs = libs};
-}
-
-std::optional<FindRes> findSystemFromPkgConfig(const std::string &dep_name) {
-    auto res_cflags = processExecStdout({"pkg-config", "--cflags", dep_name});
-    auto res_L = processExecStdout({"pkg-config", "--libs-only-L", dep_name});
-    auto res_l = processExecStdout({"pkg-config", "--libs-only-l", "--libs-only-other", dep_name});
-
-    if (res_cflags && res_L && res_l) {
-        std::string cflags_val = *res_cflags;
-        std::string L_val = *res_L;
-        std::string l_val = *res_l;
-
-        auto trim = [](std::string &s) {
-            if (auto last = s.find_last_not_of(" \t\n"); last != std::string::npos)
-                s.erase(last + 1);
-        };
-
-        trim(cflags_val);
-        trim(L_val);
-        trim(l_val);
-
-        catalyst::logger.debug("Resolved via pkg-config: cflags='{}' L='{}' l='{}'", cflags_val, L_val, l_val);
-
-        return FindRes{.lib_path = L_val, .inc_path = cflags_val, .libs = l_val};
-    }
-    return std::nullopt;
+    return FindRes{.lib_path = lib_path, .inc_path = inc_path, .libs = libs, .lib_dirs = lib_dirs};
 }
 } // namespace catalyst::generate

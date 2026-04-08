@@ -9,21 +9,22 @@
 using std::string;
 
 namespace catalyst::generate {
-std::expected<FindRes, std::string> findDep(const std::string &build_dir, const YAML::Node &dep) {
+std::expected<FindRes, std::string>
+findDep(const std::string &build_dir, const YAML::Node &dep, const catalyst::toolchain::ToolchainDef &tc) {
     if (!dep["source"] || !dep["source"].IsScalar())
         return std::unexpected(std::format("dependency: {} does not define field src", dep["name"].as<std::string>()));
     auto source_type = dep["source"].as<std::string>();
     if (source_type == "local") {
-        return findLocal(dep);
+        return findLocal(dep, tc);
     }
     if (source_type == "system") {
-        return findSystem(dep);
+        return findSystem(dep, tc);
     }
     if (source_type == "vcpkg") {
-        return findVcpkg(dep);
+        return findVcpkg(dep, tc);
     }
     if (source_type == "git") {
-        return findGit(build_dir, dep);
+        return findGit(build_dir, dep, tc);
     }
     return std::unexpected(std::format("Unkown source_type: {}", source_type));
 }
