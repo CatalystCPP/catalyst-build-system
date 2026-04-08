@@ -42,6 +42,7 @@ void setupCli(catalyst::CliContext &ctx) {
     tie(ctx.pack_subc, ctx.pack_res) = catalyst::pack::parse(ctx.app);
     tie(ctx.doc_subc, ctx.doc_res) = catalyst::doc::parse(ctx.app);
     tie(ctx.profiles_ls_subc, ctx.profile_ls_res) = catalyst::profile_ls::parse(ctx.app);
+    tie(ctx.feature_ls_subc, ctx.feature_ls_res) = catalyst::feature_ls::parse(ctx.app);
     tie(ctx.add_git_subc, ctx.add_git_res) = catalyst::add::git::parse(*ctx.add_subc);
     tie(ctx.add_system_subc, ctx.add_system_res) = catalyst::add::system::parse(*ctx.add_subc);
     tie(ctx.add_local_subc, ctx.add_local_res) = catalyst::add::local::parse(*ctx.add_subc);
@@ -227,6 +228,8 @@ int dispatch(const catalyst::CliContext &ctx) {
         return dispatchFN("doc", *ctx.doc_res, catalyst::doc::action);
     if (*ctx.profiles_ls_subc)
         return dispatchFN("profile-ls", *ctx.profile_ls_res, catalyst::profile_ls::action);
+    if (*ctx.feature_ls_subc)
+        return dispatchFN("feature-ls", *ctx.feature_ls_res, catalyst::feature_ls::action);
     catalyst::logger.info("run catalyst --help for info on available commands.");
     return 1;
 }
