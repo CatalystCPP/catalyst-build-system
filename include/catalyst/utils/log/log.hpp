@@ -68,12 +68,18 @@ private:
     ~LogT();
 
     void logImpl(LogLevel level, const std::string &message) const;
-    static std::string
-    generateJsonLogEvent(const std::chrono::system_clock::time_point &now, LogLevel level, const std::string &message);
+    std::string generateJsonLogEvent(const std::chrono::system_clock::time_point &now,
+                                     LogLevel level,
+                                     const std::string &message) const;
 
     mutable std::ofstream log_file;
     mutable std::mutex logging_mt;
     mutable bool verbose_logging = false;
+
+#if FF_catalyst__log_machine_info
+    const std::string hostname;
+    const unsigned long pid;
+#endif
 };
 
 // Global logger instance

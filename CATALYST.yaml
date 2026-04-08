@@ -47,6 +47,7 @@ common:
       - catalyst: fmt
   features:
     uniform_logs: false
+    log_machine_info: false
 ccache:
   manifest:
     tooling:
