@@ -50,7 +50,14 @@ std::expected<void, std::string> catalyst::feature_ls::action([[maybe_unused]] c
     filterUnique(all_features);
 
     catalyst::logger.debug("feature-ls subcommand finished successfully.");
-    std::ranges::for_each(all_features, [](const auto &val) { std::println("{}", val); });
+    if (parse_res.inverse) {
+        std::ranges::for_each(all_features, [](const auto &val) {
+            std::println("{}", val);
+            std::println("no-{}", val);
+        });
+    } else {
+        std::ranges::for_each(all_features, [](const auto &val) { std::println("{}", val); });
+    }
     return {};
 }
 

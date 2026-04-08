@@ -8,7 +8,7 @@
 
 namespace catalyst::feature_ls {
 struct Parse {
-    /* void */
+    bool inverse{false};
 };
 
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);
