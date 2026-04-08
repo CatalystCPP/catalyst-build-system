@@ -15,7 +15,8 @@ std::expected<void, std::string> addToProfile(const std::string &profile, const 
     if (!res) {
         return std::unexpected(res.error());
     }
-    YAML::Node profile_node = res.value();
+    auto profile_file = res.value();
+    YAML::Node profile_node = profile_file.profile_node;
 
     if (!profile_node["dependencies"]) {
         profile_node["dependencies"] = YAML::Node(YAML::NodeType::Sequence);
@@ -64,7 +65,7 @@ std::expected<void, std::string> addToProfile(const std::string &profile, const 
 
     dependencies.push_back(new_dep);
 
-    return catalyst::utils::yaml::profileWriteBack(profile, profile_node);
+    return catalyst::utils::yaml::profileWriteBack(profile_file);
 }
 } // namespace
 
