@@ -11,6 +11,7 @@
 #include "catalyst/subcommands/clean.hpp"
 #include "catalyst/subcommands/doc.hpp"
 #include "catalyst/subcommands/download.hpp"
+#include "catalyst/subcommands/feature_ls.hpp"
 #include "catalyst/subcommands/fetch.hpp"
 #include "catalyst/subcommands/fmt.hpp"
 #include "catalyst/subcommands/generate.hpp"
@@ -85,6 +86,9 @@ struct CliContext {
 
     CLI::App *profiles_ls_subc{nullptr};
     std::unique_ptr<catalyst::profile_ls::Parse> profile_ls_res{nullptr};
+
+    CLI::App *feature_ls_subc{nullptr};
+    std::unique_ptr<catalyst::feature_ls::Parse> feature_ls_res{nullptr};
 
     CLI::App *add_git_subc{nullptr};
     std::unique_ptr<catalyst::add::git::Parse> add_git_res{nullptr};
