@@ -7,8 +7,7 @@
 
 #include "catalyst/subcommands/ide_sync.hpp"
 
-namespace catalyst::ide_sync {
-std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app) {
+auto catalyst::ide_sync::parse(CLI::App &app) -> std::pair<CLI::App *, std::unique_ptr<Parse>> {
     CLI::App *ide_sync = app.add_subcommand("ide-sync", "Sync IDE configuration files for an existing project.");
     auto ret = std::make_unique<Parse>();
 
@@ -26,4 +25,3 @@ std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app) {
 
     return {ide_sync, std::move(ret)};
 }
-} // namespace catalyst::ide_sync

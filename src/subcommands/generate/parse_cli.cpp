@@ -1,8 +1,6 @@
 #include "catalyst/subcommands/generate.hpp"
 
-namespace catalyst::generate {
-
-std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app) {
+auto catalyst::generate::parse(CLI::App &app) -> std::pair<CLI::App *, std::unique_ptr<Parse>> {
     CLI::App *generate = app.add_subcommand("generate", "Generate a build file.");
     auto ret = std::make_unique<Parse>();
     generate->add_option("-p,--profiles", ret->profiles);
@@ -10,4 +8,3 @@ std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app) {
     generate->add_option("-b,--backend", ret->backend, "Backend to use for generation (ninja, gmake, cbe).");
     return {generate, std::move(ret)};
 }
-} // namespace catalyst::generate

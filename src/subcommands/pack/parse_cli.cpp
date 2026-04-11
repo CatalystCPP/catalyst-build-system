@@ -6,9 +6,7 @@
 
 #include "catalyst/subcommands/pack.hpp"
 
-namespace catalyst::pack {
-
-std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app) {
+auto catalyst::pack::parse(CLI::App &app) -> std::pair<CLI::App *, std::unique_ptr<Parse>> {
     CLI::App *pack = app.add_subcommand("pack", "Assemble the local package for distribution.");
     auto ret = std::make_unique<Parse>();
     pack->add_option("-p,--profiles", ret->profiles, "the profiles to compose for packing")
@@ -41,4 +39,3 @@ std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app) {
 
     return {pack, std::move(ret)};
 }
-} // namespace catalyst::pack

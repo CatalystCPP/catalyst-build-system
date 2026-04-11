@@ -1,11 +1,5 @@
-#include <CLI/App.hpp>
-
 #include "catalyst/subcommands/profile_ls.hpp"
 
-namespace catalyst::profile_ls {
-std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app) {
-    CLI::App *profile_ls = app.add_subcommand("profile-ls", "list all profiles");
-    auto ret = std::make_unique<Parse>();
-    return {profile_ls, std::move(ret)};
+auto catalyst::profile_ls::parse(CLI::App &app) -> std::pair<CLI::App *, std::unique_ptr<Parse>> {
+    return {app.add_subcommand("profile-ls", "list all profiles"), std::make_unique<Parse>()};
 }
-} // namespace catalyst::profile_ls

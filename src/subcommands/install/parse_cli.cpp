@@ -7,8 +7,7 @@
 
 #include "catalyst/subcommands/install.hpp"
 
-namespace catalyst::install {
-std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app) {
+auto catalyst::install::parse(CLI::App &app) -> std::pair<CLI::App *, std::unique_ptr<Parse>> {
     CLI::App *install = app.add_subcommand("install", "Install the build artifacts");
     auto ret = std::make_unique<Parse>();
     install->add_option("-p,--profiles", ret->profiles, "the profiles to compose in the build artifact")
@@ -18,4 +17,3 @@ std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app) {
     install->add_option("-t,--target", ret->target_path, "the path to install to")->required();
     return {install, std::move(ret)};
 }
-} // namespace catalyst::install

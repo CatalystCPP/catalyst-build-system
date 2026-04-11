@@ -8,9 +8,9 @@
 
 using std::string;
 
-namespace catalyst::generate {
-std::expected<FindRes, std::string>
-findDep(const std::string &build_dir, const YAML::Node &dep, const catalyst::toolchain::ToolchainDef &tc) {
+auto catalyst::generate::findDep(const std::string &build_dir,
+                                 const YAML::Node &dep,
+                                 const catalyst::toolchain::ToolchainDef &tc) -> std::expected<FindRes, std::string> {
     if (!dep["source"] || !dep["source"].IsScalar())
         return std::unexpected(std::format("dependency: {} does not define field src", dep["name"].as<std::string>()));
     auto source_type = dep["source"].as<std::string>();
@@ -28,4 +28,3 @@ findDep(const std::string &build_dir, const YAML::Node &dep, const catalyst::too
     }
     return std::unexpected(std::format("Unkown source_type: {}", source_type));
 }
-} // namespace catalyst::generate

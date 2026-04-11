@@ -11,7 +11,6 @@
 namespace catalyst::utils::yaml {
 std::expected<void, std::string> profileWriteBack(const ProfileFile &profile_file) {
     catalyst::logger.debug("Writing profile file: {}", profile_file.path.string());
-
     std::ofstream profile_file_out{profile_file.path};
     YAML::Emitter emmiter;
     emmiter << profile_file.root_node;
