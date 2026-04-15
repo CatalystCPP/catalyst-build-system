@@ -72,15 +72,28 @@ std::expected<void, std::string> action(const Parse &parse_args) {
                          .string();
     auto generator = profile_comp["meta"]["generator"].as<std::string>();
     catalyst::logger.debug("Cleaning build directory: {}", build_dir);
-    if (generator == "ninja") {
-        if (int rtn = catalyst::processExec({"ninja", "-C", build_dir, "-t", "clean"}).value().get(); rtn != 0) {
-            return std::unexpected(
-                std::format("Command: ninja -C {} -t clean failed with exit code: {}", build_dir, rtn));
+
+    std::vector<std::string> clean_cmd = {generator, "-C", build_dir, "-t", "clean"};
+    if (parse_args.intermediates) {
+        if (generator == "ninja") {
+            clean_cmd.emplace_back("-r");
+            clean_cmd.emplace_back("cxx_compile");
+            clean_cmd.emplace_back("cc_compile");
+        } else if (generator == "cbe") {
+            // eventually support intermediate cleaning for cbe, but for now just return an error
+            return std::unexpected(std::format("Generator: {} does not support cleaning intermediates.", generator));
+        } else {
+            return std::unexpected(std::format("Generator: {} does not support cleaning intermediates.", generator));
         }
-    } else if (generator == "cbe") {
-        if (int rtn = catalyst::processExec({"cbe", "-C", build_dir, "-t", "clean"}).value().get(); rtn != 0) {
-            return std::unexpected(
-                std::format("Command: cbe -C {} -t clean failed with exit code: {}", build_dir, rtn));
+    }
+
+    if (generator == "ninja" || generator == "cbe") {
+        if (int rtn = catalyst::processExec(std::move(clean_cmd)).value().get(); rtn != 0) {
+            std::string cmd_str = clean_cmd[0];
+            for (size_t i = 1; i < clean_cmd.size(); ++i) {
+                cmd_str += " " + clean_cmd[i];
+            }
+            return std::unexpected(std::format("Command: {} failed with exit code: {}", cmd_str, rtn));
         }
     }
 
