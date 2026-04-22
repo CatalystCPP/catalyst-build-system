@@ -80,8 +80,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
             clean_cmd.emplace_back("cxx_compile");
             clean_cmd.emplace_back("cc_compile");
         } else if (generator == "cbe") {
-            // eventually support intermediate cleaning for cbe, but for now just return an error
-            return std::unexpected(std::format("Generator: {} does not support cleaning intermediates.", generator));
+            clean_cmd.emplace_back("-i");
         } else {
             return std::unexpected(std::format("Generator: {} does not support cleaning intermediates.", generator));
         }
