@@ -583,6 +583,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Session Events">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#uniform-log-events" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Uniform Log Events
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -590,6 +607,17 @@
     <span class="md-ellipsis">
       
         Log Entries
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#machine-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Machine Information
       
     </span>
   </a>
@@ -959,6 +987,34 @@
     
   
     download
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/feature_ls/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    feature_ls
   
 
     
@@ -1454,6 +1510,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Session Events">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#uniform-log-events" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Uniform Log Events
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -1461,6 +1534,17 @@
     <span class="md-ellipsis">
       
         Log Entries
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#machine-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Machine Information
       
     </span>
   </a>
@@ -1502,20 +1586,38 @@
 * <strong>ERROR:</strong> Red</p>
 <p><em>Note: Errors are always routed to <code>std::cerr</code>, while other levels go to <code>std::cout</code>.</em></p>
 <h2 id="file-output-catalystlog">File Output (<code>.catalyst.log</code>)</h2>
-<p>In addition to the console, all log messages—including <code>DEBUG</code> level messages regardless of verbose settings—are appended to a <code>.catalyst.log</code> file in the directory where Catalyst is run. </p>
-<p>This file is structured using JSON lines (JSONL), making it easy to parse and analyze with standard log management tools. </p>
+<p>In addition to the console, all log messages—including <code>DEBUG</code> level messages regardless of verbose settings are
+appended to a <code>.catalyst.log</code> file in the directory where Catalyst is run.</p>
+<p>This file is structured using JSON lines (JSONL), making it easy to parse and analyze with standard log management tools.</p>
 <h3 id="session-events">Session Events</h3>
+<blockquote>
+<p>[!TIP] This can be changed by building catalyst with -f uniform_logs</p>
+</blockquote>
 <p>A logging session records when it begins and ends using specific events:</p>
-<pre><code class="language-json">{&quot;event&quot;: &quot;begin_session&quot;, &quot;timestamp&quot;: &quot;2026-04-08 10:15:30&quot;}
-{&quot;event&quot;: &quot;end_session&quot;, &quot;timestamp&quot;: &quot;2026-04-08 10:16:00&quot;}
+<pre><code class="language-json">{&quot;event&quot;:&quot;begin_session&quot;,&quot;timestamp&quot;:&quot;2025-11-07 07:59:35.537603465&quot;}
+{&quot;event&quot;:&quot;end_session&quot;,&quot;timestamp&quot;:&quot;2025-11-07 09:39:19.741159607&quot;}
+</code></pre>
+<h4 id="uniform-log-events">Uniform Log Events</h4>
+<p>When built with uniform logs, catalyst will emit the following session markers as debug events:</p>
+<pre><code class="language-json">{&quot;timestamp&quot;:&quot;2025-11-07 07:59:19.735891738&quot;,&quot;level&quot;:&quot;DEBUG&quot;,&quot;message&quot;:&quot;begin session&quot;}
+{&quot;timestamp&quot;:&quot;2025-11-07 07:59:19.735891738&quot;,&quot;level&quot;:&quot;DEBUG&quot;,&quot;message&quot;:&quot;end session&quot;}
 </code></pre>
 <h3 id="log-entries">Log Entries</h3>
 <p>Standard log entries contain the timestamp, level, and message:</p>
-<pre><code class="language-json">{&quot;level&quot;: &quot;INFO&quot;, &quot;message&quot;: &quot;Building target main...&quot;, &quot;timestamp&quot;: &quot;2026-04-08 10:15:31&quot;}
-{&quot;level&quot;: &quot;DEBUG&quot;, &quot;message&quot;: &quot;Found dependency zlib at /usr/lib&quot;, &quot;timestamp&quot;: &quot;2026-04-08 10:15:32&quot;}
-{&quot;level&quot;: &quot;ERROR&quot;, &quot;message&quot;: &quot;Failed to compile source file&quot;, &quot;timestamp&quot;: &quot;2026-04-08 10:15:35&quot;}
+<pre><code class="language-json">{&quot;timestamp&quot;:&quot;2025-11-07 07:59:19.737516723&quot;,&quot;level&quot;:&quot;INFO&quot;,&quot;message&quot;:&quot;Test subcommand invoked.&quot;}
+{&quot;timestamp&quot;:&quot;2025-11-07 07:59:19.735891738&quot;,&quot;level&quot;:&quot;DEBUG&quot;,&quot;message&quot;:&quot;catalyst test &quot;}
+{&quot;timestamp&quot;:&quot;2025-11-07 07:59:19.740866298&quot;,&quot;level&quot;:&quot;ERROR&quot;,&quot;message&quot;:&quot;Command exited with code: 32512&quot;}
+{&quot;timestamp&quot;:&quot;2025-12-22 13:40:53.874982115&quot;,&quot;level&quot;:&quot;WARN&quot;,&quot;message&quot;:&quot;Could not find library directory for vcpkg package 'reproc' at: /home/user/dev/vcpkg/packages/reproc_x64-linux/lib&quot;}
 </code></pre>
 <p>The structured JSON format ensures that even complex events are safely encapsulated and easy to interpret programmatically.</p>
+<h3 id="machine-information">Machine Information</h3>
+<blockquote>
+<p>[!TIP] This feature can be enabled by building catalyst with <code>-f log_machine_info</code></p>
+</blockquote>
+<p>When built with the <code>log_machine_info</code> feature flag, Catalyst will include the system <code>hostname</code> and process ID (<code>pid</code>) in all JSON output, including session markers and standard log entries:</p>
+<pre><code class="language-json">{&quot;event&quot;:&quot;begin_session&quot;,&quot;timestamp&quot;:&quot;2026-04-08 21:10:58.527000000&quot;,&quot;hostname&quot;:&quot;dev-workstation&quot;,&quot;pid&quot;:10425}
+{&quot;timestamp&quot;:&quot;2026-04-08 21:10:58.527553448&quot;,&quot;level&quot;:&quot;INFO&quot;,&quot;message&quot;:&quot;Test subcommand invoked.&quot;,&quot;hostname&quot;:&quot;dev-workstation&quot;,&quot;pid&quot;:10425}
+</code></pre>
 
 
 

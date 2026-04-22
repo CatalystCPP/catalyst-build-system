@@ -9,10 +9,10 @@
       
       
       
-        <link rel="prev" href="../build/">
+        <link rel="prev" href="../download/">
       
       
-        <link rel="next" href="../doc/">
+        <link rel="next" href="../fetch/">
       
       
         
@@ -23,7 +23,7 @@
     
     
       
-        <title>clean - Catalyst Build System Documentation</title>
+        <title>feature_ls - Catalyst Build System Documentation</title>
       
     
     
@@ -64,7 +64,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#catalyst-clean" class="md-skip">
+        <a href="#catalyst-feature-ls" class="md-skip">
           Skip to content
         </a>
       
@@ -99,7 +99,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              clean
+              feature_ls
             
           </span>
         </div>
@@ -795,37 +795,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    clean
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../clean/" class="md-nav__link">
         
   
   
@@ -841,37 +814,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Examples
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -937,10 +879,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../feature_ls/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    feature_ls
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -956,6 +925,48 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Details
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Examples
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1412,6 +1423,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Details
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#examples" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1439,17 +1461,24 @@
 
 
 
-<h1 id="catalyst-clean">catalyst clean</h1>
-<pre><code>clean a dependency
-Usage: catalyst clean [OPTIONS]
+<h1 id="catalyst-feature-ls">catalyst feature-ls</h1>
+<pre><code>list all features across all profiles
+Usage: catalyst feature-ls [OPTIONS]
 
 Options:
   -h,--help                   Print this help message and exit
-  -p,--profile TEXT ...       
 </code></pre>
+<h2 id="details">Details</h2>
+<p>The <code>feature-ls</code> subcommand identifies all available unique features defined across all profiles in the current workspace. It searches for:</p>
+<ol>
+<li>Profiles defined in the top-level of <code>CATALYST.yaml</code>.</li>
+<li>Individual profile files matching the pattern <code>catalyst_*.yaml</code>.</li>
+<li>The common profile if <code>catalyst.yaml</code> exists.</li>
+</ol>
+<p>It then iterates through each discovered profile, parses its <code>features</code> configuration block, and extracts all the feature names. Finally, it outputs a deduplicated, sorted list of all features.</p>
 <h2 id="examples">Examples</h2>
-<pre><code class="language-bash">catalyst clean
-catalyst clean --profile debug
+<p><strong>List all available features:</strong></p>
+<pre><code class="language-bash">catalyst feature-ls
 </code></pre>
 
 
