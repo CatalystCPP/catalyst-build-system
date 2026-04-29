@@ -2,8 +2,7 @@
 #include <string>
 #include <vector>
 
-#include <CLI/App.hpp>
-#include <CLI/Validators.hpp>
+#include <CLI/CLI.hpp>
 
 #include "catalyst/subcommands/ide_sync.hpp"
 
