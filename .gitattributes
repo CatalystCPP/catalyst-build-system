@@ -1,0 +1,6 @@
+# Set default behavior to automatically normalize line endings for all files
+* text=auto
+
+# Explicitly declare YAML files as text so they are tracked correctly with normalized line endings
+*.yaml text
+*.yml text
