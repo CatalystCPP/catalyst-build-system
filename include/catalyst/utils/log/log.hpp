@@ -1,9 +1,12 @@
 #pragma once
 #include <chrono>
+#include <concepts>
 #include <format>
 #include <fstream>
 #include <mutex>
 #include <string>
+#include <type_traits>
+#include <typeinfo>
 
 // ANSI color codes
 inline const char *const RED = "\033[31m";
@@ -22,6 +25,12 @@ enum class LogLevel : std::uint8_t {
 
 // Helper function to convert LogLevel to string
 const char *toString(LogLevel level);
+
+// C++20 Concept to check if type T has a .what() method returning something convertible to const char*
+template <typename Error_T>
+concept HasWhat = requires(const Error_T t) {
+    { t.what() } -> std::convertible_to<const char *>;
+};
 
 class LogT {
 public:
@@ -84,5 +93,13 @@ private:
 
 // Global logger instance
 inline const LogT &logger = LogT::instance();
+
+template <typename Error_T> void logException(const Error_T &err) {
+    if constexpr (HasWhat<Error_T>) {
+        logger.error("An unexpected error occurred: {}", err.what());
+    } else {
+        logger.error("An unknown exception of type '{}' occurred.", typeid(Error_T).name());
+    }
+}
 
 } // namespace catalyst

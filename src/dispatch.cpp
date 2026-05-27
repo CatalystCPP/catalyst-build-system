@@ -104,6 +104,10 @@ template <typename ParseRes_T> int dispatchFN(const char *subc_name, const Parse
             return 1;
         }
     } catch (const std::exception &err) {
+        catalyst::logException(err);
+        return 1;
+    } catch (...) {
+        catalyst::logger.error("An unknown untyped exception occurred in {}", subc_name);
         return 1;
     }
     return 0;
