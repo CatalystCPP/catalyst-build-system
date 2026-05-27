@@ -4,8 +4,7 @@
 
 #include "catalyst/subcommands/build.hpp"
 
-namespace catalyst::build {
-std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app) {
+auto catalyst::build::parse(CLI::App &app) -> std::pair<CLI::App *, std::unique_ptr<Parse>> {
     CLI::App *build = app.add_subcommand("build", "Build the project.");
     auto ret = std::make_unique<Parse>();
     build->add_flag("-r,--regen", ret->regen, "Regenerate the build file.")->default_val(false);
@@ -23,4 +22,3 @@ std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app) {
     build->add_option("--backend", ret->backend, "Backend to use for generation (ninja, gmake, cbe).");
     return {build, std::move(ret)};
 }
-} // namespace catalyst::build

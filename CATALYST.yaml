@@ -5,8 +5,8 @@ common:
   manifest:
     name: catalyst
     type: BINARY
-    version: 1.3.0
-    description: Catalyst is a Declarative C++ Package Manager
+    version: 1.4.0
+    description: Catalyst is a Declarative C++ Build System
     provides: catalyst
     tooling:
       CC: clang
@@ -45,6 +45,9 @@ common:
   hooks:
     pre-build:
       - catalyst: fmt
+  features:
+    uniform_logs: false
+    log_machine_info: false
 ccache:
   manifest:
     tooling:

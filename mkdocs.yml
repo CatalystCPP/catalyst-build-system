@@ -9,14 +9,16 @@ nav:
   - Installation: installation.md
   - Concepts:
     - Overview: concepts/index.md
+    - Catalystignore: concepts/catalystignore.md
     - Configuration: concepts/configuration.md
-    - Workspaces: concepts/workspaces.md
-    - Profiles: concepts/profiles.md
     - Dependencies: concepts/dependencies.md
     - Environment Variables: concepts/environment-variables.md
     - Hooks: concepts/hooks.md
+    - Log: concepts/log.md
     - Preprocessor: concepts/preprocessor.md
-    - Catalystignore: concepts/catalystignore.md
+    - Profiles: concepts/profiles.md
+    - Toolchains: concepts/toolchains.md
+    - Workspaces: concepts/workspaces.md
   - CLI Reference:
     - Overview: cli/index.md
     - add: cli/add.md
@@ -25,6 +27,7 @@ nav:
     - clean: cli/clean.md
     - doc: cli/doc.md
     - download: cli/download.md
+    - feature_ls: cli/feature_ls.md
     - fetch: cli/fetch.md
     - fmt: cli/fmt.md
     - generate: cli/generate.md

@@ -22,6 +22,10 @@ These ensure that profile injection and cycle detection work correctly across ne
 Execute custom shell commands or internal Catalyst subcommands at various stages of the build lifecycle.
 Automate tasks like post-build notifications or pre-test setup directly within your profile configuration.
 
+### [Log](log.md)
+Capture both structured data for automated analysis and colored terminal output for developers.
+Understand how session events and standard entries are recorded in the console and `.catalyst.log` file.
+
 ### [Preprocessor & Features](preprocessor.md)
 Toggle code sections and conditionally compile files using dynamic feature flags defined in your config.
 Catalyst automatically generates C++ macros from these features, bridging your configuration and source code.
@@ -29,6 +33,10 @@ Catalyst automatically generates C++ macros from these features, bridging your c
 ### [Profiles](profiles.md)
 Create composable build configurations that can be merged to create specific target environments.
 This left-to-right merging strategy allows for powerful, modular settings for things like `linux + debug + asan`.
+
+### [Toolchains](toolchains.md)
+Configure and manage the compiler paths, flags, and build tools required for different environments.
+Define custom toolchains to cross-compile or use specific compiler versions seamlessly across your projects.
 
 ### [Workspaces](workspaces.md)
 Manage multiple related packages within a single repository using a centralized `WORKSPACE.yaml`.

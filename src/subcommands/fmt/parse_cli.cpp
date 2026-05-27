@@ -1,9 +1,5 @@
 #include "catalyst/subcommands/fmt.hpp"
 
-namespace catalyst::fmt {
-std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app) {
-    CLI::App *fmt = app.add_subcommand("fmt", "Format project source files.");
-    auto ret = std::make_unique<Parse>();
-    return {fmt, std::move(ret)};
+auto catalyst::fmt::parse(CLI::App &app) -> std::pair<CLI::App *, std::unique_ptr<Parse>> {
+    return {app.add_subcommand("fmt", "Format project source files."), std::make_unique<Parse>()};
 }
-} // namespace catalyst::fmt

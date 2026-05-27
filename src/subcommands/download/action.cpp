@@ -39,7 +39,6 @@ std::expected<void, std::string> action(const Parse &args) {
     auto absolute_target_path = fs::absolute(args.target_path);
     auto temp_dir = fs::temp_directory_path() / std::format("catalyst_dl_{}", randomString(TEMP_DIR_NAME_LEN));
 
-    // step 1: clone
     catalyst::logger.info("Cloning {} into temporary directory {}", args.git_remote, temp_dir.string());
 
     std::vector<std::string> clone_cmd = {"git", "clone"};
@@ -90,6 +89,7 @@ std::expected<void, std::string> action(const Parse &args) {
     }
 
     catalyst::logger.info("Successfully downloaded and installed {}.", args.git_remote);
+    std::filesystem::remove_all(temp_dir);
     return {};
 }
 } // namespace catalyst::download

@@ -56,11 +56,13 @@ std::expected<void, std::string> fetchGit(
     if (hash.empty()) {
         args = {"git", "clone", "--depth", "1"};
         if (version == "latest") {
+            args.emplace_back("--");
             args.push_back(source);
             args.push_back(dep_path.string());
         } else {
             args.emplace_back("--branch");
             args.push_back(version);
+            args.emplace_back("--");
             args.push_back(source);
             args.push_back(dep_path.string());
         }

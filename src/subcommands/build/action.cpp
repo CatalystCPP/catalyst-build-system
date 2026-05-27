@@ -1,11 +1,9 @@
 #include <algorithm>
-#include <chrono>
 #include <expected>
 #include <filesystem>
 #include <format>
 #include <fstream>
 #include <string>
-#include <thread>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -133,6 +131,7 @@ bool depMissing(const utils::yaml::Configuration &config) {
 
 std::expected<void, std::string> generateCompileCommands(const fs::path &build_dir, const std::string &generator) {
     if (generator == "cbe") {
+        catalyst::logger.info("Generating compile commands database.");
         if (auto res = catalyst::processExec({"cbe", "-C", build_dir, "-t", "compdb"}); !res)
             return std::unexpected(res.error());
         return {};
@@ -152,6 +151,8 @@ std::expected<void, std::string> generateCompileCommands(const fs::path &build_d
             return std::unexpected(std::format("Failed to open {} for writing", real_compdb_path.string()));
         return {};
     }
+    if (generator == "gmake" || generator == "make")
+        catalyst::logger.warn("Automatic compile commands generation is not supported for Makefiles. Skipping.");
     return {}; // don't fail if we don't know how to generate compile commands for this generator, it's not critical
 }
 

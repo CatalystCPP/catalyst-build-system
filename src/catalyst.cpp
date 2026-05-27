@@ -1,9 +1,6 @@
-#include <format>
 #include <print>
-#include <string>
 
 #include <CLI/App.hpp>
-#include <CLI/CLI.hpp>
 
 #include "catalyst/dispatch.hpp"
 #include "catalyst/globals.hpp"
@@ -19,13 +16,10 @@ std::string concatArgv(int argc, char **argv) {
 } // namespace
 
 int main(int argc, char **argv) {
-    std::string args_str = concatArgv(argc, argv);
-    catalyst::logger.debug("{}", args_str);
+    catalyst::logger.debug("{}", concatArgv(argc, argv));
 
-    catalyst::CliContext ctx;
-    ctx.workspace = catalyst::Workspace::findRoot();
-    auto [exit_code, should_return] = catalyst::parseCli(argc, argv, ctx);
-    if (should_return)
+    catalyst::CliContext ctx{.workspace = catalyst::Workspace::findRoot()};
+    if (auto [exit_code, should_return] = catalyst::parseCli(argc, argv, ctx); should_return)
         return exit_code;
 
     auto assign_ws_if = [&ctx](auto *subc, auto &res) {

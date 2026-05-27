@@ -10,6 +10,8 @@
 #include <CLI/App.hpp>
 #include <yaml-cpp/yaml.h>
 
+#include "catalyst/utils/toolchain.hpp"
+
 namespace catalyst::generate {
 struct Parse {
     std::vector<std::string> profiles;
@@ -21,18 +23,23 @@ struct FindRes {
     std::string lib_path;
     std::string inc_path;
     std::string libs;
+    std::vector<std::string> lib_dirs;
 };
 
 std::expected<YAML::Node, std::string> profileComposition(const std::vector<std::string> &profiles);
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);
 std::expected<void, std::string> action(const Parse &);
 
-std::expected<std::string, std::string> libPath(const YAML::Node &profile, const std::vector<std::string> &profiles);
-std::expected<FindRes, std::string> findDep(const std::string &build_dir, const YAML::Node &dep);
-std::expected<FindRes, std::string> findLocal(const YAML::Node &dep);
-std::expected<FindRes, std::string> findSystem(const YAML::Node &dep);
-std::expected<FindRes, std::string> findVcpkg(const YAML::Node &dep);
-std::expected<FindRes, std::string> findGit(const std::string &build_dir, const YAML::Node &dep);
+std::expected<std::string, std::string> libPath(const YAML::Node &profile,
+                                                const std::vector<std::string> &profiles,
+                                                const catalyst::toolchain::ToolchainDef &tc);
+std::expected<FindRes, std::string>
+findDep(const std::string &build_dir, const YAML::Node &dep, const catalyst::toolchain::ToolchainDef &tc);
+std::expected<FindRes, std::string> findLocal(const YAML::Node &dep, const catalyst::toolchain::ToolchainDef &tc);
+std::expected<FindRes, std::string> findSystem(const YAML::Node &dep, const catalyst::toolchain::ToolchainDef &tc);
+std::expected<FindRes, std::string> findVcpkg(const YAML::Node &dep, const catalyst::toolchain::ToolchainDef &tc);
+std::expected<FindRes, std::string>
+findGit(const std::string &build_dir, const YAML::Node &dep, const catalyst::toolchain::ToolchainDef &tc);
 
 std::expected<std::unordered_set<std::filesystem::path>, std::string>
 buildSourceSet(const std::vector<std::string> &source_dirs, const std::vector<std::string> &profiles);

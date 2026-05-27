@@ -9,25 +9,13 @@
 #include "catalyst/utils/log/log.hpp"
 
 namespace catalyst::utils::yaml {
-std::expected<void, std::string> profileWriteBack(const std::string &profile_name, const YAML::Node &node) {
-    catalyst::logger.debug("Writing profile to file: {}", profile_name);
-    namespace fs = std::filesystem;
-    fs::path profile_path;
-    if (profile_name == "common")
-        profile_path = "catalyst.yaml";
-    else
-        profile_path = std::format("catalyst_{}.yaml", profile_name);
-
-    catalyst::logger.debug("Profile path: {}", profile_path.string());
-    if (!fs::exists(profile_path)) {
-        catalyst::logger.debug("Creating new profile file: {}", profile_path.string());
-    }
-
-    std::ofstream profile_file{profile_path};
+std::expected<void, std::string> profileWriteBack(const ProfileFile &profile_file) {
+    catalyst::logger.debug("Writing profile file: {}", profile_file.path.string());
+    std::ofstream profile_file_out{profile_file.path};
     YAML::Emitter emmiter;
-    emmiter << node;
+    emmiter << profile_file.root_node;
     // NOLINTBEGIN(performance-avoid-endl)
-    profile_file << emmiter.c_str() << std::endl;
+    profile_file_out << emmiter.c_str() << std::endl;
     // NOLINTEND(performance-avoid-endl)
     catalyst::logger.debug("Profile file written successfully.");
     return {};

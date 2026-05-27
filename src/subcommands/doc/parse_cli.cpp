@@ -4,9 +4,7 @@
 
 #include "catalyst/subcommands/doc.hpp"
 
-namespace catalyst::doc {
-
-std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app) {
+auto catalyst::doc::parse(CLI::App &app) -> std::pair<CLI::App *, std::unique_ptr<Parse>> {
     CLI::App *doc = app.add_subcommand("doc", "Build a package's documentation.");
     auto ret = std::make_unique<Parse>();
 
@@ -16,4 +14,3 @@ std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app) {
 
     return {doc, std::move(ret)};
 }
-} // namespace catalyst::doc

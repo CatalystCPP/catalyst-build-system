@@ -3,7 +3,6 @@
 
 #include <catalyst/subcommands/add.hpp>
 
-#include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/yaml/load_profile_file.hpp"
 #include "catalyst/utils/yaml/profile_write_back.hpp"
 
@@ -15,7 +14,8 @@ std::expected<void, std::string> addToProfile(const std::string &profile, const 
     if (!res) {
         return std::unexpected(res.error());
     }
-    YAML::Node profile_node = res.value();
+    auto profile_file = res.value();
+    YAML::Node profile_node = profile_file.profile_node;
 
     if (!profile_node["dependencies"]) {
         profile_node["dependencies"] = YAML::Node(YAML::NodeType::Sequence);
@@ -45,13 +45,13 @@ std::expected<void, std::string> addToProfile(const std::string &profile, const 
 
     dependencies.push_back(new_dep);
 
-    return catalyst::utils::yaml::profileWriteBack(profile, profile_node);
+    return catalyst::utils::yaml::profileWriteBack(profile_file);
 }
 } // namespace
 
 namespace catalyst::add::system {
-std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &add) {
-    CLI::App *add_system = add.add_subcommand("system", "add a system dependency");
+std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app) {
+    CLI::App *add_system = app.add_subcommand("system", "add a system dependency");
     auto ret = std::make_unique<Parse>();
 
     add_system->add_option("name", ret->name)->required();

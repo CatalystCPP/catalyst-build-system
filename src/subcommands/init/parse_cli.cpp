@@ -3,13 +3,11 @@
 #include <string>
 #include <vector>
 
-#include <CLI/App.hpp>
-#include <CLI/Validators.hpp>
+#include <CLI/CLI.hpp>
 
 #include "catalyst/subcommands/init.hpp"
 
-namespace catalyst::init {
-std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app) {
+auto catalyst::init::parse(CLI::App &app) -> std::pair<CLI::App *, std::unique_ptr<Parse>> {
     CLI::App *init = app.add_subcommand("init", "Initialize a new catalyst profile.");
     auto ret = std::make_unique<Parse>();
     init->add_option("-n,--name", ret->name, "the name of the project")
@@ -61,4 +59,3 @@ std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app) {
 
     return {init, std::move(ret)};
 }
-} // namespace catalyst::init
