@@ -1,20 +1,28 @@
 # catalyst build
 
 ```
-build the project
-Usage: catalyst build [OPTIONS]
+Build the project. 
 
-Options:
-  -h,--help                   Print this help message and exit
-  -r,--regen                  Regenerate the build file
-  -b,--force-rebuild          Recompile dependencies
-  --force-refetch             Refetch dependencies
-  --workspace,--all           Build all members in the workspace
-  -w,--watch                  Continuous build mode. Rebuilds on source file changes
-  -P,--package TEXT           Build a specific package from the root
-  -p,--profiles TEXT ...      Profile composition to build (default: common)
-  -f,--features TEXT ...      Features to enable
-  --backend TEXT              Backend to use for generation (ninja, gmake, cbe)
+
+catalyst build [OPTIONS]
+
+
+OPTIONS:
+  -h,     --help              Print this help message and exit 
+  -r,     --regen [0]         Regenerate the build file. 
+  -b,     --force-rebuild [0]  
+                              Recompile dependencies. 
+          --force-refetch [0]  
+                              Refetch dependencies. 
+          --workspace, --all [0]  
+                              Build all members in the workspace. 
+  -w,     --watch [0]         Continuous build mode. Rebuilds on source file changes. 
+  -P,     --package TEXT      Build a specific package from the root. 
+  -p,     --profiles TEXT [[common]]  ... 
+                              Profile composition to build. 
+  -f,     --features TEXT [{}]  ... 
+                              Features to enable. 
+          --backend TEXT      Backend to use for generation (ninja, gmake, cbe). 
 ```
 
 ## Details

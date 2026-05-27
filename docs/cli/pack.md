@@ -1,6 +1,25 @@
 # catalyst pack
 
-Assemble the local package for distribution. This command delegates to `cpack` internally, setting up the necessary configuration to generate redistributable archives or installers for your compiled project.
+```
+Assemble the local package for distribution. 
+
+
+catalyst pack [OPTIONS]
+
+
+OPTIONS:
+  -h,     --help              Print this help message and exit 
+  -p,     --profiles TEXT [[common]]  ... 
+                              the profiles to compose for packing 
+  -s,     --source TEXT [/home/som/Projects/catalyst/catalyst-build-system]  
+                              the source path to pack 
+  -t,     --target TEXT [build/pack]  
+                              the output directory for the package 
+  -G,     --generators ENUM ... 
+                              CPack generators to use: 7Z, APK, DEB, DMG, EXTERNAL, FREEBSD, 
+                              NSIS, RPM, STGZ, TGZ, TXZ, WIX, ZIP 
+  -a,     --all               Run all available CPack generators 
+```
 
 ## Usage
 `catalyst pack [OPTIONS]`

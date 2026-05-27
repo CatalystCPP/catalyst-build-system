@@ -1,12 +1,16 @@
 # catalyst lock
 
 ```
-Resolve and pin dependencies to a catalyst.lock file.
-Usage: catalyst lock [OPTIONS]
+Resolve and pin dependencies to a catalyst.lock file. 
 
-Options:
-  -h,--help                   Print this help message and exit
-  -p,--profiles TEXT ...      Profile composition to use for dependency resolution.
+
+catalyst lock [OPTIONS]
+
+
+OPTIONS:
+  -h,     --help              Print this help message and exit 
+  -p,     --profiles TEXT [[common]]  ... 
+                              Profile composition to use for dependency resolution. 
 ```
 
 ## Details

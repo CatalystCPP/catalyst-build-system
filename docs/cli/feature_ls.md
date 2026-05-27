@@ -1,11 +1,15 @@
 # catalyst feature-ls
 
 ```
-list all features across all profiles
-Usage: catalyst feature-ls [OPTIONS]
+list all features across all profiles 
 
-Options:
-  -h,--help                   Print this help message and exit
+
+catalyst feature-ls [OPTIONS]
+
+
+OPTIONS:
+  -h,     --help              Print this help message and exit 
+          --inverse           list no-features as well 
 ```
 
 ## Details

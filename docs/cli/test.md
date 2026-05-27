@@ -1,12 +1,15 @@
 # catalyst test
 
 ```
-test the project
-Usage: catalyst test [OPTIONS]
+Run the test executable. 
 
-Options:
-  -h,--help                   Print this help message and exit
-  -P,--params TEXT ...        
+
+catalyst test [OPTIONS]
+
+
+OPTIONS:
+  -h,     --help              Print this help message and exit 
+  -P,     --params TEXT ...   Params to pass to the test executable. 
 ```
 
 ## Examples

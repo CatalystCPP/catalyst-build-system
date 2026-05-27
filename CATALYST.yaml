@@ -82,6 +82,7 @@ release:
   hooks:
     post-build:
       - catalyst: pack -p common ccache release -a
+      - script: "scripts/generate_cli_docs.sh"
 
 linux_x86_64:
   manifest:

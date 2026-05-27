@@ -1,12 +1,16 @@
 # catalyst clean
 
 ```
-clean a dependency
-Usage: catalyst clean [OPTIONS]
+Clean artifacts. 
 
-Options:
-  -h,--help                   Print this help message and exit
-  -p,--profile TEXT ...       
+
+catalyst clean [OPTIONS]
+
+
+OPTIONS:
+  -h,     --help              Print this help message and exit 
+  -p,     --profile TEXT ...  
+  -i,     --intermediates     Clean intermediate files only. 
 ```
 
 ## Examples

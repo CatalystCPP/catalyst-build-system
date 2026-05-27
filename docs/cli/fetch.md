@@ -1,12 +1,15 @@
 # catalyst fetch
 
 ```
-fetch all dependencies for a profile
-Usage: catalyst fetch [OPTIONS]
+Fetch all dependencies for a profile composition. 
 
-Options:
-  -h,--help                   Print this help message and exit
-  --profiles TEXT ...         
+
+catalyst fetch [OPTIONS]
+
+
+OPTIONS:
+  -h,     --help              Print this help message and exit 
+  -p,     --profiles TEXT ... 
 ```
 
 ## Details

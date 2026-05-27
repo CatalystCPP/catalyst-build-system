@@ -1,16 +1,18 @@
 # catalyst ide-sync
 
 ```
-Sync IDE configuration files for an existing project.
-Usage: catalyst ide-sync [OPTIONS]
+Sync IDE configuration files for an existing project. 
 
-Options:
-  -h,--help                   Print this help message and exit
-  -p,--profiles TEXT [common]  ...
-                              Profiles to use from the configuration file
-  --ides ENUM:value in {clion->,vscode->} OR {} ...
-                              IDEs to generate project files for
-  -f,--force-ide [0]          force emitting IDE config even if one already exists
+
+catalyst ide-sync [OPTIONS]
+
+
+OPTIONS:
+  -h,     --help              Print this help message and exit 
+  -p,     --profiles TEXT [common]  ... 
+                              Profiles to use from the configuration file 
+          --ides ENUM ...     IDEs to generate project files for: vscode, clion 
+  -f,     --force-ide [0]     force emitting IDE config even if one already exists 
 ```
 
 ## Details

@@ -1,79 +1,94 @@
 # catalyst add
 
 ```
-add a dependency
-Usage: catalyst add [OPTIONS] [SUBCOMMAND]
+Add a dependency. 
 
-Options:
-  -h,--help                   Print this help message and exit
 
-Subcommands:
-  git                         add a remote git dependency
-  system                      add a system dependency
-  local                       add a local dependency
-  vcpkg                       add a vcpkg dependency
+catalyst add [OPTIONS] [SUBCOMMANDS]
+
+
+OPTIONS:
+  -h,     --help              Print this help message and exit 
+
+SUBCOMMANDS:
+  git                         add a remote git dependency 
+  system                      add a system dependency 
+  local                       add a local dependency 
+  vcpkg                       add a vcpkg dependency 
 ```
 
 ### git
 ```
-add a remote git dependency
-Usage: catalyst add git [OPTIONS] [remote]
+add a remote git dependency 
 
-Positionals:
-  remote TEXT
 
-Options:
-  -h,--help                   Print this help message and exit
-  -n,--name TEXT
-  -v,--version TEXT [latest]
-  -f,--features TEXT ...
-  -p,--profiles TEXT ...
+catalyst add git [OPTIONS] [remote]
+
+
+POSITIONALS:
+  remote TEXT                 
+
+OPTIONS:
+  -h,     --help              Print this help message and exit 
+  -n,     --name TEXT         
+  -v,     --version TEXT [latest]  
+  -f,     --features TEXT ... 
+  -p,     --profiles TEXT ... 
 ```
 
 ### system
 ```
-add a system dependency
-Usage: catalyst add system [OPTIONS] name
+add a system dependency 
 
-Positionals:
-  name TEXT REQUIRED
 
-Options:
-  -h,--help                   Print this help message and exit
-  -l,--lib TEXT
-  -i,--inc TEXT
-  -p,--profiles TEXT ...
+catalyst add system [OPTIONS] name
+
+
+POSITIONALS:
+  name TEXT REQUIRED          
+
+OPTIONS:
+  -h,     --help              Print this help message and exit 
+  -l,     --lib TEXT          
+  -i,     --inc TEXT          
+  -p,     --profiles TEXT ... 
 ```
 
 ### local
 ```
-add a local dependency
-Usage: catalyst add local [OPTIONS] name path
+add a local dependency 
 
-Positionals:
-  name TEXT REQUIRED
-  path TEXT REQUIRED
 
-Options:
-  -h,--help                   Print this help message and exit
-  -p,--profiles TEXT ...
-  -f,--features TEXT ...
+catalyst add local [OPTIONS] name path
+
+
+POSITIONALS:
+  name TEXT REQUIRED          
+  path TEXT REQUIRED          
+
+OPTIONS:
+  -h,     --help              Print this help message and exit 
+  -p,     --profiles TEXT ... 
+  -f,     --features TEXT ... 
 ```
 
 ### vcpkg
 ```
-add a vcpkg dependency
-Usage: catalyst add vcpkg [OPTIONS] name
+add a vcpkg dependency 
 
-Positionals:
-  name TEXT REQUIRED
 
-Options:
-  -h,--help                   Print this help message and exit
-  -t,--triplet TEXT REQUIRED
-  -v,--version TEXT [latest]
-  -p,--profiles TEXT [[common]]  ...
-  -f,--features TEXT ...
+catalyst add vcpkg [OPTIONS] name
+
+
+POSITIONALS:
+  name TEXT REQUIRED          
+
+OPTIONS:
+  -h,     --help              Print this help message and exit 
+  -t,     --triplet TEXT REQUIRED 
+  -v,     --version TEXT [latest]  
+  -p,     --profiles TEXT [[common]]  ... 
+  -f,     --features TEXT ... 
 ```
 
 ## Examples

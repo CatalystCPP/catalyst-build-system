@@ -1,11 +1,14 @@
 # catalyst fmt
 
 ```
-format the project files.
-Usage: catalyst fmt [OPTIONS]
+Format project source files. 
 
-Options:
-  -h,--help                   Print this help message and exit
+
+catalyst fmt [OPTIONS]
+
+
+OPTIONS:
+  -h,     --help              Print this help message and exit 
 ```
 
 ## Details

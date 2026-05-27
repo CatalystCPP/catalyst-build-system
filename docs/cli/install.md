@@ -1,14 +1,20 @@
 # catalyst install
 
 ```
-Install the build artifacts
-Usage: catalyst install [OPTIONS] --target <path>
+Install the build artifacts 
 
-Options:
-  -h,--help                   Print this help message and exit
-  -p,--profiles TEXT ...      The profiles to compose in the build artifact (default: common)
-  -s,--source TEXT            The source path of the project to build (default: current directory)
-  -t,--target TEXT            The path to install to (REQUIRED)
+
+catalyst install [OPTIONS]
+
+
+OPTIONS:
+  -h,     --help              Print this help message and exit 
+  -p,     --profiles TEXT [[common]]  ... 
+                              the profiles to compose in the build artifact 
+  -s,     --source TEXT [/home/som/Projects/catalyst/catalyst-build-system]  
+                              the source of the path to build 
+  -t,     --target TEXT REQUIRED 
+                              the path to install to 
 ```
 
 ## Description
