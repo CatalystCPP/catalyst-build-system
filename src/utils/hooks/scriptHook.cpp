@@ -8,7 +8,7 @@ std::expected<void, std::string> executeScriptHook(const YAML::Node &item, const
     catalyst::logger.debug("[Catalyst Hook: {}] Running script: {}", hook_name, script);
     if (auto res = catalyst::processExec(shellCmd(script)); !res)
         return std::unexpected(std::format("Hook '{}' script execution failed: {}", hook_name, res.error()));
-    else if (!res->get())
+    else if (res->get())
         return std::unexpected(std::format("Hook '{}' script failed: {}", hook_name, script));
     return {};
 }

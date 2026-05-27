@@ -8,7 +8,7 @@ std::expected<void, std::string> executeCommandHook(const YAML::Node &item, cons
     catalyst::logger.debug("[Catalyst Hook: {}] Running command: {}", hook_name, command);
     if (auto res = catalyst::processExec(shellCmd(command)); !res)
         return std::unexpected(std::format("Hook '{}' command execution failed: {}", hook_name, res.error()));
-    else if (!res->get())
+    else if (res->get())
         return std::unexpected(std::format("Hook '{}' command failed: {}", hook_name, command));
     return {};
 }

@@ -65,7 +65,7 @@ std::expected<void, std::string> executeHook(const YAML::Node &profile_comp, con
         auto command = hook_node.as<std::string>();
         catalyst::logger.debug("[Catalyst Hook: {}] Running command: {}", hook_name, command);
         std::vector<std::string> cmd = catalyst::hooks::shellCmd(command);
-        if (auto res = catalyst::processExec(std::move(cmd)); !res || !res->get()) {
+        if (auto res = catalyst::processExec(std::move(cmd)); !res || res->get()) {
             return std::unexpected("Hook '" + hook_name + "' command failed: " + command);
         }
     }
