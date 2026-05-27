@@ -5,7 +5,7 @@ common:
   manifest:
     name: catalyst
     type: BINARY
-    version: 1.4.0
+    version: 1.4.1
     description: Catalyst is a Declarative C++ Build System
     provides: catalyst
     tooling:
