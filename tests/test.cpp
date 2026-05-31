@@ -14,7 +14,8 @@ public:
     std::expected<std::future<int>, std::string>
     processExec(std::vector<std::string> &&args,
                 std::optional<std::string> working_dir = std::nullopt,
-                std::optional<std::unordered_map<std::string, std::string>> env = std::nullopt) override {
+                std::optional<std::unordered_map<std::string, std::string>> env = std::nullopt,
+                bool silent = false) override {
         executed_commands.push_back(args);
 
         std::promise<int> promise;
