@@ -96,7 +96,7 @@ int main() {
     # 5. Run the result
     app_bin = workspace_dir / "appA" / "build" / "appA"
     assert app_bin.exists(), "appA binary not found!"
-    
+
     run_result = subprocess.run([str(app_bin)], capture_output=True, text=True)
     assert run_result.returncode == 0
     assert "Hello from libB!" in run_result.stdout
@@ -104,23 +104,23 @@ int main() {
 def test_init_and_build(tmp_path):
     project_dir = tmp_path / "new_project"
     project_dir.mkdir()
-    
+
     # 1. Init project
     env = os.environ.copy()
     result = subprocess.run([str(CATALYST_BIN), "init"], cwd=project_dir, capture_output=True, text=True, env=env)
     assert result.returncode == 0, f"Init failed: {result.stderr}"
-    
+
     assert (project_dir / "catalyst.yaml").exists()
     assert (project_dir / "src" / "new_project.cpp").exists()
-    
+
     # 2. Build project
     result = subprocess.run([str(CATALYST_BIN), "build"], cwd=project_dir, capture_output=True, text=True, env=env)
     assert result.returncode == 0, f"Build failed: {result.stderr}\nStdout: {result.stdout}"
-    
+
     # 3. Run project
     app_bin = project_dir / "build" / "new_project"
     assert app_bin.exists(), "new_project binary not found!"
-    
+
     run_result = subprocess.run([str(app_bin)], capture_output=True, text=True)
     assert run_result.returncode == 0
     assert "Hello, Catalyst!" in run_result.stdout
@@ -128,10 +128,10 @@ def test_init_and_build(tmp_path):
 def test_invalid_yaml_handles_gracefully(tmp_path):
     project_dir = tmp_path / "bad_project"
     project_dir.mkdir()
-    
+
     with open(project_dir / "CATALYST.yaml", "w") as f:
         f.write("manifest:\n  name: [invalid_yaml")
-        
+
     env = os.environ.copy()
     result = subprocess.run([str(CATALYST_BIN), "build"], cwd=project_dir, capture_output=True, text=True, env=env)
     assert result.returncode != 0
@@ -140,11 +140,11 @@ def test_invalid_yaml_handles_gracefully(tmp_path):
 def test_pack_subcommand(tmp_path):
     project_dir = tmp_path / "pack_project"
     project_dir.mkdir()
-    
+
     # 1. Init project
     env = os.environ.copy()
     subprocess.run([str(CATALYST_BIN), "init"], cwd=project_dir, capture_output=True, text=True, env=env)
-    
+
     # 2. Add metadata to catalyst.yaml for packing
     with open(project_dir / "catalyst.yaml", "w") as f:
         f.write("""meta:
@@ -165,40 +165,65 @@ manifest:
 
     # 3. Build project (needed for packing)
     subprocess.run([str(CATALYST_BIN), "build"], cwd=project_dir, capture_output=True, text=True, env=env)
-    
+
     # 4. Run pack
     result = subprocess.run([str(CATALYST_BIN), "pack", "-G", "TGZ"], cwd=project_dir, capture_output=True, text=True, env=env)
     assert result.returncode == 0, f"Pack failed: {result.stderr}"
-    
+
     # 5. Check if package exists
     pack_dir = project_dir / "build" / "pack"
     assert pack_dir.exists()
-    
+
     tgz_files = list(pack_dir.glob("*.tar.gz"))
     assert len(tgz_files) > 0, "No TGZ package generated!"
 
 def test_pack_multiple_generators(tmp_path):
     project_dir = tmp_path / "pack_multi"
     project_dir.mkdir()
-    
+
     # 1. Init project
     env = os.environ.copy()
     subprocess.run([str(CATALYST_BIN), "init"], cwd=project_dir, capture_output=True, text=True, env=env)
-    
+
     # 2. Build project
     subprocess.run([str(CATALYST_BIN), "build"], cwd=project_dir, capture_output=True, text=True, env=env)
-    
+
     # 3. Run pack with multiple generators
     # Using ZIP and TGZ as they are generally available on most systems
     result = subprocess.run([str(CATALYST_BIN), "pack", "-G", "TGZ", "ZIP"], cwd=project_dir, capture_output=True, text=True, env=env)
     assert result.returncode == 0, f"Pack failed: {result.stderr}"
-    
+
     # 4. Check if both packages exist
     pack_dir = project_dir / "build" / "pack"
     assert pack_dir.exists()
-    
+
     tgz_files = list(pack_dir.glob("*.tar.gz"))
     zip_files = list(pack_dir.glob("*.zip"))
-    
+
     assert len(tgz_files) > 0, "No TGZ package generated!"
     assert len(zip_files) > 0, "No ZIP package generated!"
+
+def test_pack_silent(tmp_path):
+    project_dir = tmp_path / "pack_silent"
+    project_dir.mkdir()
+
+    # 1. Init project
+    env = os.environ.copy()
+    subprocess.run([str(CATALYST_BIN), "init"], cwd=project_dir, capture_output=True, text=True, env=env)
+
+    # 2. Build project
+    subprocess.run([str(CATALYST_BIN), "build"], cwd=project_dir, capture_output=True, text=True, env=env)
+
+    # 3. Run pack with --silent and capture output
+    result = subprocess.run([str(CATALYST_BIN), "pack", "-G", "TGZ", "--silent"], cwd=project_dir, capture_output=True, text=True, env=env)
+    assert result.returncode == 0, f"Pack failed: {result.stderr}"
+
+    # Verify package exists
+    pack_dir = project_dir / "build" / "pack"
+    assert pack_dir.exists()
+    tgz_files = list(pack_dir.glob("*.tar.gz"))
+    assert len(tgz_files) > 0
+
+    # Verify CPack output is suppressed
+    assert "CPack:" not in result.stdout
+    assert "CPack:" not in result.stderr

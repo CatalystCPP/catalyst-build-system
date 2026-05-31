@@ -36,6 +36,7 @@ auto catalyst::pack::parse(CLI::App &app) -> std::pair<CLI::App *, std::unique_p
         ->transform(CLI::CheckedTransformer(gen_map, CLI::ignore_case).description(""));
 
     pack->add_flag("-a,--all", ret->all_generators, "Run all available CPack generators");
+    pack->add_flag("-q,--silent", ret->silent, "Suppress CPack output");
 
     return {pack, std::move(ret)};
 }

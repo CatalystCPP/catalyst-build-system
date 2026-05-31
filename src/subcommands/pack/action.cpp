@@ -198,7 +198,9 @@ std::expected<void, std::string> action(const Parse &parse_args) {
 
     if (active_generators.empty()) {
         catalyst::logger.info("Running cpack to assemble package in {}", target_path.string());
-        if (auto res = catalyst::processExec(std::vector<std::string>(base_cpack_cmd)); !res) {
+        if (auto res = catalyst::processExec(
+                std::vector<std::string>(base_cpack_cmd), std::nullopt, std::nullopt, parse_args.silent);
+            !res) {
             return std::unexpected(std::format("Failed to execute cpack: {}", res.error()));
         } else {
             if (int code = res.value().get(); code != 0) {
@@ -217,7 +219,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
             cmd.push_back("-G");
             cmd.push_back(gen_str);
 
-            auto res = catalyst::processExec(std::move(cmd));
+            auto res = catalyst::processExec(std::move(cmd), std::nullopt, std::nullopt, parse_args.silent);
             if (!res) {
                 return std::unexpected(std::format("Failed to spawn cpack for generator {}: {}", gen_str, res.error()));
             }

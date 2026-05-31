@@ -19,6 +19,7 @@ OPTIONS:
                               CPack generators to use: 7Z, APK, DEB, DMG, EXTERNAL, FREEBSD, 
                               NSIS, RPM, STGZ, TGZ, TXZ, WIX, ZIP 
   -a,     --all               Run all available CPack generators 
+  -q,     --silent            Suppress CPack output 
 ```
 
 ## Usage
