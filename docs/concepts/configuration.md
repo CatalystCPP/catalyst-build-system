@@ -25,7 +25,7 @@ Defines constraints for the Catalyst tool itself.
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `min_ver` | String | `0.0.0` | Minimum Catalyst version required to build the project. |
-| `generator` | String | `cbe` | The generator to use. Supported: `cbe` (default/recommended), `ninja`, `gmake` (or `make`). |
+| `generator` | String | `cob` | The generator to use. Supported: `cob` (default/recommended), `ninja`, `gmake` (or `make`). |
 
 ---
 

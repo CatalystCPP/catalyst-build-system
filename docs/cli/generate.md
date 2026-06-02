@@ -11,7 +11,7 @@ OPTIONS:
   -h,     --help              Print this help message and exit 
   -p,     --profiles TEXT ... 
   -f,     --features TEXT ... 
-  -b,     --backend TEXT      Backend to use for generation (ninja, gmake, cbe). 
+  -b,     --backend TEXT      Backend to use for generation (ninja, gmake, cob). 
 ```
 
 ## Examples

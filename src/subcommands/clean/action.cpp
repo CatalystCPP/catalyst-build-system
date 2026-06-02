@@ -79,14 +79,14 @@ std::expected<void, std::string> action(const Parse &parse_args) {
             clean_cmd.emplace_back("-r");
             clean_cmd.emplace_back("cxx_compile");
             clean_cmd.emplace_back("cc_compile");
-        } else if (generator == "cbe") {
+        } else if (generator == "cob") {
             clean_cmd.emplace_back("-i");
         } else {
             return std::unexpected(std::format("Generator: {} does not support cleaning intermediates.", generator));
         }
     }
 
-    if (generator == "ninja" || generator == "cbe") {
+    if (generator == "ninja" || generator == "cob") {
         if (int rtn = catalyst::processExec(std::move(clean_cmd)).value().get(); rtn != 0) {
             std::string cmd_str = clean_cmd[0];
             for (size_t i = 1; i < clean_cmd.size(); ++i) {

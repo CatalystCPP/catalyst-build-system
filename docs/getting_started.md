@@ -28,7 +28,7 @@ catalyst build
 ```
 
 This will:
-1.  Generate build files (using CBE by default, or optionally Ninja/GNU Make).
+1.  Generate build files (using COB by default, or optionally Ninja/GNU Make).
 2.  Compile your source code.
 3.  Link the executable.
 

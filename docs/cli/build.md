@@ -22,7 +22,7 @@ OPTIONS:
                               Profile composition to build. 
   -f,     --features TEXT [{}]  ... 
                               Features to enable. 
-          --backend TEXT      Backend to use for generation (ninja, gmake, cbe). 
+          --backend TEXT      Backend to use for generation (ninja, gmake, cob). 
 ```
 
 ## Details

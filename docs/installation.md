@@ -6,8 +6,8 @@
 
 Based on your build backend, catalyst will want one of the following:
 
-- Catalyst Build Executor (`cbe`) (preferred)
-    - Follow the [instructions](https://catalystcpp.github.io/catalyst-build-executor/installation).
+- Catalyst Orchestrated Builder (`cob`) (preferred)
+    - Follow the [instructions](https://catalystcpp.github.io/catalyst-orchestrated-builder/installation).
 - `ninja`
     - Available on most package managers
 - or `make`

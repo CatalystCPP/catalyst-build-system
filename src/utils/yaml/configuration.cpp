@@ -29,7 +29,7 @@ YAML::Node getDefaultConfiguration() {
     static YAML::Node defaults = []() {
         YAML::Node root;
         root["meta"]["min_ver"] = "0.0.1";
-        root["meta"]["generator"] = "cbe";
+        root["meta"]["generator"] = "cob";
         root["manifest"]["name"] = "name";
         root["manifest"]["type"] = "BINARY";
         root["manifest"]["version"] = "0.0.1";
@@ -281,8 +281,8 @@ void mergeHelper(YAML::Node &composite, const std::string &new_profile_name, con
             "generator",
             src,
             "meta.generator",
-            [](const std::string &v) { return v == "ninja" || v == "cbe" || v == "gmake" || v == "make"; },
-            /*fallback_on_null=*/"cbe");
+            [](const std::string &v) { return v == "ninja" || v == "cob" || v == "gmake" || v == "make"; },
+            /*fallback_on_null=*/"cob");
     });
 
     merge_section(composite, "manifest", new_profile, [&](YAML::Node dst, YAML::Node src) {

@@ -195,7 +195,7 @@ _catalyst_build() {
         '(-P --package)'{-P,--package}'[Build a specific package from the root.]:package:' \
         '*'{-p,--profiles}'[Profile composition to build.]:*:profiles:_catalyst_profiles' \
         '*'{-f,--features}'[Features to enable.]:features:_catalyst_features' \
-        '--backend[Backend to use for generation (ninja, gmake, cbe).]:backend:(ninja gmake cbe)'
+        '--backend[Backend to use for generation (ninja, gmake, cob).]:backend:(ninja gmake cob)'
 }
 
 _catalyst_clean() {
@@ -244,7 +244,7 @@ _catalyst_generate() {
         '(-h --help)'{-h,--help}'[Print this help message and exit]' \
         '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles' \
         '*'{-f,--features}'[features]:features:_catalyst_features' \
-        '(-b --backend)'{-b,--backend}'[Backend to use for generation (ninja, gmake, cbe).]:backend:(ninja gmake cbe)'
+        '(-b --backend)'{-b,--backend}'[Backend to use for generation (ninja, gmake, cob).]:backend:(ninja gmake cob)'
 }
 
 _catalyst_help() {

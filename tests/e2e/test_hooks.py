@@ -20,7 +20,7 @@ def test_codegen_hooks(tmp_path):
         f.write("""
 common:
   meta:
-    generator: cbe
+    generator: cob
   manifest:
     name: codegen_test
     type: binary
@@ -101,7 +101,7 @@ def test_codegen_hooks_always_run_without_io(tmp_path):
         f.write("""
 common:
   meta:
-    generator: cbe
+    generator: cob
   manifest:
     name: codegen_always
     type: binary
@@ -152,7 +152,7 @@ def test_codegen_hooks_variable_substitution(tmp_path):
         f.write("""
 common:
   meta:
-    generator: cbe
+    generator: cob
   manifest:
     name: codegen_vars
     type: binary

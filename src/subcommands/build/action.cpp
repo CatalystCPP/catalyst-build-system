@@ -130,9 +130,9 @@ bool depMissing(const utils::yaml::Configuration &config) {
 }
 
 std::expected<void, std::string> generateCompileCommands(const fs::path &build_dir, const std::string &generator) {
-    if (generator == "cbe") {
+    if (generator == "cob") {
         catalyst::logger.info("Generating compile commands database.");
-        if (auto res = catalyst::processExec({"cbe", "-C", build_dir, "-t", "compdb"}); !res)
+        if (auto res = catalyst::processExec({"cob", "-C", build_dir, "-t", "compdb"}); !res)
             return std::unexpected(res.error());
         return {};
     }
@@ -233,7 +233,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         }
 
         fs::path build_dir = config.getBuildDir();
-        std::string generator = config.getString("meta.generator").value_or("cbe");
+        std::string generator = config.getString("meta.generator").value_or("cob");
         std::string build_filename = (generator == "ninja") ? "build.ninja" : "catalyst.build";
 
         if (!fs::exists(build_dir / build_filename) || parse_args.regen) {

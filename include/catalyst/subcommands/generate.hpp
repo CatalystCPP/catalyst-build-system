@@ -101,13 +101,13 @@ enum class TargetType : std::uint8_t {
     Make,
     VisualStudio,
     XCode,
-    CBE,
+    COB,
 };
 
 template <TargetType Target_T> class DerivedWriter : public BaseWriter {
 private:
     static consteval bool isImplemented(TargetType t) {
-        return t == TargetType::Ninja || t == TargetType::CBE || t == TargetType::Make;
+        return t == TargetType::Ninja || t == TargetType::COB || t == TargetType::Make;
     }
 
 #if __cplusplus >= 202602L
@@ -125,8 +125,8 @@ private:
             case TargetType::XCode:
                 return "Unimplemented specialization for DerivedWriter<XCode>. "
                        "Add explicit template specialization.";
-            case TargetType::CBE:
-                return "Unimplemented specialization for DerivedWriter<CBE>. "
+            case TargetType::COB:
+                return "Unimplemented specialization for DerivedWriter<COB>. "
                        "Add explicit template specialization.";
         }
         return "Unknown TargetType";

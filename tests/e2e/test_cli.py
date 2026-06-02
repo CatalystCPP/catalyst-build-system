@@ -33,7 +33,7 @@ appA:
     with open(workspace_dir / "libB" / "catalyst.yaml", "w") as f:
         f.write("""
 meta:
-  generator: cbe
+  generator: cob
 manifest:
   name: libB
   type: STATICLIB
@@ -66,7 +66,7 @@ void hello_from_B() {
     with open(workspace_dir / "appA" / "catalyst.yaml", "w") as f:
         f.write("""
 meta:
-  generator: cbe
+  generator: cob
 manifest:
   name: appA
   type: binary

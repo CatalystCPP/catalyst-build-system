@@ -15,7 +15,7 @@
             },
             "generator": {
               "type": "string",
-              "enum": ["cbe", "ninja", "gmake", "make"],
+              "enum": ["cob", "ninja", "gmake", "make"],
               "description": "The generator to use."
             }
           },

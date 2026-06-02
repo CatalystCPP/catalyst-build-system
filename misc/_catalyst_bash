@@ -45,7 +45,7 @@ _catalyst() {
 
     case "$prev" in
         -b|--backend)
-            COMPREPLY=($(compgen -W "ninja gmake cbe" -- "$cur"))
+            COMPREPLY=($(compgen -W "ninja gmake cob" -- "$cur"))
             return
             ;;
         -e|--engine)

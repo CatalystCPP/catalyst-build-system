@@ -96,7 +96,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
 
     std::string generator = parse_args.backend;
     if (generator.empty()) {
-        generator = config.getString("meta.generator").value_or("cbe");
+        generator = config.getString("meta.generator").value_or("cob");
     }
 
     std::string build_filename;
@@ -140,7 +140,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         buildwriters::DerivedWriter<buildwriters::TargetType::Make> writer(buildfile);
         generate_build(writer);
     } else {
-        buildwriters::DerivedWriter<buildwriters::TargetType::CBE> writer(buildfile);
+        buildwriters::DerivedWriter<buildwriters::TargetType::COB> writer(buildfile);
         generate_build(writer);
     }
 
