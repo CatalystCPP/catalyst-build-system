@@ -27,7 +27,8 @@ This file is structured using JSON lines (JSONL), making it easy to parse and an
 
 ### Session Events
 
-> [!TIP] This can be changed by building catalyst with -f uniform_logs
+!!! error
+    This can be changed by building catalyst with `-f uniform_logs`
 
 A logging session records when it begins and ends using specific events:
 
@@ -60,7 +61,8 @@ The structured JSON format ensures that even complex events are safely encapsula
 
 ### Machine Information
 
-> [!TIP] This feature can be enabled by building catalyst with `-f log_machine_info`
+!!! tip
+    This feature can be enabled by building catalyst with `-f log_machine_info`
 
 When built with the `log_machine_info` feature flag, Catalyst will include the system `hostname` and process ID (`pid`) in all JSON output, including session markers and standard log entries:
 
