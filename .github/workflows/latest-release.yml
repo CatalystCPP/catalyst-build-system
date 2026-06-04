@@ -56,6 +56,12 @@ jobs:
           sudo apt-get install -y ./catalyst-1.4.1.deb
           rm catalyst-1.4.1.deb
 
+      - name: Fetch dependencies
+        run: |
+          catalyst fetch --profiles common ccache release
+        env:
+          VCPKG_ROOT: /opt/vcpkg
+
       - name: Build Catalyst
         run: |
           catalyst build --profiles common ccache release
