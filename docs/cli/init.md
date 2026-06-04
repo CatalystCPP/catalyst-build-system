@@ -1,41 +1,41 @@
 # catalyst init
 
 ```
-Initialize a new catalyst profile. 
+Initialize a new catalyst profile.
 
 
 catalyst init [OPTIONS]
 
 
 OPTIONS:
-  -h,     --help              Print this help message and exit 
-  -n,     --name TEXT [catalyst-build-system]  
-                              the name of the project 
-          --path TEXT [/home/som/Projects/catalyst/catalyst-build-system]  
-                              the default path for the project 
-  -t,     --type ENUM [binary]  
-                              the project type binary, staticlib, sharedlib, or interface 
-  -v,     --version TEXT [0.0.1]  
-                              the project's version 
-  -d,     --description TEXT [Your Description Goes Here.]  
-                              a description for the project 
-          --provides TEXT     Artifact provided by this project. 
-          --cc TEXT [cc]      the c compiler to use 
-          --cxx TEXT [c++]    the cxx compiler to use 
-          --ccflags TEXT      c compiler flags 
-          --cxxflags TEXT     cxx compiler flags 
-          --ldflags TEXT      linker flags 
-          --include-dirs TEXT [[include]]  ... 
-                              include directories 
-          --source-dirs TEXT [[src]]  ... 
-                              source directories 
-          --build-dir TEXT [build]  
-                              build directory 
-          --ides ENUM:value in {clion->1,vscode->0} OR {1,0} ... 
-                              IDEs to generate project files for 
-  -p,     --profile TEXT [common]  
-                              the profile to initialize 
-  -f,     --force-ide [0]     force emitting IDE config even if one already exists 
+  -h,     --help              Print this help message and exit
+  -n,     --name TEXT [basename cwd]
+                              the name of the project
+          --path TEXT [cwd]
+                              the default path for the project
+  -t,     --type ENUM [binary]
+                              the project type binary, staticlib, sharedlib, or interface
+  -v,     --version TEXT [0.0.1]
+                              the project's version
+  -d,     --description TEXT [Your Description Goes Here.]
+                              a description for the project
+          --provides TEXT     Artifact provided by this project.
+          --cc TEXT [cc]      the c compiler to use
+          --cxx TEXT [c++]    the cxx compiler to use
+          --ccflags TEXT      c compiler flags
+          --cxxflags TEXT     cxx compiler flags
+          --ldflags TEXT      linker flags
+          --include-dirs TEXT [[include]]  ...
+                              include directories
+          --source-dirs TEXT [[src]]  ...
+                              source directories
+          --build-dir TEXT [build]
+                              build directory
+          --ides ENUM:value in {clion->1,vscode->0} OR {1,0} ...
+                              IDEs to generate project files for
+  -p,     --profile TEXT [common]
+                              the profile to initialize
+  -f,     --force-ide [0]     force emitting IDE config even if one already exists
 ```
 
 ## Examples
