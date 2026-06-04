@@ -52,9 +52,9 @@ jobs:
 
       - name: Install Catalyst (Bootstrap compiler)
         run: |
-          wget https://github.com/CatalystCPP/catalyst-build-system/releases/download/v1.4.1/catalyst-1.4.1.deb
-          sudo apt-get install -y ./catalyst-1.4.1.deb
-          rm catalyst-1.4.1.deb
+          wget https://github.com/CatalystCPP/catalyst-build-system/releases/download/v1.4.2/catalyst-1.4.2.deb
+          sudo apt-get install -y ./catalyst-1.4.2.deb
+          rm catalyst-1.4.2.deb
 
       - name: Fetch dependencies
         run: |
