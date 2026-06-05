@@ -1,6 +1,6 @@
 #include <print>
 
-#include <CLI/App.hpp>
+#include <CLI11.hpp>
 
 #include "catalyst/dispatch.hpp"
 #include "catalyst/globals.hpp"

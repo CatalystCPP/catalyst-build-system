@@ -1,14 +1,14 @@
 # catalyst run
 
 ```
-Run a built executable. 
+Run a built executable.
 
 
 catalyst run [OPTIONS]
 
 
 OPTIONS:
-  -h,     --help              Print this help message and exit 
+  -h,     --help              Print this help message and exit
   -p,     --profile TEXT [common]  
   -P,     --params TEXT [{}]  ... 
 ```

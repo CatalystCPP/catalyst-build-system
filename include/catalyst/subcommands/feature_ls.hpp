@@ -4,7 +4,7 @@
 #include <memory>
 #include <string>
 
-#include <CLI/App.hpp>
+#include <CLI11.hpp>
 
 namespace catalyst::feature_ls {
 struct Parse {

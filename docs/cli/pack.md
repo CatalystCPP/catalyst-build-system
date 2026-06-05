@@ -9,13 +9,13 @@ catalyst pack [OPTIONS]
 
 OPTIONS:
   -h,     --help              Print this help message and exit
-  -p,     --profiles TEXT [[common]]  ...
+  -p,     --profiles TEXT [[common]]  ... 
                               the profiles to compose for packing
-  -s,     --source TEXT [PWD]
+  -s,     --source TEXT [/home/som/Projects/catalyst/catalyst]  
                               the source path to pack
-  -t,     --target TEXT [build/pack]
+  -t,     --target TEXT [build/pack]  
                               the output directory for the package
-  -G,     --generators ENUM ...
+  -G,     --generators ENUM ... 
                               CPack generators to use: 7Z, APK, DEB, DMG, EXTERNAL, FREEBSD,
                               NSIS, RPM, STGZ, TGZ, TXZ, WIX, ZIP
   -a,     --all               Run all available CPack generators

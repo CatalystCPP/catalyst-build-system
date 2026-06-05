@@ -21,6 +21,7 @@ common:
     dirs:
       include:
         - include
+        - include/extern
       source:
         - src
       build: build
@@ -30,9 +31,6 @@ common:
       triplet: x64-linux
       version: latest
       using: []
-    - name: cli11
-      source: system
-      linkage: interface
     - name: reproc
       source: vcpkg
       triplet: x64-linux
@@ -43,8 +41,8 @@ common:
       version: latest
       linkage: interface
   hooks:
-    pre-build:
-      - catalyst: fmt
+    pre-fetch:
+      - script: "scripts/fetch_cli_11.sh"
   features:
     uniform_logs: false
     log_machine_info: false

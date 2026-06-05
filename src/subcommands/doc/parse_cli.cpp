@@ -1,6 +1,6 @@
 #include <memory>
 
-#include <CLI/App.hpp>
+#include <CLI11.hpp>
 
 #include "catalyst/subcommands/doc.hpp"
 

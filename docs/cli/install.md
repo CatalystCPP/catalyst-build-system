@@ -9,11 +9,11 @@ catalyst install [OPTIONS]
 
 OPTIONS:
   -h,     --help              Print this help message and exit
-  -p,     --profiles TEXT [[common]]  ...
+  -p,     --profiles TEXT [[common]]  ... 
                               the profiles to compose in the build artifact
-  -s,     --source TEXT [PWD]
+  -s,     --source TEXT [/home/som/Projects/catalyst/catalyst]  
                               the source of the path to build
-  -t,     --target TEXT REQUIRED
+  -t,     --target TEXT REQUIRED 
                               the path to install to
 ```
 

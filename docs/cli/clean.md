@@ -1,16 +1,16 @@
 # catalyst clean
 
 ```
-Clean artifacts. 
+Clean artifacts.
 
 
 catalyst clean [OPTIONS]
 
 
 OPTIONS:
-  -h,     --help              Print this help message and exit 
+  -h,     --help              Print this help message and exit
   -p,     --profile TEXT ...  
-  -i,     --intermediates     Clean intermediate files only. 
+  -i,     --intermediates     Clean intermediate files only.
 ```
 
 ## Examples

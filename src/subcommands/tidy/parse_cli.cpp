@@ -1,6 +1,6 @@
 #include <vector>
 
-#include <CLI/App.hpp>
+#include <CLI11.hpp>
 
 #include "catalyst/subcommands/tidy.hpp"
 

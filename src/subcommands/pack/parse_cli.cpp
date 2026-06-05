@@ -2,7 +2,7 @@
 #include <map>
 #include <memory>
 
-#include <CLI/CLI.hpp>
+#include <CLI11.hpp>
 
 #include "catalyst/subcommands/pack.hpp"
 

@@ -8,7 +8,7 @@
 #include <utility>
 #include <vector>
 
-#include <CLI/CLI.hpp>
+#include <CLI11.hpp>
 
 #include "catalyst/subcommands/profile_ls.hpp"
 #include "catalyst/utils/log/log.hpp"

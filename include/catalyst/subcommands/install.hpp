@@ -2,7 +2,7 @@
 #include <expected>
 #include <utility>
 
-#include <CLI/App.hpp>
+#include <CLI11.hpp>
 
 namespace catalyst::install {
 struct Parse {

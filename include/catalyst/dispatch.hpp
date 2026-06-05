@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include <CLI/App.hpp>
+#include <CLI11.hpp>
 
 #include "catalyst/globals.hpp"
 #include "catalyst/subcommands/add.hpp"

@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include <CLI/App.hpp>
+#include <CLI11.hpp>
 
 namespace catalyst::init {
 struct Parse {

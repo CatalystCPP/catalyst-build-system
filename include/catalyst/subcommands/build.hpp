@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include <CLI/App.hpp>
+#include <CLI11.hpp>
 
 #include "catalyst/workspace.hpp"
 

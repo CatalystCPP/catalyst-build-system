@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 
-#include <CLI/CLI.hpp>
+#include <CLI11.hpp>
 
 #include "catalyst/subcommands/ide_sync.hpp"
 

@@ -1,23 +1,23 @@
 # catalyst download
 
 ```
-Install a catalyst configured package from git. 
+Install a catalyst configured package from git.
 
 
 catalyst download [OPTIONS] remote [branch]
 
 
 POSITIONALS:
-  remote TEXT REQUIRED        the remote to clone 
-  branch TEXT                 the branch to clone 
+  remote TEXT REQUIRED        the remote to clone
+  branch TEXT                 the branch to clone
 
 OPTIONS:
-  -h,     --help              Print this help message and exit 
+  -h,     --help              Print this help message and exit
   -p,     --profiles TEXT [[common]]  ... 
-                              the profiles to compose in the build artifact 
-  -f,     --features TEXT ... the features to enable in the build 
+                              the profiles to compose in the build artifact
+  -f,     --features TEXT ... the features to enable in the build
   -t,     --target TEXT REQUIRED 
-                              the path to install to 
+                              the path to install to
 ```
 
 ## Details

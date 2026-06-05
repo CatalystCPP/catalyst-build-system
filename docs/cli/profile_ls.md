@@ -1,14 +1,14 @@
 # catalyst profile-ls
 
 ```
-list all profiles 
+list all profiles
 
 
 catalyst profile-ls [OPTIONS]
 
 
 OPTIONS:
-  -h,     --help              Print this help message and exit 
+  -h,     --help              Print this help message and exit
 ```
 
 ## Details

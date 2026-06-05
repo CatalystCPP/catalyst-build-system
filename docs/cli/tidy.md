@@ -1,17 +1,17 @@
 # catalyst tidy
 
 ```
-Run linting on source code. 
+Run linting on source code.
 
 
 catalyst tidy [OPTIONS]
 
 
 OPTIONS:
-  -h,     --help              Print this help message and exit 
+  -h,     --help              Print this help message and exit
   -p,     --profiles TEXT [[common]]  ... 
-                              The profile composition to lint 
-          --fix               Automatically fix lint warnings 
+                              The profile composition to lint
+          --fix               Automatically fix lint warnings
 ```
 
 ## Details

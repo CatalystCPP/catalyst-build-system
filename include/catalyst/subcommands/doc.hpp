@@ -4,7 +4,7 @@
 #include <optional>
 #include <string>
 
-#include <CLI/App.hpp>
+#include <CLI11.hpp>
 
 #include "catalyst/utils/yaml/configuration.hpp"
 

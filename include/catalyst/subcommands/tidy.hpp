@@ -2,7 +2,7 @@
 #include <expected>
 #include <string>
 
-#include <CLI/App.hpp>
+#include <CLI11.hpp>
 
 namespace catalyst::tidy {
 struct Parse {

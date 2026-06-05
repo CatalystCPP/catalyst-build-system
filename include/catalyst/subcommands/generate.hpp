@@ -7,7 +7,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include <CLI/App.hpp>
+#include <CLI11.hpp>
 #include <yaml-cpp/yaml.h>
 
 #include "catalyst/utils/toolchain.hpp"
