@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include <catalyst/hooks.hpp>
+
 #include "catalyst/dir_guard.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/install.hpp"
@@ -63,6 +65,11 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         config = utils::yaml::Configuration(parse_args.profiles);
     } catch (const std::exception &e) {
         return std::unexpected(e.what());
+    }
+
+    catalyst::logger.debug("Running pre-pack hooks.");
+    if (auto res = hooks::prePack(config); !res) {
+        return res;
     }
 
     fs::path build_dir = config.getBuildDir();
@@ -250,6 +257,11 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         if (parse_args.all_generators && success_count == 0) {
             return std::unexpected("All cpack generators failed.");
         }
+    }
+
+    catalyst::logger.debug("Running post-pack hooks.");
+    if (auto res = hooks::postPack(config); !res) {
+        return res;
     }
 
     catalyst::logger.debug("Pack subcommand finished successfully.");

@@ -23,6 +23,8 @@ std::expected<void, std::string> preTest(const YAML::Node &profile_comp);
 std::expected<void, std::string> postTest(const YAML::Node &profile_comp);
 std::expected<void, std::string> preBench(const YAML::Node &profile_comp);
 std::expected<void, std::string> postBench(const YAML::Node &profile_comp);
+std::expected<void, std::string> prePack(const YAML::Node &profile_comp);
+std::expected<void, std::string> postPack(const YAML::Node &profile_comp);
 
 std::expected<void, std::string> preBuild(const utils::yaml::Configuration &profile_comp);
 std::expected<void, std::string> postBuild(const utils::yaml::Configuration &profile_comp);
@@ -39,6 +41,8 @@ std::expected<void, std::string> preTest(const utils::yaml::Configuration &profi
 std::expected<void, std::string> postTest(const utils::yaml::Configuration &profile_comp);
 std::expected<void, std::string> preBench(const utils::yaml::Configuration &profile_comp);
 std::expected<void, std::string> postBench(const utils::yaml::Configuration &profile_comp);
+std::expected<void, std::string> prePack(const utils::yaml::Configuration &profile_comp);
+std::expected<void, std::string> postPack(const utils::yaml::Configuration &profile_comp);
 std::expected<void, std::string> preLink(const utils::yaml::Configuration &profile_comp);
 std::expected<void, std::string> postLink(const utils::yaml::Configuration &profile_comp);
 std::expected<void, std::string> onCompile(const std::filesystem::path &file);

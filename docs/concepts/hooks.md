@@ -199,6 +199,14 @@ These hooks are specific to individual Catalyst subcommands, allowing you to cus
 | `post-bench`| Runs after the benchmarks have been executed.|
 
 
+#### `pack`
+
+| Hook        | Description                                |
+| ----------- | ------------------------------------------ |
+| `pre-pack`  | Runs before the packaging begins.          |
+| `post-pack` | Runs after the packaging has successfully completed.|
+
+
 ### Target-Specific Hooks
 
 > [!NOTE]
