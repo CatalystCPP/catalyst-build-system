@@ -25,7 +25,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget mold ccache lsb-release software-properties-common gnupg git curl unzip zip pkg-config
+          sudo apt-get install -y wget mold ccache lsb-release software-properties-common gnupg git curl unzip zip pkg-config g++-15
 
       - name: Install LLVM 21
         run: |

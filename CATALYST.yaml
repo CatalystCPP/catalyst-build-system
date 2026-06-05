@@ -9,8 +9,8 @@ common:
     description: Catalyst is a Declarative C++ Build System
     provides: catalyst
     tooling:
-      CC: clang
-      CXX: clang++
+      CC: clang-21
+      CXX: clang++-21
       CCFLAGS: --std=c++23 -Wall -Wextra -Wpedantic
       CXXFLAGS: --std=c++23 -Wall -Wextra -Wpedantic
       LDFLAGS: -static
