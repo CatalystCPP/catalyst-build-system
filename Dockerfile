@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     wget \
     mold \
     ccache \
+    cmake \
     lsb-release \
     software-properties-common \
     gnupg \
