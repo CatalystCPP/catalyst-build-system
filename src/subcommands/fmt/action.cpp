@@ -3,7 +3,9 @@
 #include <execution>
 #include <filesystem>
 #include <format>
+#include <future>
 #include <mutex>
+#include <regex>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -14,10 +16,6 @@
 #include "catalyst/subcommands/fmt.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
-
-namespace {
-std::expected<void, std::string> execBatch(std::vector<std::basic_string<char>> args);
-}
 
 namespace catalyst::fmt {
 std::expected<void, std::string> action(const Parse &parse_args) {
@@ -40,19 +38,54 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     std::unordered_set<fs::path> include_dirs;
 
     for (const auto &node : profile_comp["manifest"]["dirs"]["source"]) {
-        source_dirs.insert(node.as<std::string>());
+        source_dirs.insert(fs::absolute(node.as<std::string>()));
     }
 
     for (const auto &node : profile_comp["manifest"]["dirs"]["include"]) {
-        include_dirs.insert(node.as<std::string>());
+        include_dirs.insert(fs::absolute(node.as<std::string>()));
     }
+
+    auto get_ignore_regexes = [](const fs::path &dir, const std::vector<std::string> &profiles) {
+        fs::path ignore_file = dir / ".catalystignore";
+        std::vector<std::regex> regexes;
+        if (fs::exists(ignore_file)) {
+            try {
+                YAML::Node ignore_config = YAML::LoadFile(ignore_file.string());
+                for (const auto &profile : profiles) {
+                    if (ignore_config[profile]) {
+                        for (const auto &pattern : ignore_config[profile]) {
+                            catalyst::logger.debug("Loaded ignore pattern: {} for profile: {} in dir: {}",
+                                                   pattern.as<std::string>(),
+                                                   profile,
+                                                   dir.string());
+                            regexes.emplace_back(pattern.as<std::string>());
+                        }
+                    }
+                }
+            } catch (...) {
+                // Keep moving on configuration parsing errors
+            }
+        }
+        return regexes;
+    };
+
+    auto is_ignored = [](const fs::path &path, const std::vector<std::regex> &regexes) {
+        return std::ranges::any_of(regexes, [&path](const std::regex &reg) {
+            return std::regex_match(path.filename().string(), reg);
+        });
+    };
 
     std::vector<std::filesystem::path> files_to_format;
     for (const auto &dir : source_dirs) {
+        auto ignore_regexes = get_ignore_regexes(dir, profiles);
         for (const auto &entry : std::filesystem::recursive_directory_iterator(dir)) {
             if (entry.is_regular_file()) {
-                if (std::string extension = entry.path().extension();
-                    extension == ".cc" || extension == ".cpp" || extension == ".c") {
+                if (is_ignored(entry.path(), ignore_regexes)) {
+                    continue;
+                }
+                if (std::string extension = entry.path().extension(); extension == ".cpp" || extension == ".cxx" ||
+                                                                      extension == ".cc" || extension == ".c" ||
+                                                                      extension == ".cu" || extension == ".cupp") {
                     files_to_format.push_back(entry.path());
                 }
             }
@@ -60,9 +93,15 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     }
 
     for (const auto &dir : include_dirs) {
+        auto ignore_regexes = get_ignore_regexes(dir, profiles);
         for (const auto &entry : std::filesystem::recursive_directory_iterator(dir)) {
             if (entry.is_regular_file()) {
-                if (std::string extension = entry.path().extension(); extension == ".hpp" || extension == ".h") {
+                if (is_ignored(entry.path(), ignore_regexes)) {
+                    continue;
+                }
+                if (std::string extension = entry.path().extension(); extension == ".hpp" || extension == ".hxx" ||
+                                                                      extension == ".hh" || extension == ".h" ||
+                                                                      extension == ".cuh") {
                     files_to_format.push_back(entry.path());
                 }
             }
@@ -73,41 +112,40 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         return {};
     }
 
-    constexpr size_t MAX_ARG_BYTES = 1 << (10 + 7); // 128 KiB limit
-    size_t current_bytes = formatter.size() + 3;    // formatter + " -i"
-    std::vector<std::string> args = {formatter, "-i"};
+    std::vector<std::future<std::expected<void, std::string>>> futures;
+    futures.reserve(files_to_format.size());
 
-    for (const fs::path &file_to_format : files_to_format) {
-        std::string file_str = file_to_format.string();
-        size_t entry_size = file_str.size() + 1; // +1 for separator/null
-
-        if (args.size() > 2 && current_bytes + entry_size > MAX_ARG_BYTES) {
-            if (auto res = execBatch(std::move(args)); !res)
-                return res;
-            args = {formatter, "-i"};
-            current_bytes = formatter.size() + 3;
-        }
-
-        args.push_back(std::move(file_str));
-        current_bytes += entry_size;
+    for (const auto &file : files_to_format) {
+        futures.push_back(
+            std::async(std::launch::async, [formatter, file_str = file.string()]() -> std::expected<void, std::string> {
+                auto process_res = catalyst::processExec({formatter, "-i", file_str});
+                if (!process_res) {
+                    return std::unexpected(process_res.error());
+                }
+                int exit_code = process_res.value().get();
+                if (exit_code != 0) {
+                    return std::unexpected(
+                        std::format("Error running {} on {}. Exit code: {}", formatter, file_str, exit_code));
+                }
+                return {};
+            }));
     }
 
-    if (args.size() > 2)
-        if (auto res = execBatch(std::move(args)); !res)
-            return res;
+    bool any_failed = false;
+    std::string errors;
+    for (auto &f : futures) {
+        auto res = f.get();
+        if (!res) {
+            any_failed = true;
+            errors += res.error() + "\n";
+        }
+    }
+
+    if (any_failed) {
+        return std::unexpected(errors);
+    }
 
     catalyst::logger.debug("Fmt subcommand finished successfully.");
     return {};
 }
 } // namespace catalyst::fmt
-
-namespace {
-std::expected<void, std::string> execBatch(std::vector<std::basic_string<char>> args) {
-    if (int res = catalyst::processExec(std::forward<decltype(args)>(args)).value().get(); res) {
-        std::string error_message = "Error running clang-format. Exit code: " + std::to_string(res);
-        catalyst::logger.error("{}", error_message);
-        return std::unexpected(error_message);
-    }
-    return {};
-}
-} // namespace
