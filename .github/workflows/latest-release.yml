@@ -16,7 +16,7 @@ concurrency:
 jobs:
   build-and-release:
     name: Build and Release (Rolling)
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     container:
       image: ghcr.io/catalystcpp/catalyst-build-env:latest
       credentials:
