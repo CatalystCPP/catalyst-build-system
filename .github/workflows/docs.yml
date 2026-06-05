@@ -4,6 +4,11 @@ on:
     branches:
       - master
       - main
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'Doxyfile'
+      - '.github/workflows/docs.yml'
 permissions:
   contents: read
   pages: write
