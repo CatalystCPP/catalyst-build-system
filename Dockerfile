@@ -16,6 +16,9 @@ RUN apt-get update && apt-get install -y \
     unzip \
     zip \
     pkg-config \
+    dpkg-dev \
+    rpm \
+    file \
     g++-15 \
     && rm -rf /var/lib/apt/lists/*
 
