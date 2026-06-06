@@ -142,7 +142,7 @@ void LogT::logImpl(LogLevel level, const std::string &message) const {
         std::ostream &sink = (level == LogLevel::ERROR) ? std::cerr : std::cout;
         std::string time_str = std::format("{:%Y-%m-%d %H:%M:%S}", now);
         std::string log_str = std::format("[{}] {}", toString(level), message);
-        sink << time_str << " " << color << log_str << RESET << '\n';
+        sink << time_str << " " << color << log_str << RESET << std::endl;
     }
 }
 

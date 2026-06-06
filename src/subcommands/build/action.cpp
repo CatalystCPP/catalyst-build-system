@@ -236,13 +236,41 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         std::string generator = config.getString("meta.generator").value_or("cob");
         std::string build_filename = (generator == "ninja") ? "build.ninja" : "catalyst.build";
 
-        if (!fs::exists(build_dir / build_filename) || parse_args.regen) {
+        bool needs_regen = !fs::exists(build_dir / build_filename) || parse_args.regen;
+        if (!needs_regen) {
+            auto build_time = fs::last_write_time(build_dir / build_filename);
+            if (fs::exists("CATALYST.yaml") && fs::last_write_time("CATALYST.yaml") > build_time) {
+                needs_regen = true;
+            } else {
+                for (const auto &profile : parse_args.profiles) {
+                    fs::path profile_path = (profile == "common") ? "catalyst.yaml" : std::format("catalyst_{}.yaml", profile);
+                    if (fs::exists(profile_path) && fs::last_write_time(profile_path) > build_time) {
+                        needs_regen = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (needs_regen) {
             catalyst::logger.info("Generating build files.");
             auto res = catalyst::generate::action({.profiles = parse_args.profiles,
                                                    .enabled_features = parse_args.enabled_features,
                                                    .backend = parse_args.backend});
             if (!res) {
                 catalyst::logger.error("Failed to generate build files: {}", res.error());
+                if (auto hook_res = hooks::onBuildFailure(config); !hook_res) {
+                    catalyst::logger.error("on_build_failure hook failed: {}", hook_res.error());
+                    return std::unexpected(
+                        res.error() +
+                        "\nAdditionally, the on_build_failure hook failed with error: " + hook_res.error());
+                }
+                return std::unexpected(res.error());
+            }
+        } else {
+            catalyst::logger.info("Running pre-generate hooks.");
+            if (auto res = hooks::preGenerate(config); !res) {
+                catalyst::logger.error("Pre-generate hook failed: {}", res.error());
                 if (auto hook_res = hooks::onBuildFailure(config); !hook_res) {
                     catalyst::logger.error("on_build_failure hook failed: {}", hook_res.error());
                     return std::unexpected(
@@ -325,6 +353,16 @@ std::expected<void, std::string> action(const Parse &parse_args) {
             watch_paths.push_back(fs::absolute(d));
         for (const auto &d : inc_dirs)
             watch_paths.push_back(fs::absolute(d));
+
+        if (fs::exists("CATALYST.yaml")) {
+            watch_paths.push_back(fs::absolute("CATALYST.yaml"));
+        }
+        for (const auto &profile : parse_args.profiles) {
+            fs::path profile_path = (profile == "common") ? "catalyst.yaml" : std::format("catalyst_{}.yaml", profile);
+            if (fs::exists(profile_path)) {
+                watch_paths.push_back(fs::absolute(profile_path));
+            }
+        }
 
         catalyst::logger.info("Watching for changes in: {} and {}", src_dirs, inc_dirs);
 

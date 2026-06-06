@@ -94,7 +94,7 @@ int main() {
     assert result.returncode == 0, f"Build failed with error: {result.stderr}"
 
     # 5. Run the result
-    app_bin = workspace_dir / "appA" / "build" / "appA"
+    app_bin = workspace_dir / "appA" / "build" / "common" / "appA"
     assert app_bin.exists(), "appA binary not found!"
 
     run_result = subprocess.run([str(app_bin)], capture_output=True, text=True)
@@ -118,7 +118,7 @@ def test_init_and_build(tmp_path):
     assert result.returncode == 0, f"Build failed: {result.stderr}\nStdout: {result.stdout}"
 
     # 3. Run project
-    app_bin = project_dir / "build" / "new_project"
+    app_bin = project_dir / "build" / "common" / "new_project"
     assert app_bin.exists(), "new_project binary not found!"
 
     run_result = subprocess.run([str(app_bin)], capture_output=True, text=True)
