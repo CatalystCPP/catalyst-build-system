@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cstring>
 #include <exception>
+#include <stdexcept>
 #include <filesystem>
 #include <format>
 #include <functional>
@@ -125,7 +126,7 @@ void validateProfileKeys(const YAML::Node &profile, const std::string &profile_n
                 auto key = it->first.as<std::string>();
                 if (std::ranges::find(allowed_keys, key) == allowed_keys.end()) {
                     catalyst::logger.warn("Invalid key '{}' found at '{}' in profile '{}'.", key, path, profile_name);
-                    throw std::exception();
+                    throw std::runtime_error(std::format("Invalid key '{}' found at '{}' in profile '{}'.", key, path, profile_name));
                 }
             }
         };
@@ -181,6 +182,30 @@ void validateProfileKeys(const YAML::Node &profile, const std::string &profile_n
                         "hash"},
                        "dependencies[]");
         }
+    }
+    if (profile["hooks"]) {
+        check_keys(profile["hooks"],
+                   {"pre-clean",
+                    "post-clean",
+                    "pre-run",
+                    "post-run",
+                    "pre-test",
+                    "post-test",
+                    "pre-bench",
+                    "post-bench",
+                    "pre-pack",
+                    "post-pack",
+                    "pre-build",
+                    "post-build",
+                    "on-build-failure",
+                    "pre-generate",
+                    "post-generate",
+                    "pre-fetch",
+                    "post-fetch",
+                    "pre-link",
+                    "post-link",
+                    "on-compile"},
+                   "hooks");
     }
 }
 

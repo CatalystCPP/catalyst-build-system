@@ -192,3 +192,59 @@ with open(sys.argv[2], 'w') as f_out:
     with open(out_cpp, 'r') as f:
         content = f.read()
         assert "subst_var" in content, "Variable substitution did not work correctly"
+
+
+def test_invalid_hook_name_fails(tmp_path):
+    """An unrecognized hook name under hooks: should throw an error and fail the build."""
+    project_dir = tmp_path / "invalid_hook"
+    project_dir.mkdir()
+    (project_dir / "src").mkdir()
+
+    with open(project_dir / "CATALYST.yaml", "w") as f:
+        f.write("""
+common:
+  meta:
+    generator: cob
+  manifest:
+    name: invalid_hook
+    type: binary
+    dirs:
+      source: [src]
+      build: build
+  hooks:
+    prebuild:  # typo, should be pre-build
+      - command: "echo prebuild"
+""")
+
+    env = os.environ.copy()
+    result = subprocess.run([str(CATALYST_BIN), "build"], cwd=project_dir, capture_output=True, text=True, env=env)
+    assert result.returncode != 0
+    assert "invalid key" in result.stderr.lower() or "invalid key" in result.stdout.lower()
+
+
+def test_malformed_hook_item_fails(tmp_path):
+    """A hook item without command, script, catalyst, or codegen should fail the build."""
+    project_dir = tmp_path / "malformed_hook"
+    project_dir.mkdir()
+    (project_dir / "src").mkdir()
+
+    with open(project_dir / "CATALYST.yaml", "w") as f:
+        f.write("""
+common:
+  meta:
+    generator: cob
+  manifest:
+    name: malformed_hook
+    type: binary
+    dirs:
+      source: [src]
+      build: build
+  hooks:
+    pre-build:
+      - comand: "echo typo"  # typo, should be command
+""")
+
+    env = os.environ.copy()
+    result = subprocess.run([str(CATALYST_BIN), "build"], cwd=project_dir, capture_output=True, text=True, env=env)
+    assert result.returncode != 0
+    assert "malformed" in result.stderr.lower() or "malformed" in result.stdout.lower()

@@ -56,6 +56,8 @@ std::expected<void, std::string> executeHook(const YAML::Node &profile_comp, con
                 res = catalyst::hooks::executeCatalystHook(item, hook_name);
             } else if (item["codegen"]) {
                 res = catalyst::hooks::executeCodegenHook(item["codegen"], hook_name);
+            } else {
+                return std::unexpected(std::format("Hook '{}' item is malformed. Must contain one of: 'command', 'script', 'catalyst', or 'codegen'.", hook_name));
             }
             if (!res) {
                 return res;
