@@ -22,8 +22,10 @@ auto catalyst::hooks::executeCatalystHook(const YAML::Node &item, const std::str
                 args.push_back(a.as<std::string>());
         args.push_back(cat_node["subcommand"].as<std::string>());
         if (cat_node["profiles"])
-            for (const auto &p : cat_node["profiles"])
-                args.emplace_back(std::format("-p {}", p.as<std::string>()));
+            for (const auto &p : cat_node["profiles"]) {
+                args.emplace_back("-p");
+                args.emplace_back(p.as<std::string>());
+            }
         if (cat_node["args"])
             for (const auto &a : cat_node["args"])
                 args.push_back(a.as<std::string>());
