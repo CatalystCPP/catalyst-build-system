@@ -207,26 +207,4 @@ These hooks are specific to individual Catalyst subcommands, allowing you to cus
 | `post-pack` | Runs after the packaging has successfully completed.|
 
 
-### Target-Specific Hooks
 
-> [!NOTE]
-> Not Yet Implemented.
-
-These hooks can be defined within a specific build target's configuration, allowing for fine-grained control over the build process for individual targets.
-
-| Hook        | Description                                                                 |
-| ----------- | --------------------------------------------------------------------------- |
-| `pre-link`  | Runs before the target is linked. This can be useful for pre-link steps.    |
-| `post-link` | Runs after the target is linked. This can be useful for post-link steps.    |
-
-
-### File-Specific Hooks
-
-> [!NOTE]
-> Not Yet Implemented.
-
-These hooks are triggered when a specific file is processed, allowing for custom actions on a per-file basis.
-
-| Hook         | Description                                                                                             |
-| ------------ | ------------------------------------------------------------------------------------------------------- |
-| `on-compile` | Runs when a specific source file is compiled. This can be useful for custom pre-processing or code generation. |

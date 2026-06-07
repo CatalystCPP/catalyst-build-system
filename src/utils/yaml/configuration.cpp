@@ -201,10 +201,7 @@ void validateProfileKeys(const YAML::Node &profile, const std::string &profile_n
                     "pre-generate",
                     "post-generate",
                     "pre-fetch",
-                    "post-fetch",
-                    "pre-link",
-                    "post-link",
-                    "on-compile"},
+                    "post-fetch"},
                    "hooks");
     }
 }

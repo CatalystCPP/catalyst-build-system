@@ -43,7 +43,4 @@ std::expected<void, std::string> preBench(const utils::yaml::Configuration &prof
 std::expected<void, std::string> postBench(const utils::yaml::Configuration &profile_comp);
 std::expected<void, std::string> prePack(const utils::yaml::Configuration &profile_comp);
 std::expected<void, std::string> postPack(const utils::yaml::Configuration &profile_comp);
-std::expected<void, std::string> preLink(const utils::yaml::Configuration &profile_comp);
-std::expected<void, std::string> postLink(const utils::yaml::Configuration &profile_comp);
-std::expected<void, std::string> onCompile(const std::filesystem::path &file);
 }; // namespace catalyst::hooks

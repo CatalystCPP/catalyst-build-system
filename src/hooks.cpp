@@ -187,20 +187,4 @@ std::expected<void, std::string> prePack(const utils::yaml::Configuration &profi
 std::expected<void, std::string> postPack(const utils::yaml::Configuration &profile_comp) {
     return executeHook(profile_comp.getRoot(), "post-pack");
 }
-
-std::expected<void, std::string> preLink(const utils::yaml::Configuration &profile_comp) {
-    return executeHook(profile_comp.getRoot(), "pre-link");
-}
-
-std::expected<void, std::string> postLink(const utils::yaml::Configuration &profile_comp) {
-    return executeHook(profile_comp.getRoot(), "post-link");
-}
-
-std::expected<void, std::string> onCompile([[maybe_unused]] const std::filesystem::path &file) {
-    // The on_compile hook would need a different implementation,
-    // as it's not tied to the main profile composition.
-    // For now, we'll leave it as a no-op.
-    return {};
-}
-
 } // namespace catalyst::hooks
