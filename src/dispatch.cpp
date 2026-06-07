@@ -85,8 +85,9 @@ template <typename ParseRes_T> int dispatchFN(const char *subc_name, const Parse
         catalyst::logger.error("recursive hook detected: {}", chain);
         return 1;
     }
-    if (g_call_chain.size() >= 4) {
-        catalyst::logger.error("maximum hook dispatch depth exceeded");
+    constexpr auto TUNABLE_MAX_DEPTH = 8;
+    if (g_call_chain.size() >= TUNABLE_MAX_DEPTH) {
+        catalyst::logger.error("maximum hook dispatch depth ({}) exceeded", TUNABLE_MAX_DEPTH);
         return 1;
     }
 
