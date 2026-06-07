@@ -3,7 +3,28 @@
 #include <iostream>
 #include <limits>
 
-#include <nlohmann/json.hpp>
+static std::string escapeJsonString(const std::string &input) {
+    std::string out;
+    out.reserve(input.size());
+    for (char c : input) {
+        switch (c) {
+            case '"':  out += "\\\""; break;
+            case '\\': out += "\\\\"; break;
+            case '\b': out += "\\b"; break;
+            case '\f': out += "\\f"; break;
+            case '\n': out += "\\n"; break;
+            case '\r': out += "\\r"; break;
+            case '\t': out += "\\t"; break;
+            default:
+                if (static_cast<unsigned char>(c) < 0x20) {
+                    out += std::format("\\u{:04x}", static_cast<int>(c));
+                } else {
+                    out += c;
+                }
+        }
+    }
+    return out;
+}
 
 #if FF_catalyst__log_machine_info
 #ifdef _WIN32
@@ -65,14 +86,13 @@ LogT::LogT()
 #if FF_catalyst__uniform_logs
     log_file << generateJsonLogEvent(now, LogLevel::DEBUG, "begin session") << "\n";
 #else
-    nlohmann::json j;
-    j["event"] = "begin_session";
-    j["timestamp"] = std::format("{:%Y-%m-%d %H:%M:%S}", now);
 #if FF_catalyst__log_machine_info
-    j["hostname"] = this->hostname;
-    j["pid"] = this->pid;
+    log_file << std::format(R"({{"event":"begin_session","timestamp":"{:%Y-%m-%d %H:%M:%S}","hostname":"{}","pid":{}}})",
+                            now, this->hostname, this->pid) << "\n";
+#else
+    log_file << std::format(R"({{"event":"begin_session","timestamp":"{:%Y-%m-%d %H:%M:%S}"}})",
+                            now) << "\n";
 #endif
-    log_file << j.dump() << "\n";
 #endif
 }
 
@@ -82,14 +102,13 @@ LogT::~LogT() {
     log_file << generateJsonLogEvent(now, LogLevel::DEBUG, "end session") << "\n";
 #else
     // Destructor assumes single thread or end of life
-    nlohmann::json j;
-    j["event"] = "end_session";
-    j["timestamp"] = std::format("{:%Y-%m-%d %H:%M:%S}", now);
 #if FF_catalyst__log_machine_info
-    j["hostname"] = this->hostname;
-    j["pid"] = this->pid;
+    log_file << std::format(R"({{"event":"end_session","timestamp":"{:%Y-%m-%d %H:%M:%S}","hostname":"{}","pid":{}}})",
+                            now, this->hostname, this->pid) << "\n";
+#else
+    log_file << std::format(R"({{"event":"end_session","timestamp":"{:%Y-%m-%d %H:%M:%S}"}})",
+                            now) << "\n";
 #endif
-    log_file << j.dump() << "\n";
     if (log_file.is_open()) {
         log_file.close();
     }
@@ -149,16 +168,13 @@ void LogT::logImpl(LogLevel level, const std::string &message) const {
 std::string LogT::generateJsonLogEvent(const std::chrono::system_clock::time_point &now,
                                        LogLevel level,
                                        const std::string &message) const {
-    static thread_local nlohmann::json j;
-    j.clear();
-    j["timestamp"] = std::format("{:%Y-%m-%d %H:%M:%S}", now);
-    j["level"] = toString(level);
-    j["message"] = message;
 #if FF_catalyst__log_machine_info
-    j["hostname"] = this->hostname;
-    j["pid"] = this->pid;
+    return std::format(R"({{"timestamp":"{:%Y-%m-%d %H:%M:%S}","level":"{}","message":"{}","hostname":"{}","pid":{}}})",
+                       now, toString(level), escapeJsonString(message), this->hostname, this->pid);
+#else
+    return std::format(R"({{"timestamp":"{:%Y-%m-%d %H:%M:%S}","level":"{}","message":"{}"}})",
+                       now, toString(level), escapeJsonString(message));
 #endif
-    return j.dump();
 }
 
 } // namespace catalyst

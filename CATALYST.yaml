@@ -35,11 +35,6 @@ common:
       source: vcpkg
       triplet: x64-linux
       version: latest
-    - name: nlohmann-json
-      source: vcpkg
-      triplet: x64-linux
-      version: latest
-      linkage: interface
   hooks:
     pre-fetch:
       - script: "scripts/fetch_cli_11.sh"
