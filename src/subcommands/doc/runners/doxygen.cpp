@@ -58,11 +58,11 @@ template <> std::expected<void, std::string> DerivedRunner<DocEngine::Doxygen>::
         if (std::filesystem::exists(index_path)) {
             catalyst::logger.info("Opening {}", index_path);
 #ifdef __APPLE__
-            catalyst::processExec({"open", index_path}, std::filesystem::current_path().string());
+            auto _ = catalyst::processExec({"open", index_path}, std::filesystem::current_path().string());
 #elif __linux__
-            catalyst::processExec({"xdg-open", index_path}, std::filesystem::current_path().string());
+            auto _ = catalyst::processExec({"xdg-open", index_path}, std::filesystem::current_path().string());
 #elif _WIN32
-            catalyst::processExec({"start", index_path}, std::filesystem::current_path().string());
+            auto _ = catalyst::processExec({"start", index_path}, std::filesystem::current_path().string());
 #endif
         } else {
             catalyst::logger.warn("Could not find index.html to open.");
