@@ -16,6 +16,7 @@ std::string concatArgv(int argc, char **argv) {
 } // namespace
 
 int main(int argc, char **argv) {
+    // testing GH action
     catalyst::logger.debug("{}", concatArgv(argc, argv));
 
     catalyst::CliContext ctx{.workspace = catalyst::Workspace::findRoot()};
