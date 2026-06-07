@@ -23,8 +23,8 @@ namespace fs = std::filesystem;
 
 namespace {
 
-std::expected<void, std::string> fetchVcpkg(const std::string &name) {
-    catalyst::logger.debug("Fetching vcpkg dependency: {}", name);
+std::expected<void, std::string> fetchVcpkg(const std::string &name, const std::string &triplet) {
+    catalyst::logger.debug("Fetching vcpkg dependency: {} with triplet: {}", name, triplet);
     char *vcpkg_root_env = std::getenv("VCPKG_ROOT");
     if (vcpkg_root_env == nullptr) {
         return std::unexpected(
@@ -35,11 +35,12 @@ std::expected<void, std::string> fetchVcpkg(const std::string &name) {
 #if defined(_WIN32)
     vcpkg_exe.replace_extension(".exe");
 #endif
-    std::string command = std::format("\"{}\" install {}", vcpkg_exe.string(), name);
+    std::string target = name + ":" + triplet;
+    std::string command = std::format("\"{}\" install {}", vcpkg_exe.string(), target);
     catalyst::logger.debug("Executing command: {}", command);
-    catalyst::logger.debug("Fetching: {} from vcpkg", name);
-    if (catalyst::processExec({vcpkg_exe.string(), "install", name}).value().get() != 0) {
-        return std::unexpected(std::format("Failed to fetch dependency: {}", name));
+    catalyst::logger.debug("Fetching: {} from vcpkg", target);
+    if (catalyst::processExec({vcpkg_exe.string(), "install", target}).value().get() != 0) {
+        return std::unexpected(std::format("Failed to fetch dependency: {}", target));
     }
     return {};
 }
@@ -239,7 +240,7 @@ std::expected<void, std::string> fetchDependency(const YAML::Node &dep,
         else
             return std::unexpected(std::format("vcpkg dependency '{}' is missing triplet.", name));
 
-        if (auto res = fetchVcpkg(name); !res)
+        if (auto res = fetchVcpkg(name, triplet); !res)
             return std::unexpected(res.error());
 
     } else if (source == "system") {

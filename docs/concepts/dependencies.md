@@ -31,7 +31,7 @@ Uses `vcpkg` to satisfy the dependency.
 |---|---|---|
 | `name` | Yes | Package name in vcpkg. |
 | `source` | Yes | Must be `vcpkg`. |
-| `version` | No | Package version. |
+| `version` | No | Package version (informative only; vcpkg classic mode resolves versions based on VCPKG_ROOT's registry). |
 | `triplet` | No | vcpkg triplet (e.g., `x64-linux`). |
 | `using` | No | List of features to enable. |
 
