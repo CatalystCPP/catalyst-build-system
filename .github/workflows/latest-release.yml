@@ -91,10 +91,10 @@ jobs:
           submodules: recursive
 
       - name: Fetch dependencies
-        run: catalyst fetch --profiles common ccache release
+        run: catalyst fetch --profiles common release
 
       - name: Build Catalyst
-        run: catalyst build --profiles common ccache release
+        run: catalyst build --profiles common release
 
       - name: Recreate & Upload Rolling Release
         env:
