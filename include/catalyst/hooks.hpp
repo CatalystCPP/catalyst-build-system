@@ -2,6 +2,7 @@
 #include <expected>
 #include <filesystem>
 #include <string>
+#include <string_view>
 
 #include "catalyst/utils/yaml/configuration.hpp"
 
@@ -9,11 +10,11 @@
 
 namespace catalyst::hooks {
 
-std::expected<void, std::string> executeCommandHook(const YAML::Node &item, const std::string &hook_name);
-std::expected<void, std::string> executeScriptHook(const YAML::Node &item, const std::string &hook_name);
-std::expected<void, std::string> executeCatalystHook(const YAML::Node &item, const std::string &hook_name);
-std::expected<void, std::string> executeCodegenHook(const YAML::Node &codegen_node, const std::string &hook_name);
-std::vector<std::string> shellCmd(const std::string &cmd);
+std::expected<void, std::string> executeCommandHook(const YAML::Node &item, std::string_view hook_name);
+std::expected<void, std::string> executeScriptHook(const YAML::Node &item, std::string_view hook_name);
+std::expected<void, std::string> executeCatalystHook(const YAML::Node &item, std::string_view hook_name);
+std::expected<void, std::string> executeCodegenHook(const YAML::Node &codegen_node, std::string_view hook_name);
+std::vector<std::string> shellCmd(std::string_view cmd);
 
 std::expected<void, std::string> preClean(const YAML::Node &profile_comp);
 std::expected<void, std::string> postClean(const YAML::Node &profile_comp);

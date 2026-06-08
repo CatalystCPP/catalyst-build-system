@@ -140,11 +140,11 @@ std::pair<int, bool> parseCli(int argc, char **argv, catalyst::CliContext &ctx) 
     return {0, false};
 }
 
-std::pair<int, bool> parseCli(const std::string &args, catalyst::CliContext &ctx) {
+std::pair<int, bool> parseCli(std::string_view args, catalyst::CliContext &ctx) {
     setupCli(ctx);
 
     try {
-        ctx.app.parse(args, true);
+        ctx.app.parse(std::string{args}, true);
     } catch (const CLI::ParseError &e) {
         if (!args.contains("--help") && !args.contains("-h")) {
             catalyst::logger.error("Failed to parse provided arguments: {}", args);
@@ -159,7 +159,7 @@ std::pair<int, bool> parseCli(const std::string &args, catalyst::CliContext &ctx
     return {0, false};
 }
 
-std::pair<int, bool> parseCli(const std::vector<std::string> &args, catalyst::CliContext &ctx) {
+std::pair<int, bool> parseCli(std::span<const std::string> args, catalyst::CliContext &ctx) {
     std::string arg_str = "catalyst ";
     for (const auto &a : args) {
         arg_str += a + " ";
@@ -275,11 +275,11 @@ std::expected<void, std::string> dispatchHookImpl(auto &&args) {
 }
 } // namespace
 
-std::expected<void, std::string> dispatchHook(const std::string &args) {
+std::expected<void, std::string> dispatchHook(std::string_view args) {
     return dispatchHookImpl(args);
 }
 
-std::expected<void, std::string> dispatchHook(const std::vector<std::string> &args) {
+std::expected<void, std::string> dispatchHook(std::span<const std::string> args) {
     return dispatchHookImpl(args);
 }
 

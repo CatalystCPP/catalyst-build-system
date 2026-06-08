@@ -3,6 +3,7 @@
 #include <format>
 #include <regex>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <catalyst/hooks.hpp>
@@ -16,25 +17,25 @@
 #include "yaml-cpp/node/node.h"
 
 namespace catalyst::hooks {
-std::vector<std::string> shellCmd(const std::string &cmd) {
+std::vector<std::string> shellCmd(std::string_view cmd) {
 #if defined(_WIN32)
-    return {"cmd", "/c", cmd};
+    return {"cmd", "/c", std::string{cmd}};
 #else
-    return {"/bin/sh", "-c", cmd};
+    return {"/bin/sh", "-c", std::string{cmd}};
 #endif
 }
 } // namespace catalyst::hooks
 
 namespace {
 
-std::expected<void, std::string> executeHook(const YAML::Node &profile_comp, const std::string &hook_name) {
+std::expected<void, std::string> executeHook(const YAML::Node &profile_comp, std::string_view hook_name) {
     catalyst::logger.debug("Executing hook: {}", hook_name);
-    if (!profile_comp["hooks"] || !profile_comp["hooks"][hook_name]) {
+    if (!profile_comp["hooks"] || !profile_comp["hooks"][std::string{hook_name}]) {
         catalyst::logger.debug("No hook defined for: {}", hook_name);
         return {};
     }
 
-    const YAML::Node &hook_node = profile_comp["hooks"][hook_name];
+    const YAML::Node &hook_node = profile_comp["hooks"][std::string{hook_name}];
 
     // Normalize: if the hook is a bare map (not wrapped in a sequence), treat it as a single-element sequence.
     std::vector<YAML::Node> items;
@@ -68,7 +69,7 @@ std::expected<void, std::string> executeHook(const YAML::Node &profile_comp, con
         catalyst::logger.debug("[Catalyst Hook: {}] Running command: {}", hook_name, command);
         std::vector<std::string> cmd = catalyst::hooks::shellCmd(command);
         if (auto res = catalyst::processExec(std::move(cmd)); !res || res->get()) {
-            return std::unexpected("Hook '" + hook_name + "' command failed: " + command);
+            return std::unexpected(std::format("Hook '{}' command failed: {}", hook_name, command));
         }
     }
 

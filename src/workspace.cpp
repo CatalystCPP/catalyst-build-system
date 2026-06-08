@@ -90,7 +90,7 @@ std::optional<WorkspaceMember> Workspace::getMemberByPath(const fs::path &path) 
     return std::nullopt;
 }
 
-std::optional<WorkspaceMember> Workspace::findPackage(const std::string &package_name) const {
+std::optional<WorkspaceMember> Workspace::findPackage(std::string_view package_name) const {
     for (const auto &[key, member] : members) {
         try {
             std::vector<std::string> profiles = member.profiles;
