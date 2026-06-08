@@ -4,12 +4,12 @@
 #include <cassert>
 #include <cstring>
 #include <exception>
-#include <stdexcept>
 #include <filesystem>
 #include <format>
 #include <functional>
 #include <optional>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -126,7 +126,8 @@ void validateProfileKeys(const YAML::Node &profile, const std::string &profile_n
                 auto key = it->first.as<std::string>();
                 if (std::ranges::find(allowed_keys, key) == allowed_keys.end()) {
                     catalyst::logger.warn("Invalid key '{}' found at '{}' in profile '{}'.", key, path, profile_name);
-                    throw std::runtime_error(std::format("Invalid key '{}' found at '{}' in profile '{}'.", key, path, profile_name));
+                    throw std::runtime_error(
+                        std::format("Invalid key '{}' found at '{}' in profile '{}'.", key, path, profile_name));
                 }
             }
         };
@@ -220,8 +221,8 @@ void mergeHelper(YAML::Node &composite, const std::string &new_profile_name, con
             std::string default_val = default_node ? default_node->as<std::string>() : "";
 
             if (!current_val.empty() && current_val != incoming_val && current_val != default_val) {
-                catalyst::logger.warn(
-                    "Profile '{}' overrides '{}': '{}' -> '{}'", new_profile_name, dotpath, current_val, incoming_val);
+                catalyst::logger.info("Profile '{}' overrides '{}'", new_profile_name, dotpath);
+                catalyst::logger.debug("'{}': '{}' -> '{}'", dotpath, current_val, incoming_val);
             }
         } catch (...) {
             catalyst::logger.debug("Could not check conflict for '{}'", dotpath);
