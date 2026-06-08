@@ -12,6 +12,7 @@
 
 #include "catalyst/subcommands/profile_ls.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/os/os_defs.hpp"
 
 namespace {
 std::string concatArgv(int argc, char **argv) {
@@ -20,6 +21,19 @@ std::string concatArgv(int argc, char **argv) {
         res += std::string{argv[ii]} + " ";
     return res;
 }
+
+void checkRequiredTools() {
+    if (!catalyst::utils::os::isCommandInstalled("vcpkg")) {
+        catalyst::logger.warn("vcpkg is not installed or not in PATH.");
+    }
+    if (!catalyst::utils::os::isCommandInstalled("git")) {
+        catalyst::logger.warn("git is not installed or not in PATH.");
+    }
+    if (!catalyst::utils::os::isCommandInstalled("pkg-config")) {
+        catalyst::logger.warn("pkg-config is not installed or not in PATH.");
+    }
+}
+
 
 void setupCli(catalyst::CliContext &ctx) {
     using std::tie;
@@ -168,6 +182,7 @@ std::pair<int, bool> parseCli(std::span<const std::string> args, catalyst::CliCo
 }
 
 int dispatch(const catalyst::CliContext &ctx) {
+    checkRequiredTools();
     if (*ctx.add_subc) {
         if (*ctx.add_git_subc)
             return dispatchFN("add git", *ctx.add_git_res, catalyst::add::git::action);

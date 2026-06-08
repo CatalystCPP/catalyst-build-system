@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <string>
 
 namespace catalyst::utils::os {
 // NOLINTBEGIN(cppcoreguidelines-use-default-member-init,modernize-use-default-member-init,cppcoreguidelines-prefer-member-initializer)
@@ -32,4 +33,8 @@ struct OSInfo {
     }
     // NOLINTEND(cppcoreguidelines-use-default-member-init,modernize-use-default-member-init,cppcoreguidelines-prefer-member-initializer)
 };
+
+bool isCommandInstalled(const std::string &command);
+
 }; // namespace catalyst::utils::os
+
