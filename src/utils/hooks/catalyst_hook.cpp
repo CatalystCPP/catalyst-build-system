@@ -1,11 +1,12 @@
 #include <ranges>
 #include <string>
+#include <string_view>
 
 #include "catalyst/dispatch.hpp"
 #include "catalyst/hooks.hpp"
 #include "catalyst/utils/log/log.hpp"
 
-auto catalyst::hooks::executeCatalystHook(const YAML::Node &item, const std::string &hook_name)
+auto catalyst::hooks::executeCatalystHook(const YAML::Node &item, std::string_view hook_name)
     -> std::expected<void, std::string> {
     if (auto cat_node = item["catalyst"]; cat_node.IsScalar()) {
         auto args = cat_node.as<std::string>();

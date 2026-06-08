@@ -1,9 +1,10 @@
+#include <string_view>
 #include "catalyst/hooks.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/utils/log/log.hpp"
 
 namespace catalyst::hooks {
-std::expected<void, std::string> executeCommandHook(const YAML::Node &item, const std::string &hook_name) {
+std::expected<void, std::string> executeCommandHook(const YAML::Node &item, std::string_view hook_name) {
     auto command = item["command"].as<std::string>();
     catalyst::logger.debug("[Catalyst Hook: {}] Running command: {}", hook_name, command);
     if (auto res = catalyst::processExec(shellCmd(command)); !res)

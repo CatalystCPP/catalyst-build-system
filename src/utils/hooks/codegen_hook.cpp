@@ -1,4 +1,6 @@
 #include <regex>
+#include <span>
+#include <string_view>
 
 #include "catalyst/hooks.hpp"
 #include "catalyst/process_exec.hpp"
@@ -9,13 +11,13 @@ namespace catalyst::hooks {
 namespace {
 
 std::expected<std::string, std::string> substituteCmdArgs(std::string cmd,
-                                                          const std::vector<std::string> &inputs,
-                                                          const std::vector<std::string> &outputs,
-                                                          const std::string &hook_name);
+                                                          std::span<const std::string> inputs,
+                                                          std::span<const std::string> outputs,
+                                                          std::string_view hook_name);
 
 } // namespace
 
-std::expected<void, std::string> executeCodegenHook(const YAML::Node &codegen_node, const std::string &hook_name) {
+std::expected<void, std::string> executeCodegenHook(const YAML::Node &codegen_node, std::string_view hook_name) {
     if (!codegen_node["cmd"]) {
         return std::unexpected(std::format("Hook '{}' codegen missing required 'cmd' field", hook_name));
     }
@@ -90,15 +92,15 @@ std::expected<void, std::string> executeCodegenHook(const YAML::Node &codegen_no
 
 namespace {
 std::expected<std::string, std::string> substituteCmdArgs(std::string cmd,
-                                                          const std::vector<std::string> &inputs,
-                                                          const std::vector<std::string> &outputs,
-                                                          const std::string &hook_name) {
+                                                          std::span<const std::string> inputs,
+                                                          std::span<const std::string> outputs,
+                                                          std::string_view hook_name) {
     // Substitute $IN/$OUT variables, indices, and slices in cmd.
-    auto quote_if_needed = [](const std::string &path) {
+    constexpr auto quote_if_needed = [](std::string_view path) -> std::string {
         if (path.empty())
             return std::string("''");
-        if (path.find_first_of(" \t\n\r\"'\\$&|;<>()`~*?[]{}#^") == std::string::npos) {
-            return path;
+        if (path.find_first_of(" \t\n\r\"'\\$&|;<>()`~*?[]{}#^") == std::string_view::npos) {
+            return std::string{path};
         }
         std::string escaped = "'";
         for (char c : path) {
@@ -116,11 +118,11 @@ std::expected<std::string, std::string> substituteCmdArgs(std::string cmd,
     std::sregex_iterator it(cmd.begin(), cmd.end(), var_regex);
     std::sregex_iterator end;
 
-    auto parse_int = [](const std::string &s, ssize_t &out) -> bool {
+    constexpr auto parse_int = [](std::string_view s, ssize_t &out) -> bool {
         if (s.empty() || s == "-")
             return false;
         try {
-            out = std::stoll(s);
+            out = std::stoll(std::string{s});
             return true;
         } catch (...) {
             return false;
@@ -141,7 +143,7 @@ std::expected<std::string, std::string> substituteCmdArgs(std::string cmd,
         }
 
         const std::string &var_name = match[3].str();
-        const std::vector<std::string> &target_list = (var_name == "IN") ? inputs : outputs;
+        std::span<const std::string> target_list = (var_name == "IN") ? inputs : outputs;
         ssize_t n = target_list.size();
 
         if (match[4].matched && match[4].length() > 0) {
