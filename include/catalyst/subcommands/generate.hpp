@@ -40,6 +40,8 @@ std::expected<FindRes, std::string> findSystem(const YAML::Node &dep, const cata
 std::expected<FindRes, std::string> findVcpkg(const YAML::Node &dep, const catalyst::toolchain::ToolchainDef &tc);
 std::expected<FindRes, std::string>
 findGit(const std::string &build_dir, const YAML::Node &dep, const catalyst::toolchain::ToolchainDef &tc);
+std::expected<FindRes, std::string>
+findConan(const std::string &build_dir, const YAML::Node &dep, const catalyst::toolchain::ToolchainDef &tc);
 
 std::expected<std::unordered_set<std::filesystem::path>, std::string>
 buildSourceSet(const std::vector<std::string> &source_dirs, const std::vector<std::string> &profiles);

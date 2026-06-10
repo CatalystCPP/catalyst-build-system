@@ -72,6 +72,21 @@ Uses `pkg-config` to find a system-installed library.
   source: system
 ```
 
+### 5. `conan`
+Uses Conan 2.x to fetch and resolve dependencies using Conan's native `PkgConfigDeps` generator.
+
+| Field | Required | Description |
+|---|---|---|
+| `name` | Yes | Name of the Conan package (e.g. `fmt`). |
+| `source` | Yes | Must be `conan`. |
+| `version` | Yes | Package version reference. |
+
+```yaml
+- name: fmt
+  source: conan
+  version: 10.1.1
+```
+
 ## Adding Dependencies via CLI
 
 

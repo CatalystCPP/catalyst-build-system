@@ -1,6 +1,8 @@
 #include <cstdlib>
 #include <expected>
 #include <filesystem>
+#include <fstream>
+#include <cctype>
 #include <format>
 #include <future>
 #include <iostream>
@@ -20,6 +22,127 @@
 
 namespace catalyst::fetch {
 namespace fs = std::filesystem;
+
+std::string getCompilerVersion(const std::string &compiler_exe) {
+    auto res = catalyst::processExecStdout({compiler_exe, "--version"});
+    if (!res) return "";
+    const std::string& out = *res;
+    size_t pos = out.find("version");
+    if (pos == std::string::npos) {
+        pos = out.find(' ');
+    }
+    size_t digit_pos = std::string::npos;
+    for (size_t i = (pos != std::string::npos ? pos : 0); i < out.size(); ++i) {
+        if (std::isdigit(static_cast<unsigned char>(out[i]))) {
+            digit_pos = i;
+            break;
+        }
+    }
+    if (digit_pos == std::string::npos) return "";
+    size_t end_pos = digit_pos;
+    while (end_pos < out.size() && (std::isdigit(static_cast<unsigned char>(out[end_pos])) || out[end_pos] == '.')) {
+        end_pos++;
+    }
+    std::string version = out.substr(digit_pos, end_pos - digit_pos);
+    size_t dot = version.find('.');
+    if (dot != std::string::npos) {
+        return version.substr(0, dot);
+    }
+    return version;
+}
+
+std::expected<void, std::string> fetchConanDeps(const std::vector<YAML::Node> &conan_deps,
+                                               const std::string &build_dir,
+                                               const utils::yaml::Configuration &config,
+                                               const std::vector<std::string> &profiles) {
+    catalyst::logger.debug("Writing conanfile.txt in {}", build_dir);
+    fs::path build_path(build_dir);
+    fs::create_directories(build_path);
+    fs::path conanfile_path = build_path / "conanfile.txt";
+    std::ofstream conanfile(conanfile_path);
+    if (!conanfile.is_open()) {
+        return std::unexpected(std::format("Failed to open {} for writing", conanfile_path.string()));
+    }
+
+    conanfile << "[requires]\n";
+    for (const auto &dep : conan_deps) {
+        auto name = dep["name"].as<std::string>();
+        auto version = dep["version"].as<std::string>();
+        conanfile << name << "/" << version << "\n";
+    }
+
+    conanfile << "\n[generators]\n";
+    conanfile << "PkgConfigDeps\n";
+    conanfile.close();
+
+    catalyst::logger.info("Installing Conan dependencies...");
+
+    // Build conan command
+    std::vector<std::string> conan_cmd = {"conan", "install", build_dir, "--output-folder=" + (build_path / "conan").string(), "--build=missing", "-g", "PkgConfigDeps"};
+
+    // 1. Determine build type
+    std::string build_type = "Release";
+    for (const auto &profile : profiles) {
+        if (profile == "debug") {
+            build_type = "Debug";
+            break;
+        }
+    }
+    conan_cmd.push_back("-s");
+    conan_cmd.push_back("build_type=" + build_type);
+
+    // 2. Determine compiler
+    auto cxx_opt = config.getString("manifest.tooling.CXX");
+    if (cxx_opt && !cxx_opt->empty()) {
+        std::string cxx = *cxx_opt;
+        std::string compiler = "";
+        if (cxx.find("clang++") != std::string::npos || cxx.find("clang") != std::string::npos) {
+            compiler = "clang";
+        } else if (cxx.find("g++") != std::string::npos || cxx.find("gcc") != std::string::npos) {
+            compiler = "gcc";
+        } else if (cxx.find("cl") != std::string::npos || cxx.find("MSVC") != std::string::npos) {
+            compiler = "msvc";
+        }
+
+        if (!compiler.empty()) {
+            conan_cmd.push_back("-s");
+            conan_cmd.push_back("compiler=" + compiler);
+
+            std::string version = getCompilerVersion(cxx);
+            if (!version.empty()) {
+                conan_cmd.push_back("-s");
+                conan_cmd.push_back("compiler.version=" + version);
+            }
+
+            if (compiler == "gcc" || compiler == "clang") {
+#if defined(__linux__)
+                conan_cmd.push_back("-s");
+                conan_cmd.push_back("compiler.libcxx=libstdc++11");
+#endif
+            }
+
+            conan_cmd.push_back("-s");
+            conan_cmd.push_back("compiler.cppstd=23");
+        }
+    }
+
+    std::string cmd_str;
+    for (const auto &arg : conan_cmd) {
+        cmd_str += arg + " ";
+    }
+    catalyst::logger.debug("Executing Conan command: {}", cmd_str);
+
+    auto res = catalyst::processExec(std::move(conan_cmd));
+    if (!res) {
+        return std::unexpected(res.error());
+    }
+
+    if (res.value().get() != 0) {
+        return std::unexpected("Conan installation failed.");
+    }
+
+    return {};
+}
 
 namespace {
 
@@ -339,6 +462,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     if (auto deps = config.getRoot()["dependencies"]; deps && deps.IsSequence()) {
         std::vector<YAML::Node> parallel_deps;
         std::vector<YAML::Node> serial_deps;
+        std::vector<YAML::Node> conan_deps;
         std::unordered_set<std::string> seen_deps;
 
         for (int ii = 0; auto dep : deps) {
@@ -366,7 +490,9 @@ std::expected<void, std::string> action(const Parse &parse_args) {
 
             // 2. Categorize by safety
             // Workspace links, vcpkg installs, and local builds mutate shared state
-            if (is_workspace_member || source == "vcpkg" || source == "local") {
+            if (source == "conan") {
+                conan_deps.push_back(dep);
+            } else if (is_workspace_member || source == "vcpkg" || source == "local") {
                 serial_deps.push_back(dep);
             } else {
                 parallel_deps.push_back(dep);
@@ -406,6 +532,13 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         for (auto dep : serial_deps) {
             if (auto res = fetchDependency(dep, build_dir, lockfile_deps, parse_args); !res) {
                 return res; // Fail fast
+            }
+        }
+
+        // Execute Conan dependencies seperately from other dependencies since conan needs compiler info and stuff
+        if (!conan_deps.empty()) {
+            if (auto res = fetchConanDeps(conan_deps, build_dir, config, parse_args.profiles); !res) {
+                return res;
             }
         }
     }
