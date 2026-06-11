@@ -35,6 +35,14 @@ common:
       source: vcpkg
       triplet: x64-linux
       version: latest
+    - name: ryml
+      source: vcpkg
+      triplet: x64-linux
+      version: latest
+    - name: c4core # static-lib dependency of ryml; vcpkg packages it separately
+      source: vcpkg
+      triplet: x64-linux
+      version: latest
   hooks:
     pre-fetch:
       - script: "scripts/fetch_cli_11.sh"
