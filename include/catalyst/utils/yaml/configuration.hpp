@@ -6,6 +6,8 @@
 
 #include "yaml-cpp/yaml.h"
 
+#include "catalyst/utils/yaml/ryml_utils.hpp"
+
 namespace catalyst::utils::yaml {
 
 inline std::filesystem::path multiplexedBuildDir(const std::string &base, const std::vector<std::string> &profiles) {
@@ -35,11 +37,21 @@ public:
 
     std::filesystem::path getBuildDir() const;
 
+    /** The composed configuration tree (rapidyaml). */
+    ryml::ConstNodeRef rootRef() const {
+        return composition.crootref();
+    }
+
+    /** TEMPORARY yaml-cpp view of the composed tree, materialized once at
+     * construction, for consumers that haven't been ported to rapidyaml yet.
+     * Phase 3 of the port removes this together with the yaml-cpp dependency
+     * (see docs/yaml-cpp-to-rapidyaml-port.md). Prefer rootRef(). */
     const YAML::Node &getRoot() const & {
         return root;
     }
 
 private:
+    ryml::Tree composition;
     YAML::Node root;
     std::vector<std::string> profile_names;
 };
