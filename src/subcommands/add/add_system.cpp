@@ -5,27 +5,24 @@
 
 #include "catalyst/utils/yaml/load_profile_file.hpp"
 #include "catalyst/utils/yaml/profile_write_back.hpp"
-
-#include "yaml-cpp/node/node.h"
+#include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace {
 std::expected<void, std::string> addToProfile(const std::string &profile, const catalyst::add::system::Parse &args) {
-    auto res = catalyst::utils::yaml::loadProfileFile(profile);
+    namespace yaml = catalyst::utils::yaml;
+    auto res = yaml::loadProfileFile(profile);
     if (!res) {
         return std::unexpected(res.error());
     }
-    auto profile_file = res.value();
-    YAML::Node profile_node = profile_file.profile_node;
+    yaml::ProfileFile &profile_file = res.value();
+    ryml::Tree &tree = profile_file.tree;
 
-    if (!profile_node["dependencies"]) {
-        profile_node["dependencies"] = YAML::Node(YAML::NodeType::Sequence);
-    }
-
-    YAML::Node dependencies = profile_node["dependencies"];
+    ryml::NodeRef dependencies = yaml::childOrCreate(profile_file.profile(), "dependencies");
+    dependencies |= ryml::SEQ;
 
     bool dependency_found = false;
-    for (const auto &dep : dependencies) {
-        if (dep["name"] && dep["name"].as<std::string>() == args.name) {
+    for (ryml::ConstNodeRef dep : dependencies.children()) {
+        if (yaml::asString(yaml::child(dep, "name")) == args.name) {
             dependency_found = true;
             break;
         }
@@ -35,17 +32,16 @@ std::expected<void, std::string> addToProfile(const std::string &profile, const 
         return std::unexpected("Dependency '" + args.name + "' already exists in profile '" + profile + "'.");
     }
 
-    YAML::Node new_dep;
-    new_dep["name"] = args.name;
+    ryml::NodeRef new_dep = dependencies.append_child();
+    new_dep |= ryml::MAP;
+    new_dep["name"] = tree.to_arena(args.name);
     new_dep["source"] = "system";
     if (!args.lib_path.empty())
-        new_dep["lib"] = args.lib_path;
+        new_dep["lib"] = tree.to_arena(args.lib_path);
     if (!args.inc_path.empty())
-        new_dep["include"] = args.inc_path;
+        new_dep["include"] = tree.to_arena(args.inc_path);
 
-    dependencies.push_back(new_dep);
-
-    return catalyst::utils::yaml::profileWriteBack(profile_file);
+    return yaml::profileWriteBack(profile_file);
 }
 } // namespace
 

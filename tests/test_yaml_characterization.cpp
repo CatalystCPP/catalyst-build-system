@@ -17,8 +17,10 @@
 #include "catalyst/utils/yaml/configuration.hpp"
 #include "catalyst/utils/yaml/load_profile_file.hpp"
 #include "catalyst/utils/yaml/profile_write_back.hpp"
+#include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace fs = std::filesystem;
+using catalyst::utils::yaml::asString;
 using catalyst::utils::yaml::Configuration;
 using catalyst::utils::yaml::loadProfileFile;
 using catalyst::utils::yaml::profileWriteBack;
@@ -293,7 +295,7 @@ TEST_CASE("Configuration::getBuildDir multiplexes the profile list", "[yaml][cha
     }
 }
 
-TEST_CASE("ProfileFile: combined load aliases profile_node into root_node", "[yaml][characterization]") {
+TEST_CASE("ProfileFile: combined load aliases the profile node into the document", "[yaml][characterization]") {
     TempDir dir{"catalyst_char_wb_combined"};
     writeFile(dir.path / "CATALYST.yaml",
               "common:\n  manifest:\n    name: writeback\ndebug:\n  manifest:\n    tooling:\n      CXXFLAGS: -g\n");
@@ -302,12 +304,13 @@ TEST_CASE("ProfileFile: combined load aliases profile_node into root_node", "[ya
     REQUIRE(loaded.has_value());
     CHECK(loaded->path == dir.path / "CATALYST.yaml");
 
-    // Mutating profile_node must be visible through root_node (shared state)
-    loaded->profile_node["manifest"]["version"] = "9.9.9";
-    CHECK(loaded->root_node["debug"]["manifest"]["version"].as<std::string>() == "9.9.9");
+    // Mutating via profile() must be visible through root() (same tree)
+    loaded->profile()["manifest"]["version"] = "9.9.9";
+    CHECK(asString(loaded->root()["debug"]["manifest"]["version"]) == "9.9.9");
 
     REQUIRE(profileWriteBack(*loaded).has_value());
 
+    // Reload with yaml-cpp: the written file must stay valid for other parsers
     YAML::Node reloaded = YAML::LoadFile((dir.path / "CATALYST.yaml").string());
     CHECK(reloaded["debug"]["manifest"]["version"].as<std::string>() == "9.9.9");
     CHECK(reloaded["debug"]["manifest"]["tooling"]["CXXFLAGS"].as<std::string>() == "-g");
@@ -321,10 +324,13 @@ TEST_CASE("ProfileFile: missing profile in combined file is created as an empty 
 
     auto loaded = loadProfileFile("release", dir.path);
     REQUIRE(loaded.has_value());
-    CHECK(loaded->profile_node.IsMap());
-    CHECK(loaded->root_node["release"].IsDefined());
+    CHECK(loaded->profile().is_map());
+    CHECK(loaded->root()["release"].readable());
 
-    loaded->profile_node["manifest"]["provides"] = "rel";
+    // No operator[] chaining through missing keys in ryml: materialize each level
+    ryml::NodeRef manifest = loaded->profile()["manifest"];
+    manifest |= ryml::MAP;
+    manifest["provides"] = "rel";
     REQUIRE(profileWriteBack(*loaded).has_value());
 
     YAML::Node reloaded = YAML::LoadFile((dir.path / "CATALYST.yaml").string());
@@ -332,8 +338,7 @@ TEST_CASE("ProfileFile: missing profile in combined file is created as an empty 
     CHECK(reloaded["common"]["manifest"]["name"].as<std::string>() == "writeback");
 }
 
-TEST_CASE("ProfileFile: isolated profile file makes root_node and profile_node the same document",
-          "[yaml][characterization]") {
+TEST_CASE("ProfileFile: isolated profile file makes profile() the document root", "[yaml][characterization]") {
     TempDir dir{"catalyst_char_wb_isolated"};
     writeFile(dir.path / "catalyst.yaml", "manifest:\n  name: isolated\n");
 
@@ -341,8 +346,8 @@ TEST_CASE("ProfileFile: isolated profile file makes root_node and profile_node t
     REQUIRE(loaded.has_value());
     CHECK(loaded->path == dir.path / "catalyst.yaml");
 
-    loaded->profile_node["manifest"]["name"] = "changed";
-    CHECK(loaded->root_node["manifest"]["name"].as<std::string>() == "changed");
+    loaded->profile()["manifest"]["name"] = "changed";
+    CHECK(asString(loaded->root()["manifest"]["name"]) == "changed");
 
     REQUIRE(profileWriteBack(*loaded).has_value());
 
@@ -368,7 +373,7 @@ TEST_CASE("ProfileFile: legacy isolated file is merged into CATALYST.yaml on loa
     REQUIRE(loaded.has_value());
     // The isolated file's content wins and the combined file is the write target
     CHECK(loaded->path == dir.path / "CATALYST.yaml");
-    CHECK(loaded->profile_node["manifest"]["name"].as<std::string>() == "legacy");
+    CHECK(asString(loaded->profile()["manifest"]["name"]) == "legacy");
 
     REQUIRE(profileWriteBack(*loaded).has_value());
 

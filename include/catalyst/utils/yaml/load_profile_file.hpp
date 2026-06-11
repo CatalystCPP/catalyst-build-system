@@ -3,14 +3,28 @@
 #include <filesystem>
 #include <string>
 
-#include <yaml-cpp/yaml.h>
+#include <catalyst/utils/yaml/ryml_utils.hpp>
 
 namespace catalyst::utils::yaml {
 
+/**
+ * A profile file loaded for mutation and write-back. The tree owns the whole
+ * document; the profile's node is stored as an id (not a NodeRef) so that
+ * moving the struct cannot dangle a Tree pointer. For combined CATALYST.yaml
+ * files the profile node is the keyed map under the profile name; for
+ * isolated catalyst[_<profile>].yaml files it is the document root.
+ */
 struct ProfileFile {
-    YAML::Node root_node;
-    YAML::Node profile_node;
+    ryml::Tree tree;
+    ryml::id_type profile_id;
     std::filesystem::path path;
+
+    ryml::NodeRef root() {
+        return tree.rootref();
+    }
+    ryml::NodeRef profile() {
+        return {&tree, profile_id};
+    }
 };
 
 std::expected<ProfileFile, std::string>

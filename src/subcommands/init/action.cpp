@@ -5,6 +5,7 @@
 #include <string>
 
 #include <yaml-cpp/node/node.h>
+#include <yaml-cpp/yaml.h> // TODO(phase 3): port document building to rapidyaml
 
 #include "catalyst/globals.hpp"
 #include "catalyst/subcommands/init.hpp"

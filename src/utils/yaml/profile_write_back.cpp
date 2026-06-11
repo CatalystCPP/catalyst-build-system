@@ -1,22 +1,21 @@
 #include <expected>
 #include <filesystem>
 #include <fstream>
+#include <string>
 
 #include <catalyst/utils/yaml/profile_write_back.hpp>
-#include <yaml-cpp/node/node.h>
-#include <yaml-cpp/yaml.h>
 
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::utils::yaml {
 std::expected<void, std::string> profileWriteBack(const ProfileFile &profile_file) {
     catalyst::logger.debug("Writing profile file: {}", profile_file.path.string());
     std::ofstream profile_file_out{profile_file.path};
-    YAML::Emitter emmiter;
-    emmiter << profile_file.root_node;
-    // NOLINTBEGIN(performance-avoid-endl)
-    profile_file_out << emmiter.c_str() << std::endl;
-    // NOLINTEND(performance-avoid-endl)
+    std::string text = emitYaml(profile_file.tree);
+    profile_file_out << text;
+    if (!text.ends_with('\n'))
+        profile_file_out << '\n';
     catalyst::logger.debug("Profile file written successfully.");
     return {};
 }

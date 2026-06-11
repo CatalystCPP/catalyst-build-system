@@ -14,10 +14,6 @@ namespace catalyst::utils::yaml {
 
 namespace {
 
-ryml::csubstr toSubstr(std::string_view sv) {
-    return {sv.data(), sv.size()};
-}
-
 // Returns the node's scalar value, or nullopt if the node is not a readable
 // non-null scalar. Every getter funnels through here so the yaml-cpp parity
 // rules (see header) live in one place.
@@ -105,6 +101,59 @@ std::optional<std::vector<std::string>> asStringVector(ryml::ConstNodeRef node) 
         out.push_back(std::move(*item));
     }
     return out;
+}
+
+namespace {
+
+// Copies every key/value string reachable from node into its own tree's
+// arena. Run after a cross-tree Tree::duplicate*, whose copies still point
+// into the source tree's buffer. Strings already in the arena are unaffected
+// (arena growth relocates them automatically).
+void reanchorStrings(ryml::NodeRef node) {
+    ryml::Tree *tree = node.tree();
+    if (node.has_key())
+        node.set_key(tree->to_arena(node.key()));
+    if (node.has_val())
+        node.set_val(tree->to_arena(node.val()));
+    for (ryml::NodeRef child_node : node.children())
+        reanchorStrings(child_node);
+}
+
+} // namespace
+
+ryml::NodeRef childOrCreate(ryml::NodeRef parent, std::string_view key) {
+    if (!parent.is_map())
+        parent |= ryml::MAP;
+    ryml::Tree *tree = parent.tree();
+    ryml::id_type child_id = tree->find_child(parent.id(), toSubstr(key));
+    if (child_id != ryml::NONE)
+        return {tree, child_id};
+    ryml::NodeRef created = parent.append_child();
+    created.set_key(tree->to_arena(toSubstr(key)));
+    return created;
+}
+
+void removeChild(ryml::NodeRef parent, std::string_view key) {
+    if (!parent.readable() || !parent.is_map())
+        return;
+    ryml::id_type child_id = parent.tree()->find_child(parent.id(), toSubstr(key));
+    if (child_id != ryml::NONE)
+        parent.tree()->remove(child_id);
+}
+
+ryml::NodeRef appendCopy(ryml::NodeRef parent, ryml::ConstNodeRef src) {
+    ryml::Tree *tree = parent.tree();
+    ryml::id_type copy_id = tree->duplicate(src.tree(), src.id(), parent.id(), tree->last_child(parent.id()));
+    ryml::NodeRef copy{tree, copy_id};
+    reanchorStrings(copy);
+    return copy;
+}
+
+ryml::NodeRef appendContentCopy(ryml::NodeRef parent, ryml::ConstNodeRef src) {
+    ryml::NodeRef copy = parent.append_child();
+    parent.tree()->duplicate_contents(src.tree(), src.id(), copy.id());
+    reanchorStrings(copy);
+    return copy;
 }
 
 std::string emitYaml(const ryml::Tree &tree) {
