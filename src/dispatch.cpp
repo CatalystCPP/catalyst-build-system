@@ -32,6 +32,9 @@ void checkRequiredTools() {
     if (!catalyst::utils::os::isCommandInstalled("pkg-config")) {
         catalyst::logger.warn("pkg-config is not installed or not in PATH.");
     }
+    if (!catalyst::utils::os::isCommandInstalled("conan")) {
+        catalyst::logger.warn("conan is not installed or not in PATH.");
+    }
 }
 
 

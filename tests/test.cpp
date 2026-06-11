@@ -5,6 +5,9 @@
 
 #include "catalyst/process_exec.hpp"
 #include "catalyst/utils/os/os_defs.hpp"
+#include "catalyst/subcommands/fetch.hpp"
+#include "catalyst/subcommands/generate.hpp"
+#include "yaml-cpp/yaml.h"
 
 TEST_CASE("Basic Check", "[basic]") {
     REQUIRE(1 == 1);
@@ -101,6 +104,173 @@ TEST_CASE("isCommandInstalled path resolution", "[os]") {
     std::filesystem::remove_all(temp_dir);
 }
 
+TEST_CASE("findConan dependency resolution", "[conan]") {
+    namespace fs = std::filesystem;
+    fs::path temp_build = fs::temp_directory_path() / "catalyst_test_conan_build";
+    fs::create_directories(temp_build);
+
+    fs::path conan_dir = temp_build / "conan";
+    fs::create_directories(conan_dir);
+
+    fs::path pc_file = conan_dir / "fmt.pc";
+    {
+        std::ofstream pc_out(pc_file);
+        pc_out << R"(
+prefix=/usr
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: fmt
+Description: A modern formatting library
+Version: 10.1.1
+Libs: -L${libdir} -lfmt
+Cflags: -I${includedir} -DFMT_HEADER_ONLY
+)";
+    }
+
+    catalyst::toolchain::ToolchainDef tc;
+    tc.flags.include_dir = "-I{path}";
+    tc.flags.lib_dir = "-L{path}";
+    tc.flags.lib = "-l{name}";
+
+    YAML::Node dep = YAML::Load("name: fmt\nsource: conan\nversion: 10.1.1");
+
+    class MockPkgConfigExecutor : public catalyst::IProcessExecutor {
+    public:
+        std::expected<std::future<int>, std::string>
+        processExec(std::vector<std::string> &&args,
+                    std::optional<std::string> working_dir = std::nullopt,
+                    std::optional<std::unordered_map<std::string, std::string>> env = std::nullopt,
+                    bool silent = false) override {
+            std::promise<int> promise;
+            promise.set_value(0);
+            return promise.get_future();
+        }
+
+        std::expected<std::string, std::string>
+        processExecStdout(const std::vector<std::string> &args,
+                          const std::optional<std::string> &working_dir = std::nullopt,
+                          const std::optional<std::unordered_map<std::string, std::string>> &env = std::nullopt) override {
+            if (args.size() >= 3 && args[0] == "pkg-config" && args.back() == "fmt") {
+                if (args[1] == "--cflags") {
+                    return "-I/usr/include -DFMT_HEADER_ONLY";
+                }
+                if (args[1] == "--libs-only-L") {
+                    return "-L/usr/lib";
+                }
+                if (args[1] == "--libs-only-l") {
+                    return "-lfmt";
+                }
+            }
+            return "";
+        }
+    };
+
+    auto mock_executor = std::make_shared<MockPkgConfigExecutor>();
+    catalyst::setProcessExecutor(mock_executor);
+
+    auto res = catalyst::generate::findConan(temp_build.string(), dep, tc);
+    REQUIRE(res.has_value());
+    REQUIRE(res->inc_path == " -I/usr/include -DFMT_HEADER_ONLY");
+    REQUIRE(res->lib_path == " -L/usr/lib");
+    REQUIRE(res->libs == " -lfmt");
+
+    catalyst::setProcessExecutor(std::make_shared<catalyst::ProcessExecutor>());
+    fs::remove_all(temp_build);
+}
+
+TEST_CASE("fetchConanDeps generates conanfile.txt and executes conan install", "[conan]") {
+    namespace fs = std::filesystem;
+    fs::path temp_build = fs::temp_directory_path() / "catalyst_test_conan_fetch";
+    fs::create_directories(temp_build);
+
+    fs::path temp_root = fs::temp_directory_path() / "catalyst_test_conan_fetch_root";
+    fs::create_directories(temp_root);
+    {
+        std::ofstream out(temp_root / "CATALYST.yaml");
+        out << R"(
+common:
+  manifest:
+    name: "test_conan"
+    dirs:
+      source: ["src"]
+      include: []
+      build: "build"
+    tooling:
+      CXX: "mock_clang++"
+)";
+    }
+
+    catalyst::utils::yaml::Configuration config({"common"}, temp_root);
+
+    std::vector<YAML::Node> conan_deps;
+    conan_deps.push_back(YAML::Load("name: fmt\nversion: 10.1.1"));
+    conan_deps.push_back(YAML::Load("name: zlib\nversion: 1.2.11"));
+
+    class MockConanInstallExecutor : public catalyst::IProcessExecutor {
+    public:
+        std::vector<std::vector<std::string>> executed_commands;
+
+        std::expected<std::future<int>, std::string>
+        processExec(std::vector<std::string> &&args,
+                    std::optional<std::string> working_dir = std::nullopt,
+                    std::optional<std::unordered_map<std::string, std::string>> env = std::nullopt,
+                    bool silent = false) override {
+            executed_commands.push_back(args);
+            std::promise<int> promise;
+            promise.set_value(0);
+            return promise.get_future();
+        }
+
+        std::expected<std::string, std::string>
+        processExecStdout(const std::vector<std::string> &args,
+                          const std::optional<std::string> &working_dir = std::nullopt,
+                          const std::optional<std::unordered_map<std::string, std::string>> &env = std::nullopt) override {
+            if (args.size() >= 2 && args[0] == "mock_clang++" && args[1] == "--version") {
+                return "mock_clang++ version 17.0.0";
+            }
+            return "";
+        }
+    };
+
+    auto mock_executor = std::make_shared<MockConanInstallExecutor>();
+    catalyst::setProcessExecutor(mock_executor);
+
+    auto res = catalyst::fetch::fetchConanDeps(conan_deps, temp_build.string(), config, {"common"});
+    REQUIRE(res.has_value());
+
+    fs::path conanfile_path = temp_build / "conanfile.txt";
+    REQUIRE(fs::exists(conanfile_path));
+    std::ifstream conanfile_in(conanfile_path);
+    std::stringstream buffer;
+    buffer << conanfile_in.rdbuf();
+    std::string content = buffer.str();
+    REQUIRE(content.find("fmt/10.1.1") != std::string::npos);
+    REQUIRE(content.find("zlib/1.2.11") != std::string::npos);
+    REQUIRE(content.find("PkgConfigDeps") != std::string::npos);
+
+    REQUIRE(mock_executor->executed_commands.size() == 1);
+    const auto &cmd = mock_executor->executed_commands[0];
+    REQUIRE(cmd[0] == "conan");
+    REQUIRE(cmd[1] == "install");
+
+    bool has_build_type = false;
+    bool has_compiler = false;
+    bool has_version = false;
+    for (size_t i = 0; i < cmd.size(); ++i) {
+        if (cmd[i] == "build_type=Release") has_build_type = true;
+        if (cmd[i] == "compiler=clang") has_compiler = true;
+        if (cmd[i] == "compiler.version=17") has_version = true;
+    }
+    REQUIRE(has_build_type);
+    REQUIRE(has_compiler);
+    REQUIRE(has_version);
+
+    catalyst::setProcessExecutor(std::make_shared<catalyst::ProcessExecutor>());
+    fs::remove_all(temp_build);
+    fs::remove_all(temp_root);
+}
 
 int main(int argc, char* argv[]) {
     int result = Catch::Session().run(argc, argv);
