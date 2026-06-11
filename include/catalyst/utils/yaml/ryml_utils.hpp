@@ -12,6 +12,11 @@
 
 namespace catalyst::utils::yaml {
 
+/** @brief Converts a string_view to a ryml csubstr (no copy — same lifetime). */
+inline ryml::csubstr toSubstr(std::string_view sv) {
+    return {sv.data(), sv.size()};
+}
+
 /**
  * @brief Reads and parses a YAML file, replacing YAML::LoadFile.
  *
@@ -57,6 +62,45 @@ std::optional<int> asInt(ryml::ConstNodeRef node);
 std::optional<bool> asBool(ryml::ConstNodeRef node);
 /** Requires a sequence whose children are all non-null scalars, like yaml-cpp's as<std::vector<std::string>>(). */
 std::optional<std::vector<std::string>> asStringVector(ryml::ConstNodeRef node);
+/** @} */
+
+/**
+ * @name Mutation helpers
+ *
+ * rapidyaml's own cross-tree copies (Tree::duplicate, Tree::merge_with) copy
+ * raw string pointers, leaving the destination tree pointing into the source
+ * tree's buffer — a dangling reference once the source is destroyed. The
+ * helpers here re-anchor every copied key/value into the destination tree's
+ * arena, so the result is self-contained. (Tags and anchors are not
+ * re-anchored; catalyst profiles don't use them.)
+ * @{
+ */
+
+/**
+ * @brief Returns the map child @p key of @p parent, creating it (with the key
+ * copied into the arena) if absent. Materializes @p parent as a map if it has
+ * no type yet.
+ */
+ryml::NodeRef childOrCreate(ryml::NodeRef parent, std::string_view key);
+
+/** @brief Removes the child @p key of @p parent (and its subtree), if present. */
+void removeChild(ryml::NodeRef parent, std::string_view key);
+
+/**
+ * @brief Appends a self-contained copy of @p src (key, value, children, and
+ * type flags) as the last child of @p parent. @p src may belong to another
+ * tree; it must not be its tree's root. @p parent must be a container.
+ * @return the copy.
+ */
+ryml::NodeRef appendCopy(ryml::NodeRef parent, ryml::ConstNodeRef src);
+
+/**
+ * @brief Like appendCopy, but copies only @p src's content (value or
+ * children), not its key — for wrapping a keyed node into a sequence or
+ * copying a whole document under a new key. @p src may be its tree's root.
+ * @return the new keyless child.
+ */
+ryml::NodeRef appendContentCopy(ryml::NodeRef parent, ryml::ConstNodeRef src);
 /** @} */
 
 /**
