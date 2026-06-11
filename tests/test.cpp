@@ -7,6 +7,7 @@
 #include "catalyst/utils/os/os_defs.hpp"
 #include "catalyst/subcommands/fetch.hpp"
 #include "catalyst/subcommands/generate.hpp"
+#include "catalyst/utils/yaml/ryml_init.hpp"
 #include "yaml-cpp/yaml.h"
 
 TEST_CASE("Basic Check", "[basic]") {
@@ -273,6 +274,7 @@ common:
 }
 
 int main(int argc, char* argv[]) {
+    catalyst::utils::yaml::installRymlErrorHandler();
     int result = Catch::Session().run(argc, argv);
     return result;
 }
