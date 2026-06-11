@@ -5,6 +5,7 @@
 #include "catalyst/dispatch.hpp"
 #include "catalyst/globals.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/yaml/ryml_init.hpp"
 
 namespace {
 std::string concatArgv(int argc, char **argv) {
@@ -16,6 +17,7 @@ std::string concatArgv(int argc, char **argv) {
 } // namespace
 
 int main(int argc, char **argv) {
+    catalyst::utils::yaml::installRymlErrorHandler();
     catalyst::logger.debug("{}", concatArgv(argc, argv));
 
     catalyst::CliContext ctx{.workspace = catalyst::Workspace::findRoot()};
