@@ -23,7 +23,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
 
     ryml::NodeRef meta = yaml::childOrCreate(root, "meta");
     meta |= ryml::MAP;
-    meta["min_ver"] = tree.to_arena(catalyst::CATALYST_VERSION);
+    meta["min_ver"] = tree.to_arena(CATALYST_PROJ_VER);
 
     ryml::NodeRef manifest = yaml::childOrCreate(root, "manifest");
     manifest |= ryml::MAP;
