@@ -50,7 +50,7 @@ std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app) {
     CLI::App *add_system = app.add_subcommand("system", "add a system dependency");
     auto ret = std::make_unique<Parse>();
 
-    add_system->add_option("name", ret->name)->required();
+    add_system->add_option("-n,--name", ret->name)->required();
     add_system->add_option("-l,--lib", ret->lib_path);
     add_system->add_option("-i,--inc", ret->inc_path);
     add_system->add_option("-p,--profiles", ret->profiles);

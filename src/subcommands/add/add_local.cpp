@@ -50,7 +50,7 @@ namespace catalyst::add::local {
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app) {
     auto *cmd = app.add_subcommand("local", "add a local dependency");
     auto ret = std::make_unique<Parse>();
-    cmd->add_option("name", ret->name)->required();
+    cmd->add_option("-n,--name", ret->name)->required();
     cmd->add_option("path", ret->path)->required();
     cmd->add_option("-p,--profiles", ret->profiles);
     cmd->add_option("-f,--features", ret->enabled_features);
