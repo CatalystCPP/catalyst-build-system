@@ -4,8 +4,6 @@
 #include <string>
 #include <vector>
 
-#include "yaml-cpp/yaml.h"
-
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::utils::yaml {
@@ -42,17 +40,8 @@ public:
         return composition.crootref();
     }
 
-    /** TEMPORARY yaml-cpp view of the composed tree, materialized once at
-     * construction, for consumers that haven't been ported to rapidyaml yet.
-     * Phase 3 of the port removes this together with the yaml-cpp dependency
-     * (see docs/yaml-cpp-to-rapidyaml-port.md). Prefer rootRef(). */
-    const YAML::Node &getRoot() const & {
-        return root;
-    }
-
 private:
     ryml::Tree composition;
-    YAML::Node root;
     std::vector<std::string> profile_names;
 };
 } // namespace catalyst::utils::yaml

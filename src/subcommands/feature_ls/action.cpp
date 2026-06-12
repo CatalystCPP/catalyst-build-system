@@ -9,8 +9,7 @@
 #include "catalyst/subcommands/feature_ls.hpp"
 #include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
-
-#include "yaml-cpp/yaml.h"
+#include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace fs = std::filesystem;
 
@@ -36,10 +35,11 @@ std::expected<void, std::string> catalyst::feature_ls::action([[maybe_unused]] c
     for (const auto &profile_name : profiles) {
         try {
             catalyst::utils::yaml::Configuration config({profile_name});
-            const YAML::Node &root = config.getRoot();
-            if (root["features"] && root["features"].IsMap()) {
-                for (auto it = root["features"].begin(); it != root["features"].end(); ++it) {
-                    all_features.push_back(it->first.as<std::string>());
+            ryml::ConstNodeRef features = catalyst::utils::yaml::child(config.rootRef(), "features");
+            if (features.readable() && features.is_map()) {
+                for (ryml::ConstNodeRef feature : features.children()) {
+                    if (feature.has_key())
+                        all_features.emplace_back(feature.key().str, feature.key().len);
                 }
             }
         } catch (const std::exception &e) {
@@ -63,12 +63,15 @@ std::expected<void, std::string> catalyst::feature_ls::action([[maybe_unused]] c
 
 namespace {
 void addCombinedProfiles(std::vector<std::string> &out_profiles) {
-    try {
-        YAML::Node profiles = YAML::LoadFile("CATALYST.yaml");
-        for (auto it : profiles) {
-            out_profiles.push_back(it.first.as<std::string>());
-        }
-    } catch (...) {
+    auto tree = catalyst::utils::yaml::loadFile("CATALYST.yaml");
+    if (!tree)
+        return;
+    ryml::ConstNodeRef root = tree->crootref();
+    if (!root.is_map())
+        return;
+    for (ryml::ConstNodeRef profile : root.children()) {
+        if (profile.has_key())
+            out_profiles.emplace_back(profile.key().str, profile.key().len);
     }
 }
 

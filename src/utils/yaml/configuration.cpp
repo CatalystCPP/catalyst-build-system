@@ -11,12 +11,9 @@
 #include <string_view>
 #include <vector>
 
-#include <yaml-cpp/yaml.h>
-
 #include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
-using catalyst::utils::yaml::Configuration;
 using catalyst::utils::yaml::appendContentCopy;
 using catalyst::utils::yaml::appendCopy;
 using catalyst::utils::yaml::asBool;
@@ -25,6 +22,7 @@ using catalyst::utils::yaml::asString;
 using catalyst::utils::yaml::asStringVector;
 using catalyst::utils::yaml::child;
 using catalyst::utils::yaml::childOrCreate;
+using catalyst::utils::yaml::Configuration;
 using catalyst::utils::yaml::emitYaml;
 using catalyst::utils::yaml::removeChild;
 using catalyst::utils::yaml::toSubstr;
@@ -464,10 +462,6 @@ Configuration::Configuration(const std::vector<std::string> &profiles, const std
     for (const auto &profile_name : profile_names) {
         merge(composition, profile_name, root_dir);
     }
-
-    // TEMPORARY (Phase 2→3 bridge): materialize a yaml-cpp view for consumers
-    // that still read getRoot(). Removed in Phase 3 along with yaml-cpp.
-    root = YAML::Load(emitYaml(composition));
 
     this->profile_names = profile_names;
     catalyst::logger.debug("Profile composition finished.");

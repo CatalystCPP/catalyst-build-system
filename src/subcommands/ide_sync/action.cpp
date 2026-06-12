@@ -2,8 +2,6 @@
 #include <filesystem>
 #include <string>
 
-#include <yaml-cpp/node/node.h>
-
 #include "catalyst/subcommands/ide_sync.hpp"
 #include "catalyst/subcommands/init.hpp"
 #include "catalyst/utils/log/log.hpp"
@@ -15,27 +13,21 @@ auto catalyst::ide_sync::action(const Parse &parse_args) -> std::expected<void, 
     const std::filesystem::path root_dir = std::filesystem::current_path();
 
     const auto config = catalyst::utils::yaml::Configuration(parse_args.profiles);
-    const auto &profile_node = config.getRoot();
 
-    if (!profile_node["manifest"] || !profile_node["manifest"]["name"])
+    auto name = config.getString("manifest.name");
+    if (!name)
         return std::unexpected("Invalid profile: missing manifest.name in common profile.");
 
     catalyst::init::Parse init_parse{
-        .name = profile_node["manifest"]["name"].as<std::string>(),
+        .name = *name,
         .path = root_dir,
         .provides = "",
         .tooling = {},
         .dirs =
             {
-                .include = (profile_node["manifest"]["dirs"] && profile_node["manifest"]["dirs"]["include"])
-                               ? profile_node["manifest"]["dirs"]["include"].as<std::vector<std::string>>()
-                               : std::vector<std::string>{},
-                .source = (profile_node["manifest"]["dirs"] && profile_node["manifest"]["dirs"]["source"])
-                              ? profile_node["manifest"]["dirs"]["source"].as<std::vector<std::string>>()
-                              : std::vector<std::string>{},
-                .build = (profile_node["manifest"]["dirs"] && profile_node["manifest"]["dirs"]["build"])
-                             ? profile_node["manifest"]["dirs"]["build"].as<std::string>()
-                             : std::string{},
+                .include = config.getStringVector("manifest.dirs.include").value_or(std::vector<std::string>{}),
+                .source = config.getStringVector("manifest.dirs.source").value_or(std::vector<std::string>{}),
+                .build = config.getString("manifest.dirs.build").value_or(""),
             },
         .ides = parse_args.ides,
         .force_emit_ide = parse_args.force_emit_ide,

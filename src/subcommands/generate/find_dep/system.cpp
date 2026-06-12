@@ -7,6 +7,7 @@
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::generate {
 namespace {
@@ -60,19 +61,17 @@ std::optional<FindRes> findSystemFromPkgConfig(const std::string &dep_name,
 }
 } // namespace
 
-std::expected<FindRes, std::string> findSystem(const YAML::Node &dep, const catalyst::toolchain::ToolchainDef &tc) {
-    auto dep_name = dep["name"].as<std::string>();
+std::expected<FindRes, std::string> findSystem(ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc) {
+    namespace yaml = catalyst::utils::yaml;
+    auto dep_name = yaml::asString(yaml::child(dep, "name")).value_or("");
     catalyst::logger.debug("Resolving system dependency: {}", dep_name);
 
-    std::string linkage; // assume shared
-    if (dep["linkage"] && dep["linkage"].IsScalar()) {
-        linkage = dep["linkage"].as<std::string>();
-    } else {
-        linkage = "shared";
-    }
+    std::string linkage = yaml::asString(yaml::child(dep, "linkage")).value_or("shared"); // assume shared
 
-    bool has_explicit_include = dep["include"] && dep["include"].IsScalar();
-    bool has_explicit_lib = dep["lib"] && dep["lib"].IsScalar();
+    std::optional<std::string> explicit_include = yaml::asString(yaml::child(dep, "include"));
+    std::optional<std::string> explicit_lib = yaml::asString(yaml::child(dep, "lib"));
+    bool has_explicit_include = explicit_include.has_value();
+    bool has_explicit_lib = explicit_lib.has_value();
 
     std::string inc_path;
     std::string lib_path;
@@ -80,14 +79,12 @@ std::expected<FindRes, std::string> findSystem(const YAML::Node &dep, const cata
     std::vector<std::string> lib_dirs;
 
     if (has_explicit_include) {
-        inc_path += " " + catalyst::toolchain::expand_template(tc.flags.include_dir,
-                                                               {{"path", dep["include"].as<std::string>()}});
+        inc_path += " " + catalyst::toolchain::expand_template(tc.flags.include_dir, {{"path", *explicit_include}});
     }
 
     if (has_explicit_lib) {
-        auto explicit_lib = dep["lib"].as<std::string>();
-        lib_path += " " + catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", explicit_lib}});
-        lib_dirs.push_back(explicit_lib);
+        lib_path += " " + catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", *explicit_lib}});
+        lib_dirs.push_back(*explicit_lib);
     }
 
     if (has_explicit_include && has_explicit_lib) {

@@ -6,6 +6,7 @@
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
+#include "catalyst/utils/yaml/ryml_utils.hpp"
 
 #ifdef _WIN32
 constexpr const char *const TRIPLET = "x64-windows";
@@ -18,13 +19,14 @@ constexpr const char *const TRIPLET = "x64-linux";
 constexpr char DELIMITER = ':';
 #endif
 
-auto catalyst::generate::libPath(const YAML::Node &profile,
+auto catalyst::generate::libPath(const utils::yaml::Configuration &profile_comp,
                                  const std::vector<std::string> &profiles,
                                  const catalyst::toolchain::ToolchainDef &tc)
     -> std::expected<std::string, std::string> {
+    namespace yaml = catalyst::utils::yaml;
     catalyst::logger.debug("Calculating LD_LIBRARY_PATH.");
-    std::filesystem::path build_dir =
-        catalyst::utils::yaml::multiplexedBuildDir(profile["manifest"]["dirs"]["build"].as<std::string>(), profiles);
+    std::filesystem::path build_dir = catalyst::utils::yaml::multiplexedBuildDir(
+        profile_comp.getString("manifest.dirs.build").value_or(""), profiles);
     std::vector<std::string> lib_dirs{std::filesystem::absolute("catalyst-libs").string()};
 
     if (const char *vcpkg_root = std::getenv("VCPKG_ROOT"); vcpkg_root)
@@ -32,11 +34,12 @@ auto catalyst::generate::libPath(const YAML::Node &profile,
     else
         logger.warn("VCPKG_ROOT environment variable is not defined.");
 
-    if (auto deps = profile["dependencies"]; deps && deps.IsSequence())
-        for (const auto &dep : deps) {
+    if (auto deps = yaml::child(profile_comp.rootRef(), "dependencies"); deps.readable() && deps.is_seq())
+        for (ryml::ConstNodeRef dep : deps.children()) {
             if (auto res = findDep(build_dir.string(), dep, tc); !res)
-                catalyst::logger.error(
-                    "Failed to resolve dependency {}: {}", dep["name"].as<std::string>(), res.error());
+                catalyst::logger.error("Failed to resolve dependency {}: {}",
+                                       yaml::asString(yaml::child(dep, "name")).value_or("<unnamed>"),
+                                       res.error());
             else
                 lib_dirs.insert(lib_dirs.end(), res->lib_dirs.begin(), res->lib_dirs.end());
         }

@@ -133,9 +133,10 @@ TEST_CASE("Profile composition: defaults applied under a minimal profile", "[yam
     CHECK(config.getString("manifest.tooling.doc.engine") == "doxygen");
     CHECK(config.getString("manifest.dirs.build") == "");
     CHECK(config.getStringVector("manifest.dirs.source") == std::vector<std::string>{});
-    CHECK(config.getRoot()["dependencies"].IsSequence());
-    CHECK(config.getRoot()["dependencies"].size() == 0);
-    CHECK(config.getRoot()["features"].IsMap());
+    namespace yaml = catalyst::utils::yaml;
+    CHECK(yaml::child(config.rootRef(), "dependencies").is_seq());
+    CHECK(yaml::child(config.rootRef(), "dependencies").num_children() == 0);
+    CHECK(yaml::child(config.rootRef(), "features").is_map());
 }
 
 TEST_CASE("Profile composition: scalar override, sequence append, dependency append", "[yaml][characterization]") {
@@ -156,11 +157,13 @@ TEST_CASE("Profile composition: scalar override, sequence append, dependency app
     CHECK(config.getStringVector("manifest.dirs.include") == std::vector<std::string>{"include"});
 
     // Dependencies append in profile order
-    const YAML::Node &deps = config.getRoot()["dependencies"];
-    REQUIRE(deps.IsSequence());
-    REQUIRE(deps.size() == 2);
-    CHECK(deps[0]["name"].as<std::string>() == "fmt");
-    CHECK(deps[1]["name"].as<std::string>() == "zlib");
+    namespace yaml = catalyst::utils::yaml;
+    ryml::ConstNodeRef deps = yaml::child(config.rootRef(), "dependencies");
+    REQUIRE(deps.readable());
+    REQUIRE(deps.is_seq());
+    REQUIRE(deps.num_children() == 2);
+    CHECK(yaml::asString(yaml::child(deps[0], "name")) == "fmt");
+    CHECK(yaml::asString(yaml::child(deps[1], "name")) == "zlib");
 }
 
 TEST_CASE("Profile composition: min_ver takes the maximum version seen", "[yaml][characterization]") {

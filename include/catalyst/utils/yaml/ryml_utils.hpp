@@ -108,4 +108,7 @@ ryml::NodeRef appendContentCopy(ryml::NodeRef parent, ryml::ConstNodeRef src);
  */
 std::string emitYaml(const ryml::Tree &tree);
 
+/** @brief Emits the subtree rooted at @p node as YAML text. */
+std::string emitYaml(ryml::ConstNodeRef node);
+
 } // namespace catalyst::utils::yaml

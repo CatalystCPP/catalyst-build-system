@@ -1,14 +1,15 @@
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/catch_session.hpp>
-#include <fstream>
 #include <filesystem>
+#include <fstream>
+
+#include <catch2/catch_session.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 #include "catalyst/process_exec.hpp"
-#include "catalyst/utils/os/os_defs.hpp"
 #include "catalyst/subcommands/fetch.hpp"
 #include "catalyst/subcommands/generate.hpp"
+#include "catalyst/utils/os/os_defs.hpp"
 #include "catalyst/utils/yaml/ryml_init.hpp"
-#include "yaml-cpp/yaml.h"
+#include "catalyst/utils/yaml/ryml_utils.hpp"
 
 TEST_CASE("Basic Check", "[basic]") {
     REQUIRE(1 == 1);
@@ -135,7 +136,8 @@ Cflags: -I${includedir} -DFMT_HEADER_ONLY
     tc.flags.lib_dir = "-L{path}";
     tc.flags.lib = "-l{name}";
 
-    YAML::Node dep = YAML::Load("name: fmt\nsource: conan\nversion: 10.1.1");
+    ryml::Tree dep_tree = catalyst::utils::yaml::parseYaml("name: fmt\nsource: conan\nversion: 10.1.1").value();
+    ryml::ConstNodeRef dep = dep_tree.crootref();
 
     class MockPkgConfigExecutor : public catalyst::IProcessExecutor {
     public:
@@ -149,10 +151,10 @@ Cflags: -I${includedir} -DFMT_HEADER_ONLY
             return promise.get_future();
         }
 
-        std::expected<std::string, std::string>
-        processExecStdout(const std::vector<std::string> &args,
-                          const std::optional<std::string> &working_dir = std::nullopt,
-                          const std::optional<std::unordered_map<std::string, std::string>> &env = std::nullopt) override {
+        std::expected<std::string, std::string> processExecStdout(
+            const std::vector<std::string> &args,
+            const std::optional<std::string> &working_dir = std::nullopt,
+            const std::optional<std::unordered_map<std::string, std::string>> &env = std::nullopt) override {
             if (args.size() >= 3 && args[0] == "pkg-config" && args.back() == "fmt") {
                 if (args[1] == "--cflags") {
                     return "-I/usr/include -DFMT_HEADER_ONLY";
@@ -205,9 +207,9 @@ common:
 
     catalyst::utils::yaml::Configuration config({"common"}, temp_root);
 
-    std::vector<YAML::Node> conan_deps;
-    conan_deps.push_back(YAML::Load("name: fmt\nversion: 10.1.1"));
-    conan_deps.push_back(YAML::Load("name: zlib\nversion: 1.2.11"));
+    ryml::Tree fmt_tree = catalyst::utils::yaml::parseYaml("name: fmt\nversion: 10.1.1").value();
+    ryml::Tree zlib_tree = catalyst::utils::yaml::parseYaml("name: zlib\nversion: 1.2.11").value();
+    std::vector<ryml::ConstNodeRef> conan_deps{fmt_tree.crootref(), zlib_tree.crootref()};
 
     class MockConanInstallExecutor : public catalyst::IProcessExecutor {
     public:
@@ -224,10 +226,10 @@ common:
             return promise.get_future();
         }
 
-        std::expected<std::string, std::string>
-        processExecStdout(const std::vector<std::string> &args,
-                          const std::optional<std::string> &working_dir = std::nullopt,
-                          const std::optional<std::unordered_map<std::string, std::string>> &env = std::nullopt) override {
+        std::expected<std::string, std::string> processExecStdout(
+            const std::vector<std::string> &args,
+            const std::optional<std::string> &working_dir = std::nullopt,
+            const std::optional<std::unordered_map<std::string, std::string>> &env = std::nullopt) override {
             if (args.size() >= 2 && args[0] == "mock_clang++" && args[1] == "--version") {
                 return "mock_clang++ version 17.0.0";
             }
@@ -260,9 +262,12 @@ common:
     bool has_compiler = false;
     bool has_version = false;
     for (size_t i = 0; i < cmd.size(); ++i) {
-        if (cmd[i] == "build_type=Release") has_build_type = true;
-        if (cmd[i] == "compiler=clang") has_compiler = true;
-        if (cmd[i] == "compiler.version=17") has_version = true;
+        if (cmd[i] == "build_type=Release")
+            has_build_type = true;
+        if (cmd[i] == "compiler=clang")
+            has_compiler = true;
+        if (cmd[i] == "compiler.version=17")
+            has_version = true;
     }
     REQUIRE(has_build_type);
     REQUIRE(has_compiler);
@@ -273,7 +278,7 @@ common:
     fs::remove_all(temp_root);
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
     catalyst::utils::yaml::installRymlErrorHandler();
     int result = Catch::Session().run(argc, argv);
     return result;

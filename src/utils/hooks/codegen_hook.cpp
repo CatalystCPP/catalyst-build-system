@@ -5,6 +5,7 @@
 #include "catalyst/hooks.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::hooks {
 
@@ -15,33 +16,35 @@ std::expected<std::string, std::string> substituteCmdArgs(std::string cmd,
                                                           std::span<const std::string> outputs,
                                                           std::string_view hook_name);
 
+// Collects a scalar-or-sequence node ("input"/"output") into a string list.
+std::vector<std::string> collectPathList(ryml::ConstNodeRef node) {
+    std::vector<std::string> paths;
+    if (!node.readable())
+        return paths;
+    if (node.is_seq()) {
+        for (ryml::ConstNodeRef item : node.children())
+            if (auto s = catalyst::utils::yaml::asString(item))
+                paths.push_back(*s);
+    } else if (auto s = catalyst::utils::yaml::asString(node)) {
+        paths.push_back(*s);
+    }
+    return paths;
+}
+
 } // namespace
 
-std::expected<void, std::string> executeCodegenHook(const YAML::Node &codegen_node, std::string_view hook_name) {
-    if (!codegen_node["cmd"]) {
+std::expected<void, std::string> executeCodegenHook(ryml::ConstNodeRef codegen_node, std::string_view hook_name) {
+    using utils::yaml::asString;
+    using utils::yaml::child;
+
+    auto cmd_opt = asString(child(codegen_node, "cmd"));
+    if (!cmd_opt) {
         return std::unexpected(std::format("Hook '{}' codegen missing required 'cmd' field", hook_name));
     }
-    auto cmd = codegen_node["cmd"].as<std::string>();
+    std::string cmd = *cmd_opt;
 
-    std::vector<std::string> inputs;
-    if (codegen_node["input"]) {
-        if (codegen_node["input"].IsSequence()) {
-            for (const auto &in : codegen_node["input"])
-                inputs.push_back(in.as<std::string>());
-        } else if (codegen_node["input"].IsScalar()) {
-            inputs.push_back(codegen_node["input"].as<std::string>());
-        }
-    }
-
-    std::vector<std::string> outputs;
-    if (codegen_node["output"]) {
-        if (codegen_node["output"].IsSequence()) {
-            for (const auto &out : codegen_node["output"])
-                outputs.push_back(out.as<std::string>());
-        } else if (codegen_node["output"].IsScalar()) {
-            outputs.push_back(codegen_node["output"].as<std::string>());
-        }
-    }
+    std::vector<std::string> inputs = collectPathList(child(codegen_node, "input"));
+    std::vector<std::string> outputs = collectPathList(child(codegen_node, "output"));
 
     auto sub_res = substituteCmdArgs(cmd, inputs, outputs, hook_name);
     if (!sub_res) {

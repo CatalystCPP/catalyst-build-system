@@ -7,8 +7,6 @@
 #include <tuple>
 #include <vector>
 
-#include <yaml-cpp/yaml.h>
-
 #include "catalyst/hooks.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/generate.hpp"
@@ -72,16 +70,15 @@ std::expected<void, std::string> action(const Parse &args) {
     std::vector<std::string> profiles{"common", "test"};
 
     catalyst::logger.debug("Composing profiles.");
-    YAML::Node profile_comp;
     auto res = generate::profileComposition(profiles);
     if (!res) {
         return std::unexpected(res.error());
     }
-    profile_comp = res.value();
+    const utils::yaml::Configuration &profile_comp = res.value();
 
     catalyst::logger.debug("Running pre-test hooks.");
-    if (auto res = hooks::preTest(profile_comp); !res) {
-        return res;
+    if (auto hook_res = hooks::preTest(profile_comp); !hook_res) {
+        return hook_res;
     }
 
     std::string exe;
@@ -91,25 +88,23 @@ std::expected<void, std::string> action(const Parse &args) {
         std::ranges::transform(input, input.begin(), lower);
         return;
     };
-    std::string target_type = profile_comp["manifest"]["type"].Scalar();
+    std::optional<std::string> type_opt = profile_comp.getString("manifest.type");
+    std::string target_type = type_opt.value_or("");
     str_to_lower(target_type);
 
-    if (!profile_comp["manifest"]["type"].IsDefined() || target_type != "binary") {
+    if (!type_opt || target_type != "binary") {
         return std::unexpected("profile does not build a binary target");
     }
 
-    std::string build_dir_base = "build";
-    if (profile_comp["manifest"]["dirs"]["build"]) {
-        build_dir_base = profile_comp["manifest"]["dirs"]["build"].as<std::string>();
-        if (build_dir_base.empty())
-            build_dir_base = "build";
-    }
+    std::string build_dir_base = profile_comp.getString("manifest.dirs.build").value_or("build");
+    if (build_dir_base.empty())
+        build_dir_base = "build";
     build_dir = catalyst::utils::yaml::multiplexedBuildDir(build_dir_base, profiles).string();
 
-    if (profile_comp["manifest"]["provides"] && profile_comp["manifest"]["provides"].as<std::string>() != "") {
-        exe = profile_comp["manifest"]["provides"].as<std::string>();
-    } else if (profile_comp["manifest"]["name"] && profile_comp["manifest"]["name"].as<std::string>() != "") {
-        exe = profile_comp["manifest"]["name"].as<std::string>();
+    if (auto provides = profile_comp.getString("manifest.provides"); provides && !provides->empty()) {
+        exe = *provides;
+    } else if (auto name = profile_comp.getString("manifest.name"); name && !name->empty()) {
+        exe = *name;
     } else {
         return std::unexpected("unable to figure out executable name. "
                                "manifest.name and manifest.provides are undefined");

@@ -78,7 +78,8 @@ std::optional<bool> asBool(ryml::ConstNodeRef node) {
         return std::nullopt;
 
     std::string lowered{val->str, val->len};
-    std::ranges::transform(lowered, lowered.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    std::ranges::transform(
+        lowered, lowered.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
 
     constexpr std::array TRUE_NAMES{"y", "yes", "true", "on"};
     constexpr std::array FALSE_NAMES{"n", "no", "false", "off"};
@@ -158,6 +159,10 @@ ryml::NodeRef appendContentCopy(ryml::NodeRef parent, ryml::ConstNodeRef src) {
 
 std::string emitYaml(const ryml::Tree &tree) {
     return ryml::emitrs_yaml<std::string>(tree);
+}
+
+std::string emitYaml(ryml::ConstNodeRef node) {
+    return ryml::emitrs_yaml<std::string>(node);
 }
 
 } // namespace catalyst::utils::yaml

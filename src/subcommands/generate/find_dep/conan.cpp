@@ -9,20 +9,21 @@
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::generate {
 namespace fs = std::filesystem;
 
-std::expected<FindRes, std::string> findConan(const std::string &build_dir,
-                                             const YAML::Node &dep,
-                                             const catalyst::toolchain::ToolchainDef &tc) {
-    auto dep_name = dep["name"].as<std::string>();
+std::expected<FindRes, std::string>
+findConan(const std::string &build_dir, ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc) {
+    namespace yaml = catalyst::utils::yaml;
+    auto dep_name = yaml::asString(yaml::child(dep, "name")).value_or("<unnamed>");
     catalyst::logger.debug("Resolving Conan dependency: {}", dep_name);
 
     fs::path conan_dir = fs::path(build_dir) / "conan";
     if (!fs::exists(conan_dir) || !fs::is_directory(conan_dir)) {
-        return std::unexpected(
-            std::format("Conan build output directory '{}' not found. Did you run 'catalyst fetch'?", conan_dir.string()));
+        return std::unexpected(std::format("Conan build output directory '{}' not found. Did you run 'catalyst fetch'?",
+                                           conan_dir.string()));
     }
 
     std::unordered_map<std::string, std::string> env;
@@ -73,8 +74,11 @@ std::expected<FindRes, std::string> findConan(const std::string &build_dir,
         }
     });
 
-    catalyst::logger.debug(
-        "Resolved Conan package '{}' via pkg-config: cflags='{}' L='{}' l='{}'", dep_name, result.inc_path, result.lib_path, result.libs);
+    catalyst::logger.debug("Resolved Conan package '{}' via pkg-config: cflags='{}' L='{}' l='{}'",
+                           dep_name,
+                           result.inc_path,
+                           result.lib_path,
+                           result.libs);
     return result;
 }
 } // namespace catalyst::generate

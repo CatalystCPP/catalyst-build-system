@@ -4,13 +4,10 @@
 #include <fstream>
 #include <string>
 
-#include <yaml-cpp/node/node.h>
-#include <yaml-cpp/yaml.h> // TODO(phase 3): port document building to rapidyaml
-
 #include "catalyst/globals.hpp"
 #include "catalyst/subcommands/init.hpp"
 #include "catalyst/utils/log/log.hpp"
-#include "catalyst/utils/yaml/profile_write_back.hpp"
+#include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::init {
 
@@ -18,35 +15,56 @@ namespace fs = std::filesystem;
 
 std::expected<void, std::string> action(const Parse &parse_args) {
     catalyst::logger.debug("Init subcommand invoked.");
+    namespace yaml = catalyst::utils::yaml;
     // TODO: change directory to parse_args->path;
-    YAML::Node node;
-    node["meta"]["min_ver"] = catalyst::CATALYST_VERSION;
-    node["manifest"]["name"] = parse_args.name;
+    ryml::Tree tree;
+    ryml::NodeRef root = tree.rootref();
+    root |= ryml::MAP;
+
+    ryml::NodeRef meta = yaml::childOrCreate(root, "meta");
+    meta |= ryml::MAP;
+    meta["min_ver"] = tree.to_arena(catalyst::CATALYST_VERSION);
+
+    ryml::NodeRef manifest = yaml::childOrCreate(root, "manifest");
+    manifest |= ryml::MAP;
+    manifest["name"] = tree.to_arena(parse_args.name);
     switch (parse_args.type) {
         case Parse::Type::BINARY:
-            node["manifest"]["type"] = "BINARY";
+            manifest["type"] = "BINARY";
             break;
         case Parse::Type::STATICLIB:
-            node["manifest"]["type"] = "STATICLIB";
+            manifest["type"] = "STATICLIB";
             break;
         case Parse::Type::SHAREDLIB:
-            node["manifest"]["type"] = "SHAREDLIB";
+            manifest["type"] = "SHAREDLIB";
             break;
         case Parse::Type::INTERFACE:
-            node["manifest"]["type"] = "INTERFACE";
+            manifest["type"] = "INTERFACE";
             break;
     }
-    node["manifest"]["version"] = parse_args.version;
-    node["manifest"]["description"] = parse_args.description;
-    node["manifest"]["provides"] = parse_args.provides;
-    node["manifest"]["tooling"]["CC"] = parse_args.tooling.cc;
-    node["manifest"]["tooling"]["CXX"] = parse_args.tooling.cxx;
-    node["manifest"]["tooling"]["CCFLAGS"] = parse_args.tooling.ccflags;
-    node["manifest"]["tooling"]["CXXFLAGS"] = parse_args.tooling.cxxflags;
-    node["manifest"]["tooling"]["LDFLAGS"] = parse_args.tooling.ldflags;
-    node["manifest"]["dirs"]["include"] = parse_args.dirs.include;
-    node["manifest"]["dirs"]["source"] = parse_args.dirs.source;
-    node["manifest"]["dirs"]["build"] = parse_args.dirs.build;
+    manifest["version"] = tree.to_arena(parse_args.version);
+    manifest["description"] = tree.to_arena(parse_args.description);
+    manifest["provides"] = tree.to_arena(parse_args.provides);
+
+    ryml::NodeRef tooling = yaml::childOrCreate(manifest, "tooling");
+    tooling |= ryml::MAP;
+    tooling["CC"] = tree.to_arena(parse_args.tooling.cc);
+    tooling["CXX"] = tree.to_arena(parse_args.tooling.cxx);
+    tooling["CCFLAGS"] = tree.to_arena(parse_args.tooling.ccflags);
+    tooling["CXXFLAGS"] = tree.to_arena(parse_args.tooling.cxxflags);
+    tooling["LDFLAGS"] = tree.to_arena(parse_args.tooling.ldflags);
+
+    ryml::NodeRef dirs = yaml::childOrCreate(manifest, "dirs");
+    dirs |= ryml::MAP;
+    auto add_dir_seq = [&tree, &dirs](std::string_view key, const std::vector<std::string> &values) {
+        ryml::NodeRef seq = catalyst::utils::yaml::childOrCreate(dirs, key);
+        seq |= ryml::SEQ;
+        for (const auto &value : values)
+            seq.append_child() = tree.to_arena(value);
+    };
+    add_dir_seq("include", parse_args.dirs.include);
+    add_dir_seq("source", parse_args.dirs.source);
+    dirs["build"] = tree.to_arena(parse_args.dirs.build);
 
     for (auto dir : parse_args.dirs.include) {
         if (!fs::exists(parse_args.path / dir)) {
@@ -100,9 +118,7 @@ int main(int argc, char **argv) {
     }
 
     std::ofstream profile_file = std::ofstream(profile_path);
-    YAML::Emitter emmiter;
-    emmiter << node;
-    profile_file << emmiter.c_str() << std::endl;
+    profile_file << yaml::emitYaml(tree) << std::flush;
     catalyst::logger.debug("Init subcommand finished successfully.");
 
     if (auto res = invokeIDEConfigEmitters(parse_args); !res) {
