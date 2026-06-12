@@ -8,10 +8,9 @@
 #include <unordered_set>
 #include <vector>
 
-#include <yaml-cpp/yaml.h>
-
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace fs = std::filesystem;
 
@@ -30,13 +29,20 @@ std::optional<std::unordered_set<std::string>> createIgnorePatterns(const fs::pa
                    // to apply since the file doesn't exist
     }
     logger.debug("Found .catalystignore file in: {}", dir.string());
-    YAML::Node ignore_config = YAML::LoadFile(ignore_file.string());
+    namespace yaml = catalyst::utils::yaml;
+    auto ignore_config = yaml::loadFile(ignore_file);
+    if (!ignore_config) {
+        logger.warn("Failed to parse {}: {}", ignore_file.string(), ignore_config.error());
+        return {};
+    }
     for (const auto &profile : profiles) {
-        if (ignore_config[profile]) {
-            for (const auto &ignore_pattern : ignore_config[profile]) {
-                auto pattern = ignore_pattern.as<std::string>();
-                logger.debug("Ignoring pattern: {}", pattern);
-                ignore_patterns.insert(pattern);
+        ryml::ConstNodeRef profile_node = yaml::child(ignore_config->crootref(), profile);
+        if (!profile_node.readable() || !profile_node.is_seq())
+            continue;
+        for (ryml::ConstNodeRef ignore_pattern : profile_node.children()) {
+            if (auto pattern = yaml::asString(ignore_pattern)) {
+                logger.debug("Ignoring pattern: {}", *pattern);
+                ignore_patterns.insert(*pattern);
             }
         }
     }

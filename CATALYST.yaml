@@ -26,12 +26,15 @@ common:
         - src
       build: build
   dependencies:
-    - name: yaml-cpp
+    - name: reproc
       source: vcpkg
       triplet: x64-linux
       version: latest
-      using: []
-    - name: reproc
+    - name: ryml
+      source: vcpkg
+      triplet: x64-linux
+      version: latest
+    - name: c4core # static-lib dependency of ryml; vcpkg packages it separately
       source: vcpkg
       triplet: x64-linux
       version: latest
@@ -58,6 +61,10 @@ test:
       build: build/test
   dependencies:
     - name: catch2
+      source: vcpkg
+      triplet: x64-linux
+      version: latest
+    - name: yaml-cpp # second parser for cross-parser checks in test_yaml_characterization.cpp
       source: vcpkg
       triplet: x64-linux
       version: latest

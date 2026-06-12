@@ -5,7 +5,6 @@
 
 #include <catalyst/hooks.hpp>
 #include <catalyst/subcommands/clean.hpp>
-#include <yaml-cpp/node/node.h>
 
 #include "catalyst/dir_guard.hpp"
 #include "catalyst/process_exec.hpp"
@@ -55,22 +54,25 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     }
 
     catalyst::logger.debug("Composing profiles.");
-    YAML::Node profile_comp;
     auto res = generate::profileComposition(profiles);
     if (!res) {
         return std::unexpected(res.error());
     }
-    profile_comp = res.value();
+    const utils::yaml::Configuration &profile_comp = res.value();
 
     catalyst::logger.debug("Running pre-clean hooks.");
-    if (auto res = hooks::preClean(profile_comp); !res) {
-        return res;
+    if (auto hook_res = hooks::preClean(profile_comp); !hook_res) {
+        return hook_res;
     }
 
-    auto build_dir = catalyst::utils::yaml::multiplexedBuildDir(
-                         profile_comp["manifest"]["dirs"]["build"].as<std::string>(), profiles)
-                         .string();
-    auto generator = profile_comp["meta"]["generator"].as<std::string>();
+    auto build_dir =
+        catalyst::utils::yaml::multiplexedBuildDir(profile_comp.getString("manifest.dirs.build").value_or(""), profiles)
+            .string();
+    auto generator_opt = profile_comp.getString("meta.generator");
+    if (!generator_opt) {
+        return std::unexpected("Unable to get value for meta.generator");
+    }
+    const std::string &generator = *generator_opt;
     catalyst::logger.debug("Cleaning build directory: {}", build_dir);
 
     std::vector<std::string> clean_cmd = {generator, "-C", build_dir, "-t", "clean"};

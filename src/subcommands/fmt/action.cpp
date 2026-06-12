@@ -10,26 +10,28 @@
 #include <unordered_set>
 #include <vector>
 
-#include <yaml-cpp/yaml.h>
-
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/fmt.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::fmt {
 std::expected<void, std::string> action(const Parse &parse_args) {
     catalyst::logger.debug("Fmt subcommand invoked.");
     const std::vector<std::string> &profiles = parse_args.profiles;
-    YAML::Node profile_comp;
     catalyst::logger.debug("Composing profiles.");
     auto res = generate::profileComposition(profiles);
     if (!res) {
         return std::unexpected(res.error());
     }
-    profile_comp = res.value();
+    const utils::yaml::Configuration &profile_comp = res.value();
 
-    auto formatter = profile_comp["manifest"]["tooling"]["FMT"].as<std::string>();
+    auto formatter_opt = profile_comp.getString("manifest.tooling.FMT");
+    if (!formatter_opt) {
+        return std::unexpected("field: manifest.tooling.FMT is not defined");
+    }
+    const std::string &formatter = *formatter_opt;
     catalyst::logger.debug("Using formatter: {}", formatter);
 
     namespace fs = std::filesystem;
@@ -37,28 +39,34 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     std::unordered_set<fs::path> source_dirs;
     std::unordered_set<fs::path> include_dirs;
 
-    for (const auto &node : profile_comp["manifest"]["dirs"]["source"]) {
-        source_dirs.insert(fs::absolute(node.as<std::string>()));
+    for (const auto &dir : profile_comp.getStringVector("manifest.dirs.source").value_or(std::vector<std::string>{})) {
+        source_dirs.insert(fs::absolute(dir));
     }
 
-    for (const auto &node : profile_comp["manifest"]["dirs"]["include"]) {
-        include_dirs.insert(fs::absolute(node.as<std::string>()));
+    for (const auto &dir : profile_comp.getStringVector("manifest.dirs.include").value_or(std::vector<std::string>{})) {
+        include_dirs.insert(fs::absolute(dir));
     }
 
     auto get_ignore_regexes = [](const fs::path &dir, const std::vector<std::string> &profiles) {
+        namespace yaml = catalyst::utils::yaml;
         fs::path ignore_file = dir / ".catalystignore";
         std::vector<std::regex> regexes;
         if (fs::exists(ignore_file)) {
             try {
-                YAML::Node ignore_config = YAML::LoadFile(ignore_file.string());
+                auto ignore_config = yaml::loadFile(ignore_file);
+                if (!ignore_config)
+                    return regexes; // Keep moving on configuration parsing errors
                 for (const auto &profile : profiles) {
-                    if (ignore_config[profile]) {
-                        for (const auto &pattern : ignore_config[profile]) {
+                    ryml::ConstNodeRef profile_node = yaml::child(ignore_config->crootref(), profile);
+                    if (!profile_node.readable() || !profile_node.is_seq())
+                        continue;
+                    for (ryml::ConstNodeRef pattern_node : profile_node.children()) {
+                        if (auto pattern = yaml::asString(pattern_node)) {
                             catalyst::logger.debug("Loaded ignore pattern: {} for profile: {} in dir: {}",
-                                                   pattern.as<std::string>(),
+                                                   *pattern,
                                                    profile,
                                                    dir.string());
-                            regexes.emplace_back(pattern.as<std::string>());
+                            regexes.emplace_back(*pattern);
                         }
                     }
                 }
@@ -70,9 +78,8 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     };
 
     auto is_ignored = [](const fs::path &path, const std::vector<std::regex> &regexes) {
-        return std::ranges::any_of(regexes, [&path](const std::regex &reg) {
-            return std::regex_match(path.filename().string(), reg);
-        });
+        return std::ranges::any_of(
+            regexes, [&path](const std::regex &reg) { return std::regex_match(path.filename().string(), reg); });
     };
 
     std::vector<std::filesystem::path> files_to_format;

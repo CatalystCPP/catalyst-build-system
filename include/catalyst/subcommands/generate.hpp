@@ -8,9 +8,10 @@
 #include <vector>
 
 #include <CLI11.hpp>
-#include <yaml-cpp/yaml.h>
+#include <ryml/ryml.hpp>
 
 #include "catalyst/utils/toolchain.hpp"
+#include "catalyst/utils/yaml/configuration.hpp"
 
 namespace catalyst::generate {
 struct Parse {
@@ -26,22 +27,22 @@ struct FindRes {
     std::vector<std::string> lib_dirs;
 };
 
-std::expected<YAML::Node, std::string> profileComposition(const std::vector<std::string> &profiles);
+std::expected<utils::yaml::Configuration, std::string> profileComposition(const std::vector<std::string> &profiles);
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);
 std::expected<void, std::string> action(const Parse &);
 
-std::expected<std::string, std::string> libPath(const YAML::Node &profile,
+std::expected<std::string, std::string> libPath(const utils::yaml::Configuration &profile_comp,
                                                 const std::vector<std::string> &profiles,
                                                 const catalyst::toolchain::ToolchainDef &tc);
 std::expected<FindRes, std::string>
-findDep(const std::string &build_dir, const YAML::Node &dep, const catalyst::toolchain::ToolchainDef &tc);
-std::expected<FindRes, std::string> findLocal(const YAML::Node &dep, const catalyst::toolchain::ToolchainDef &tc);
-std::expected<FindRes, std::string> findSystem(const YAML::Node &dep, const catalyst::toolchain::ToolchainDef &tc);
-std::expected<FindRes, std::string> findVcpkg(const YAML::Node &dep, const catalyst::toolchain::ToolchainDef &tc);
+findDep(const std::string &build_dir, ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
+std::expected<FindRes, std::string> findLocal(ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
+std::expected<FindRes, std::string> findSystem(ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
+std::expected<FindRes, std::string> findVcpkg(ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
 std::expected<FindRes, std::string>
-findGit(const std::string &build_dir, const YAML::Node &dep, const catalyst::toolchain::ToolchainDef &tc);
+findGit(const std::string &build_dir, ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
 std::expected<FindRes, std::string>
-findConan(const std::string &build_dir, const YAML::Node &dep, const catalyst::toolchain::ToolchainDef &tc);
+findConan(const std::string &build_dir, ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
 
 std::expected<std::unordered_set<std::filesystem::path>, std::string>
 buildSourceSet(const std::vector<std::string> &source_dirs, const std::vector<std::string> &profiles);

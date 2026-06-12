@@ -8,8 +8,6 @@
 #include <unordered_set>
 #include <vector>
 
-#include <yaml-cpp/node/node.h>
-
 #include "catalyst/hooks.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/build.hpp"
@@ -41,7 +39,9 @@ struct BuildFailureGuard {
         if (!result) {
             if (auto hook_res = hooks::onBuildFailure(config); !hook_res) {
                 catalyst::logger.error("on_build_failure hook failed: {}", hook_res.error());
-                result = std::unexpected(result.error() + "\nAdditionally, the on_build_failure hook failed with error: " + hook_res.error());
+                result =
+                    std::unexpected(result.error() +
+                                    "\nAdditionally, the on_build_failure hook failed with error: " + hook_res.error());
             }
         }
     }
@@ -77,11 +77,12 @@ std::vector<WorkspaceMember> buildOrderTopSort(const Workspace &ws) {
             info.name = name;
             info.workspace_member_key = key;
 
-            const auto &root = config.getRoot();
-            if (root["dependencies"]) {
-                for (const auto &dep : root["dependencies"]) {
-                    if (dep["name"]) {
-                        info.dependencies.push_back(dep["name"].as<std::string>());
+            namespace yaml = utils::yaml;
+            if (ryml::ConstNodeRef deps = yaml::child(config.rootRef(), "dependencies");
+                deps.readable() && deps.is_seq()) {
+                for (ryml::ConstNodeRef dep : deps.children()) {
+                    if (auto dep_name = yaml::asString(yaml::child(dep, "name"))) {
+                        info.dependencies.push_back(std::move(*dep_name));
                     }
                 }
             }
@@ -138,17 +139,22 @@ bool depMissing(const utils::yaml::Configuration &config) {
         return false;
     }
     // TODO: needs to be updated to respect actual dependency types
-    const auto &pc = config.getRoot();
-    return std::any_of(pc["dependencies"].begin(), pc["dependencies"].end(), [&](const YAML::Node &dep) {
-        if (auto type = dep["source"].as<std::string>(); type == "git") {
-            bool missing = !fs::exists(build_dir / "catalyst-libs" / dep["name"].as<std::string>());
-            if (missing) {
-                catalyst::logger.warn("Missing dependency: {}", dep["name"].as<std::string>());
-            }
-            return missing;
-        }
+    namespace yaml = utils::yaml;
+    ryml::ConstNodeRef deps = yaml::child(config.rootRef(), "dependencies");
+    if (!deps.readable() || !deps.is_seq()) {
         return false;
-    });
+    }
+    for (ryml::ConstNodeRef dep : deps.children()) {
+        if (yaml::asString(yaml::child(dep, "source")) != "git") {
+            continue;
+        }
+        std::string dep_name = yaml::asString(yaml::child(dep, "name")).value_or("");
+        if (!fs::exists(build_dir / "catalyst-libs" / dep_name)) {
+            catalyst::logger.warn("Missing dependency: {}", dep_name);
+            return true;
+        }
+    }
+    return false;
 }
 
 std::expected<void, std::string> generateCompileCommands(const fs::path &build_dir, const std::string &generator) {
@@ -265,7 +271,8 @@ std::expected<void, std::string> action(const Parse &parse_args) {
                 needs_regen = true;
             } else {
                 for (const auto &profile : parse_args.profiles) {
-                    fs::path profile_path = (profile == "common") ? "catalyst.yaml" : std::format("catalyst_{}.yaml", profile);
+                    fs::path profile_path =
+                        (profile == "common") ? "catalyst.yaml" : std::format("catalyst_{}.yaml", profile);
                     if (fs::exists(profile_path) && fs::last_write_time(profile_path) > build_time) {
                         needs_regen = true;
                         break;

@@ -1,9 +1,6 @@
 #include "catalyst/utils/yaml/configuration.hpp"
 
 #include <algorithm>
-#include <cassert>
-#include <cstring>
-#include <exception>
 #include <filesystem>
 #include <format>
 #include <functional>
@@ -11,48 +8,68 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
-#include <yaml-cpp/yaml.h>
-
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/yaml/ryml_utils.hpp"
 
-#include "yaml-cpp/node/node.h"
-#include "yaml-cpp/node/parse.h"
-
-using catalyst::LogLevel;
+using catalyst::utils::yaml::appendContentCopy;
+using catalyst::utils::yaml::appendCopy;
+using catalyst::utils::yaml::asBool;
+using catalyst::utils::yaml::asInt;
+using catalyst::utils::yaml::asString;
+using catalyst::utils::yaml::asStringVector;
+using catalyst::utils::yaml::child;
+using catalyst::utils::yaml::childOrCreate;
 using catalyst::utils::yaml::Configuration;
+using catalyst::utils::yaml::emitYaml;
+using catalyst::utils::yaml::removeChild;
+using catalyst::utils::yaml::toSubstr;
 namespace fs = std::filesystem;
 
 namespace {
 
-YAML::Node getDefaultConfiguration() {
-    static YAML::Node defaults = []() {
-        YAML::Node root;
-        root["meta"]["min_ver"] = "0.0.1";
-        root["meta"]["generator"] = "cob";
-        root["manifest"]["name"] = "name";
-        root["manifest"]["type"] = "BINARY";
-        root["manifest"]["version"] = "0.0.1";
-        root["manifest"]["provides"] = "";
-        root["manifest"]["tooling"]["CC"] = "clang";
-        root["manifest"]["tooling"]["CXX"] = "clang++";
-        root["manifest"]["tooling"]["FMT"] = "clang-format";
-        root["manifest"]["tooling"]["LINTER"] = "clang-tidy";
-        root["manifest"]["tooling"]["CCFLAGS"] = "";
-        root["manifest"]["tooling"]["CXXFLAGS"] = "";
-        root["manifest"]["tooling"]["LDFLAGS"] = "";
-        root["manifest"]["tooling"]["doc"]["engine"] = "doxygen";
-        root["manifest"]["tooling"]["doc"]["config"] = "Doxyfile";
-        root["manifest"]["tooling"]["doc"]["out_dir"] = "docs/";
-        root["manifest"]["dirs"]["include"] = std::vector<std::string>{};
-        root["manifest"]["dirs"]["source"] = std::vector<std::string>{};
-        root["manifest"]["dirs"]["build"] = "";
-        root["dependencies"] = std::vector<YAML::Node>{};
-        root["features"] = YAML::Node(YAML::NodeType::Map);
-        return root;
+// The default configuration every composition starts from. Parsing a literal
+// (instead of building the tree programmatically) keeps the quoted-empty
+// scalars ('' is an empty string, not null) and saves rapidyaml's verbose
+// node-creation idioms.
+constexpr std::string_view DEFAULT_CONFIGURATION_YAML = R"(meta:
+  min_ver: 0.0.1
+  generator: cob
+manifest:
+  name: name
+  type: BINARY
+  version: 0.0.1
+  provides: ''
+  tooling:
+    CC: clang
+    CXX: clang++
+    FMT: clang-format
+    LINTER: clang-tidy
+    CCFLAGS: ''
+    CXXFLAGS: ''
+    LDFLAGS: ''
+    doc:
+      engine: doxygen
+      config: Doxyfile
+      out_dir: docs/
+  dirs:
+    include: []
+    source: []
+    build: ''
+dependencies: []
+features: {}
+)";
+
+const ryml::Tree &getDefaultConfiguration() {
+    static const ryml::Tree default_tree = []() {
+        auto tree = catalyst::utils::yaml::parseYaml(DEFAULT_CONFIGURATION_YAML, "<defaults>");
+        if (!tree)
+            throw std::runtime_error(tree.error());
+        return std::move(*tree);
     }();
-    return YAML::Clone(defaults);
+    return default_tree;
 }
 
 std::string verMax(std::string s1, std::string s2) {
@@ -100,30 +117,42 @@ std::vector<std::string> splitPath(const std::string &key) {
     return segments;
 }
 
-std::optional<YAML::Node> traverse(const std::string &key, const YAML::Node &root) {
-    std::vector<std::string> segments = splitPath(key);
-    YAML::Node current;
-    current.reset(root);
-
-    for (const auto &s : segments) {
-        if (!current[s]) {
+std::optional<ryml::ConstNodeRef> traverse(const std::string &key, ryml::ConstNodeRef root) {
+    ryml::ConstNodeRef current = root;
+    for (const auto &s : splitPath(key)) {
+        current = child(current, s);
+        if (!current.readable())
             return std::nullopt;
-        }
-        current.reset(current[s]);
     }
     return current;
 }
 
-void validateProfileKeys(const YAML::Node &profile, const std::string &profile_name) {
-    if (!profile.IsMap())
+// True for a key whose value is null (`key:`, `key: ~`, `key: null`) — the
+// "remove this key" marker in profile merging. Containers are not null.
+bool isNullValue(ryml::ConstNodeRef node) {
+    return node.readable() && node.has_val() && node.val_is_null();
+}
+
+// Sets (creating or overwriting) the scalar child `key` of `parent`, copying
+// both strings into the tree's arena.
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+void setScalarChild(ryml::NodeRef parent, std::string_view key, std::string_view value) {
+    ryml::NodeRef node = childOrCreate(parent, key);
+    node.set_val(parent.tree()->to_arena(toSubstr(value)));
+}
+
+void validateProfileKeys(ryml::ConstNodeRef profile, const std::string &profile_name) {
+    if (!profile.readable() || !profile.is_map())
         return;
 
     auto check_keys =
-        [&](const YAML::Node &node, const std::vector<std::string> &allowed_keys, const std::string &path) {
-            if (!node.IsMap())
+        [&](ryml::ConstNodeRef node, const std::vector<std::string_view> &allowed_keys, const std::string &path) {
+            if (!node.readable() || !node.is_map())
                 return;
-            for (auto it = node.begin(); it != node.end(); ++it) {
-                auto key = it->first.as<std::string>();
+            for (ryml::ConstNodeRef item : node.children()) {
+                if (!item.has_key())
+                    continue;
+                std::string key{item.key().str, item.key().len};
                 if (std::ranges::find(allowed_keys, key) == allowed_keys.end()) {
                     catalyst::logger.warn("Invalid key '{}' found at '{}' in profile '{}'.", key, path, profile_name);
                     throw std::runtime_error(
@@ -133,41 +162,33 @@ void validateProfileKeys(const YAML::Node &profile, const std::string &profile_n
         };
 
     check_keys(profile, {"meta", "manifest", "dependencies", "features", "hooks"}, "root");
-    if (profile["meta"]) {
-        check_keys(profile["meta"], {"min_ver", "generator"}, "meta");
-    }
-    if (profile["manifest"]) {
-        check_keys(profile["manifest"],
-                   {"name",
-                    "type",
-                    "version",
-                    "provides",
-                    "toolchain",
-                    "tooling",
-                    "dirs",
-                    "description",
-                    "author",
-                    "maintainer",
-                    "vendor",
-                    "license_file",
-                    "readme_file"},
-                   "manifest");
-        if (profile["manifest"]["tooling"]) {
-            check_keys(
-                profile["manifest"]["tooling"],
-                {"CC", "CXX", "CC_LAUNCHER", "CXX_LAUNCHER", "FMT", "LINTER", "CCFLAGS", "CXXFLAGS", "LDFLAGS", "doc"},
-                "manifest.tooling");
-            if (profile["manifest"]["tooling"]["doc"]) {
-                check_keys(
-                    profile["manifest"]["tooling"]["doc"], {"engine", "config", "out_dir"}, "manifest.tooling.doc");
-            }
-        }
-        if (profile["manifest"]["dirs"]) {
-            check_keys(profile["manifest"]["dirs"], {"include", "source", "build"}, "manifest.dirs");
-        }
-    }
-    if (profile["dependencies"] && profile["dependencies"].IsSequence()) {
-        for (const auto &dep : profile["dependencies"]) {
+    check_keys(child(profile, "meta"), {"min_ver", "generator"}, "meta");
+
+    ryml::ConstNodeRef manifest = child(profile, "manifest");
+    check_keys(manifest,
+               {"name",
+                "type",
+                "version",
+                "provides",
+                "toolchain",
+                "tooling",
+                "dirs",
+                "description",
+                "author",
+                "maintainer",
+                "vendor",
+                "license_file",
+                "readme_file"},
+               "manifest");
+    ryml::ConstNodeRef tooling = child(manifest, "tooling");
+    check_keys(tooling,
+               {"CC", "CXX", "CC_LAUNCHER", "CXX_LAUNCHER", "FMT", "LINTER", "CCFLAGS", "CXXFLAGS", "LDFLAGS", "doc"},
+               "manifest.tooling");
+    check_keys(child(tooling, "doc"), {"engine", "config", "out_dir"}, "manifest.tooling.doc");
+    check_keys(child(manifest, "dirs"), {"include", "source", "build"}, "manifest.dirs");
+
+    if (ryml::ConstNodeRef deps = child(profile, "dependencies"); deps.readable() && deps.is_seq()) {
+        for (ryml::ConstNodeRef dep : deps.children()) {
             check_keys(dep,
                        {"name",
                         "source",
@@ -184,81 +205,83 @@ void validateProfileKeys(const YAML::Node &profile, const std::string &profile_n
                        "dependencies[]");
         }
     }
-    if (profile["hooks"]) {
-        check_keys(profile["hooks"],
-                   {"pre-clean",
-                    "post-clean",
-                    "pre-run",
-                    "post-run",
-                    "pre-test",
-                    "post-test",
-                    "pre-bench",
-                    "post-bench",
-                    "pre-pack",
-                    "post-pack",
-                    "pre-build",
-                    "post-build",
-                    "on-build-failure",
-                    "pre-generate",
-                    "post-generate",
-                    "pre-fetch",
-                    "post-fetch"},
-                   "hooks");
-    }
+    check_keys(child(profile, "hooks"),
+               {"pre-clean",
+                "post-clean",
+                "pre-run",
+                "post-run",
+                "pre-test",
+                "post-test",
+                "pre-bench",
+                "post-bench",
+                "pre-pack",
+                "post-pack",
+                "pre-build",
+                "post-build",
+                "on-build-failure",
+                "pre-generate",
+                "post-generate",
+                "pre-fetch",
+                "post-fetch"},
+               "hooks");
 }
 
-void mergeHelper(YAML::Node &composite, const std::string &new_profile_name, const YAML::Node &new_profile) {
+// The single switchboard for catalyst's profile-merge semantics; splitting it
+// would scatter the override/append/remove rules across functions.
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+void mergeHelper(ryml::Tree &composite, const std::string &new_profile_name, ryml::ConstNodeRef new_profile) {
     validateProfileKeys(new_profile, new_profile_name);
 
-    YAML::Node defaults = getDefaultConfiguration();
+    ryml::ConstNodeRef defaults = getDefaultConfiguration().crootref();
 
     auto check_conflict = [&](const std::string &dotpath, const std::string &incoming_val) {
-        try {
-            auto current_node = traverse(dotpath, composite);
-            auto default_node = traverse(dotpath, defaults);
+        auto current_node = traverse(dotpath, composite.crootref());
+        auto default_node = traverse(dotpath, defaults);
 
-            std::string current_val = current_node ? current_node->as<std::string>() : "";
-            std::string default_val = default_node ? default_node->as<std::string>() : "";
+        std::string current_val = current_node ? asString(*current_node).value_or("") : "";
+        std::string default_val = default_node ? asString(*default_node).value_or("") : "";
 
-            if (!current_val.empty() && current_val != incoming_val && current_val != default_val) {
-                catalyst::logger.info("Profile '{}' overrides '{}'", new_profile_name, dotpath);
-                catalyst::logger.debug("'{}': '{}' -> '{}'", dotpath, current_val, incoming_val);
-            }
-        } catch (...) {
-            catalyst::logger.debug("Could not check conflict for '{}'", dotpath);
+        if (!current_val.empty() && current_val != incoming_val && current_val != default_val) {
+            catalyst::logger.info("Profile '{}' overrides '{}'", new_profile_name, dotpath);
+            catalyst::logger.debug("'{}': '{}' -> '{}'", dotpath, current_val, incoming_val);
         }
     };
 
     auto merge_scalar =
-        [&](YAML::Node dst_parent, const std::string &key, YAML::Node src_parent, const std::string &dotpath) {
-            if (!src_parent[key].IsDefined())
+        [&](ryml::NodeRef dst_parent, std::string_view key, ryml::ConstNodeRef src_parent, const std::string &dotpath) {
+            ryml::ConstNodeRef src_child = child(src_parent, key);
+            if (!src_child.readable())
                 return;
-            if (src_parent[key].IsNull()) {
-                dst_parent.remove(key);
+            if (isNullValue(src_child)) {
+                removeChild(dst_parent, key);
             } else {
-                check_conflict(dotpath, src_parent[key].as<std::string>());
-                dst_parent[key] = src_parent[key];
+                check_conflict(dotpath, asString(src_child).value_or(""));
+                // Replace wholesale (appendCopy keeps the quote flags, so a
+                // quoted-empty '' survives as an empty string, not null).
+                removeChild(dst_parent, key);
+                appendCopy(dst_parent, src_child);
             }
         };
 
-    auto merge_scalar_validated = [&](YAML::Node dst_parent,
-                                      const std::string &key,
-                                      YAML::Node src_parent,
+    auto merge_scalar_validated = [&](ryml::NodeRef dst_parent,
+                                      std::string_view key,
+                                      ryml::ConstNodeRef src_parent,
                                       const std::string &dotpath,
                                       const std::function<bool(const std::string &)> &validator,
                                       const std::string &fallback_on_null = "") {
-        if (!src_parent[key].IsDefined())
+        ryml::ConstNodeRef src_child = child(src_parent, key);
+        if (!src_child.readable())
             return;
-        if (src_parent[key].IsNull()) {
+        if (isNullValue(src_child)) {
             if (!fallback_on_null.empty())
-                dst_parent[key] = fallback_on_null;
+                setScalarChild(dst_parent, key, fallback_on_null);
             else
-                dst_parent.remove(key);
+                removeChild(dst_parent, key);
         } else {
-            auto val = src_parent[key].as<std::string>();
+            auto val = asString(src_child).value_or("");
             if (validator(val)) {
                 check_conflict(dotpath, val);
-                dst_parent[key] = val;
+                setScalarChild(dst_parent, key, val);
             } else {
                 catalyst::logger.warn(
                     "Invalid value '{}' for '{}' in profile '{}'. Ignoring.", val, dotpath, new_profile_name);
@@ -266,36 +289,45 @@ void mergeHelper(YAML::Node &composite, const std::string &new_profile_name, con
         }
     };
 
-    auto merge_sequence = [&](YAML::Node dst_parent, const std::string &key, YAML::Node src_parent) {
-        if (!src_parent[key].IsDefined())
+    auto merge_sequence = [&](ryml::NodeRef dst_parent, std::string_view key, ryml::ConstNodeRef src_parent) {
+        ryml::ConstNodeRef src_child = child(src_parent, key);
+        if (!src_child.readable())
             return;
-        if (src_parent[key].IsNull()) {
-            dst_parent.remove(key);
-        } else if (src_parent[key].IsSequence()) {
-            for (const auto &item : src_parent[key])
-                dst_parent[key].push_back(item);
+        if (isNullValue(src_child)) {
+            removeChild(dst_parent, key);
+        } else if (src_child.is_seq()) {
+            ryml::NodeRef dst_seq = childOrCreate(dst_parent, key);
+            dst_seq |= ryml::SEQ;
+            for (ryml::ConstNodeRef item : src_child.children())
+                appendCopy(dst_seq, item);
         }
     };
 
-    auto merge_section = [&](YAML::Node dst_parent,
-                             const std::string &key,
-                             YAML::Node src_parent,
-                             const std::function<void(YAML::Node, YAML::Node)> &body) {
-        if (!src_parent[key].IsDefined())
+    auto merge_section = [&](ryml::NodeRef dst_parent,
+                             std::string_view key,
+                             ryml::ConstNodeRef src_parent,
+                             const std::function<void(ryml::NodeRef, ryml::ConstNodeRef)> &body) {
+        ryml::ConstNodeRef src_child = child(src_parent, key);
+        if (!src_child.readable())
             return;
-        if (src_parent[key].IsNull()) {
-            dst_parent.remove(key);
+        if (isNullValue(src_child)) {
+            removeChild(dst_parent, key);
         } else {
-            body(dst_parent[key], src_parent[key]);
+            ryml::NodeRef dst_child = childOrCreate(dst_parent, key);
+            dst_child |= ryml::MAP;
+            body(dst_child, src_child);
         }
     };
 
-    merge_section(composite, "meta", new_profile, [&](YAML::Node dst, YAML::Node src) {
-        if (src["min_ver"].IsDefined()) {
-            if (src["min_ver"].IsNull()) {
-                dst.remove("min_ver");
+    ryml::NodeRef composite_root = composite.rootref();
+
+    merge_section(composite_root, "meta", new_profile, [&](ryml::NodeRef dst, ryml::ConstNodeRef src) {
+        if (ryml::ConstNodeRef src_min_ver = child(src, "min_ver"); src_min_ver.readable()) {
+            if (isNullValue(src_min_ver)) {
+                removeChild(dst, "min_ver");
             } else {
-                dst["min_ver"] = verMax(dst["min_ver"].as<std::string>(), src["min_ver"].as<std::string>());
+                std::string current = asString(child(dst, "min_ver")).value_or("");
+                setScalarChild(dst, "min_ver", verMax(current, asString(src_min_ver).value_or("")));
             }
         }
 
@@ -308,7 +340,7 @@ void mergeHelper(YAML::Node &composite, const std::string &new_profile_name, con
             /*fallback_on_null=*/"cob");
     });
 
-    merge_section(composite, "manifest", new_profile, [&](YAML::Node dst, YAML::Node src) {
+    merge_section(composite_root, "manifest", new_profile, [&](ryml::NodeRef dst, ryml::ConstNodeRef src) {
         for (const auto &key : {"name",
                                 "type",
                                 "version",
@@ -322,61 +354,75 @@ void mergeHelper(YAML::Node &composite, const std::string &new_profile_name, con
                                 "readme_file"})
             merge_scalar(dst, key, src, std::string("manifest.") + key);
 
-        merge_section(dst, "tooling", src, [&](YAML::Node tdst, YAML::Node tsrc) {
+        merge_section(dst, "tooling", src, [&](ryml::NodeRef tdst, ryml::ConstNodeRef tsrc) {
             for (const auto &key :
                  {"CC", "CXX", "CC_LAUNCHER", "CXX_LAUNCHER", "FMT", "LINTER", "CCFLAGS", "CXXFLAGS", "LDFLAGS"})
                 merge_scalar(tdst, key, tsrc, std::string("manifest.tooling.") + key);
 
-            merge_section(tdst, "doc", tsrc, [&](YAML::Node docdst, YAML::Node docsrc) {
+            merge_section(tdst, "doc", tsrc, [&](ryml::NodeRef docdst, ryml::ConstNodeRef docsrc) {
                 for (const auto &key : {"engine", "config", "out_dir"})
                     merge_scalar(docdst, key, docsrc, std::string("manifest.tooling.doc.") + key);
             });
         });
 
-        merge_section(dst, "dirs", src, [&](YAML::Node ddst, YAML::Node dsrc) {
+        merge_section(dst, "dirs", src, [&](ryml::NodeRef ddst, ryml::ConstNodeRef dsrc) {
             merge_sequence(ddst, "include", dsrc);
             merge_sequence(ddst, "source", dsrc);
             merge_scalar(ddst, "build", dsrc, "manifest.dirs.build");
         });
     });
 
-    merge_section(composite, "features", new_profile, [&](YAML::Node dst, YAML::Node src) {
-        if (src.IsMap()) {
-            for (const auto &it : src) {
-                dst[it.first.as<std::string>()] = it.second;
+    merge_section(composite_root, "features", new_profile, [&](ryml::NodeRef dst, ryml::ConstNodeRef src) {
+        auto merge_feature_map = [&](ryml::ConstNodeRef map) {
+            for (ryml::ConstNodeRef item : map.children()) {
+                if (!item.has_key())
+                    continue;
+                removeChild(dst, std::string_view{item.key().str, item.key().len});
+                appendCopy(dst, item);
             }
-        } else if (src.IsSequence()) {
-            for (const auto &item : src) {
-                if (item.IsMap()) {
-                    for (const auto &it : item) {
-                        dst[it.first.as<std::string>()] = it.second;
-                    }
-                }
+        };
+        if (src.is_map()) {
+            merge_feature_map(src);
+        } else if (src.is_seq()) {
+            for (ryml::ConstNodeRef item : src.children()) {
+                if (item.is_map())
+                    merge_feature_map(item);
             }
         }
     });
-    merge_sequence(composite, "dependencies", new_profile);
+    merge_sequence(composite_root, "dependencies", new_profile);
 
-    merge_section(composite, "hooks", new_profile, [&](YAML::Node dst, YAML::Node src) {
-        for (const auto &hook : src) {
-            auto name = hook.first.as<std::string>();
-            if (hook.second.IsNull()) {
-                dst.remove(name);
-            } else if (hook.second.IsSequence()) {
-                for (const auto &item : hook.second)
-                    dst[name].push_back(item);
-            } else if (hook.second.IsScalar() || hook.second.IsMap()) {
-                dst[name].push_back(hook.second);
+    merge_section(composite_root, "hooks", new_profile, [&](ryml::NodeRef dst, ryml::ConstNodeRef src) {
+        for (ryml::ConstNodeRef hook : src.children()) {
+            if (!hook.has_key())
+                continue;
+            std::string_view name{hook.key().str, hook.key().len};
+            if (isNullValue(hook)) {
+                removeChild(dst, name);
+            } else if (hook.is_seq()) {
+                ryml::NodeRef dst_seq = childOrCreate(dst, name);
+                dst_seq |= ryml::SEQ;
+                for (ryml::ConstNodeRef item : hook.children())
+                    appendCopy(dst_seq, item);
+            } else if (hook.has_val() || hook.is_map()) {
+                ryml::NodeRef dst_seq = childOrCreate(dst, name);
+                dst_seq |= ryml::SEQ;
+                // Copy the hook's content only: its key ("pre-build", ...)
+                // must not follow it into the sequence item.
+                appendContentCopy(dst_seq, hook);
             }
         }
     });
 }
 
-void merge(YAML::Node &composite, const std::string &profile_name, const fs::path &root_dir) {
+void merge(ryml::Tree &composite, const std::string &profile_name, const fs::path &root_dir) {
     if (fs::exists(root_dir / "CATALYST.yaml")) {
-        if (YAML::Node catalyst_yaml = YAML::LoadFile(root_dir / "CATALYST.yaml"); catalyst_yaml[profile_name]) {
+        auto catalyst_yaml = catalyst::utils::yaml::loadFile(root_dir / "CATALYST.yaml");
+        if (!catalyst_yaml)
+            throw std::runtime_error(catalyst_yaml.error());
+        if (ryml::ConstNodeRef profile = child(catalyst_yaml->crootref(), profile_name); profile.readable()) {
             catalyst::logger.debug("Found profile '{}' in CATALYST.yaml", profile_name);
-            mergeHelper(composite, profile_name, catalyst_yaml[profile_name]);
+            mergeHelper(composite, profile_name, profile);
             return;
         }
     }
@@ -392,12 +438,16 @@ void merge(YAML::Node &composite, const std::string &profile_name, const fs::pat
         catalyst::logger.error("Profile {} not found in {} or CATALYST.yaml", profile_name, profile_path.string());
         throw std::exception();
     }
-    mergeHelper(composite, profile_name, YAML::LoadFile(profile_path));
+    auto profile_yaml = catalyst::utils::yaml::loadFile(profile_path);
+    if (!profile_yaml)
+        throw std::runtime_error(profile_yaml.error());
+    mergeHelper(composite, profile_name, profile_yaml->crootref());
 }
 
 } // namespace
 
-Configuration::Configuration(const std::vector<std::string> &profiles, const std::filesystem::path &root_dir) {
+Configuration::Configuration(const std::vector<std::string> &profiles, const std::filesystem::path &root_dir)
+    : composition(getDefaultConfiguration()) {
     std::vector<std::string> profile_names;
     profile_names.reserve(profiles.size());
     for (const auto &p : profiles) {
@@ -409,10 +459,8 @@ Configuration::Configuration(const std::vector<std::string> &profiles, const std
     }
     catalyst::logger.debug("Composing profiles: {}.", profile_names);
 
-    root = getDefaultConfiguration();
-
     for (const auto &profile_name : profile_names) {
-        merge(root, profile_name, root_dir);
+        merge(composition, profile_name, root_dir);
     }
 
     this->profile_names = profile_names;
@@ -420,60 +468,39 @@ Configuration::Configuration(const std::vector<std::string> &profiles, const std
 }
 
 bool Configuration::has(const std::string &key) const {
-    return traverse(key, root).has_value();
+    return traverse(key, composition.crootref()).has_value();
 }
 
 std::optional<std::string> Configuration::getString(const std::string &key) const {
-    std::optional<YAML::Node> res = traverse(key, root);
+    std::optional<ryml::ConstNodeRef> res = traverse(key, composition.crootref());
     if (!res) {
         return std::nullopt;
     }
-
-    try {
-        return res.value().as<std::string>();
-    } catch (const YAML::Exception &e) {
-        catalyst::logger.error("YAML Exception in getString for key {}: {}", key, e.what());
-        return std::nullopt;
-    }
+    return asString(*res);
 }
 
 std::optional<int> Configuration::getInt(const std::string &key) const {
-    std::optional<YAML::Node> res = traverse(key, root);
+    std::optional<ryml::ConstNodeRef> res = traverse(key, composition.crootref());
     if (!res) {
         return std::nullopt;
     }
-
-    try {
-        return res.value().as<int>();
-    } catch (const YAML::Exception &) {
-        return std::nullopt;
-    }
+    return asInt(*res);
 }
 
 std::optional<bool> Configuration::getBool(const std::string &key) const {
-    std::optional<YAML::Node> res = traverse(key, root);
+    std::optional<ryml::ConstNodeRef> res = traverse(key, composition.crootref());
     if (!res) {
         return std::nullopt;
     }
-
-    try {
-        return res.value().as<bool>();
-    } catch (const YAML::Exception &) {
-        return std::nullopt;
-    }
+    return asBool(*res);
 }
 
 std::optional<std::vector<std::string>> Configuration::getStringVector(const std::string &key) const {
-    std::optional<YAML::Node> res = traverse(key, root);
+    std::optional<ryml::ConstNodeRef> res = traverse(key, composition.crootref());
     if (!res) {
         return std::nullopt;
     }
-
-    try {
-        return res.value().as<std::vector<std::string>>();
-    } catch (const YAML::Exception &) {
-        return std::nullopt;
-    }
+    return asStringVector(*res);
 }
 
 std::filesystem::path Configuration::getBuildDir() const {

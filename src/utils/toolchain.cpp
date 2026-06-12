@@ -2,7 +2,7 @@
 
 #include <format>
 
-#include <yaml-cpp/yaml.h>
+#include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::toolchain {
 
@@ -32,78 +32,59 @@ std::string expand_template(std::string_view tmpl, const std::unordered_map<std:
 }
 
 std::expected<ToolchainDef, std::string> parse_toolchain(const std::filesystem::path &path) {
+    namespace yaml = catalyst::utils::yaml;
     ToolchainDef tc;
-    try {
-        YAML::Node root = YAML::LoadFile(path.string());
-        if (!root["toolchain"]) {
-            return std::unexpected(std::format("Toolchain file {} missing 'toolchain' root node.", path.string()));
-        }
-        YAML::Node node = root["toolchain"];
 
-        if (node["name"])
-            tc.name = node["name"].as<std::string>();
-
-        if (YAML::Node ext = node["extensions"]) {
-            if (ext["object"])
-                tc.extensions.object = ext["object"].as<std::string>();
-            if (ext["executable"])
-                tc.extensions.executable = ext["executable"].as<std::string>();
-            if (ext["static_lib"])
-                tc.extensions.static_lib = ext["static_lib"].as<std::string>();
-            if (ext["shared_lib"])
-                tc.extensions.shared_lib = ext["shared_lib"].as<std::string>();
-            if (ext["static_lib_prefix"])
-                tc.extensions.static_lib_prefix = ext["static_lib_prefix"].as<std::string>();
-            if (ext["shared_lib_prefix"])
-                tc.extensions.shared_lib_prefix = ext["shared_lib_prefix"].as<std::string>();
-        }
-
-        if (YAML::Node flags = node["flags"]) {
-            if (flags["include_dir"])
-                tc.flags.include_dir = flags["include_dir"].as<std::string>();
-            if (flags["lib_dir"])
-                tc.flags.lib_dir = flags["lib_dir"].as<std::string>();
-            if (flags["lib"])
-                tc.flags.lib = flags["lib"].as<std::string>();
-            if (flags["define"])
-                tc.flags.define = flags["define"].as<std::string>();
-            if (flags["define_empty"])
-                tc.flags.define_empty = flags["define_empty"].as<std::string>();
-        }
-
-        if (YAML::Node comp = node["compiler"]) {
-            if (YAML::Node c = comp["c"]) {
-                if (c["executable"])
-                    tc.compiler.c.executable = c["executable"].as<std::string>();
-                if (c["command"])
-                    tc.compiler.c.command = c["command"].as<std::string>();
-            }
-            if (YAML::Node cxx = comp["cxx"]) {
-                if (cxx["executable"])
-                    tc.compiler.cxx.executable = cxx["executable"].as<std::string>();
-                if (cxx["command"])
-                    tc.compiler.cxx.command = cxx["command"].as<std::string>();
-            }
-        }
-
-        if (YAML::Node link = node["linker"]) {
-            if (link["executable"])
-                tc.linker.executable = link["executable"].as<std::string>();
-            if (link["executable_command"])
-                tc.linker.executable_command = link["executable_command"].as<std::string>();
-            if (link["shared_lib_command"])
-                tc.linker.shared_lib_command = link["shared_lib_command"].as<std::string>();
-        }
-
-        if (YAML::Node arch = node["archiver"]) {
-            if (arch["executable"])
-                tc.archiver.executable = arch["executable"].as<std::string>();
-            if (arch["command"])
-                tc.archiver.command = arch["command"].as<std::string>();
-        }
-    } catch (const YAML::Exception &e) {
-        return std::unexpected(std::format("YAML parsing error in {}: {}", path.string(), e.what()));
+    auto tree = yaml::loadFile(path);
+    if (!tree) {
+        return std::unexpected(std::format("YAML parsing error in {}: {}", path.string(), tree.error()));
     }
+
+    ryml::ConstNodeRef node = yaml::child(tree->crootref(), "toolchain");
+    if (!node.readable()) {
+        return std::unexpected(std::format("Toolchain file {} missing 'toolchain' root node.", path.string()));
+    }
+
+    // Assigns the scalar child `key` of `parent` to `target`, if present.
+    auto set = [](ryml::ConstNodeRef parent, std::string_view key, std::string &target) {
+        if (auto val = yaml::asString(yaml::child(parent, key)))
+            target = std::move(*val);
+    };
+
+    set(node, "name", tc.name);
+
+    ryml::ConstNodeRef ext = yaml::child(node, "extensions");
+    set(ext, "object", tc.extensions.object);
+    set(ext, "executable", tc.extensions.executable);
+    set(ext, "static_lib", tc.extensions.static_lib);
+    set(ext, "shared_lib", tc.extensions.shared_lib);
+    set(ext, "static_lib_prefix", tc.extensions.static_lib_prefix);
+    set(ext, "shared_lib_prefix", tc.extensions.shared_lib_prefix);
+
+    ryml::ConstNodeRef flags = yaml::child(node, "flags");
+    set(flags, "include_dir", tc.flags.include_dir);
+    set(flags, "lib_dir", tc.flags.lib_dir);
+    set(flags, "lib", tc.flags.lib);
+    set(flags, "define", tc.flags.define);
+    set(flags, "define_empty", tc.flags.define_empty);
+
+    ryml::ConstNodeRef comp = yaml::child(node, "compiler");
+    ryml::ConstNodeRef comp_c = yaml::child(comp, "c");
+    set(comp_c, "executable", tc.compiler.c.executable);
+    set(comp_c, "command", tc.compiler.c.command);
+    ryml::ConstNodeRef comp_cxx = yaml::child(comp, "cxx");
+    set(comp_cxx, "executable", tc.compiler.cxx.executable);
+    set(comp_cxx, "command", tc.compiler.cxx.command);
+
+    ryml::ConstNodeRef link = yaml::child(node, "linker");
+    set(link, "executable", tc.linker.executable);
+    set(link, "executable_command", tc.linker.executable_command);
+    set(link, "shared_lib_command", tc.linker.shared_lib_command);
+
+    ryml::ConstNodeRef arch = yaml::child(node, "archiver");
+    set(arch, "executable", tc.archiver.executable);
+    set(arch, "command", tc.archiver.command);
+
     return tc;
 }
 
