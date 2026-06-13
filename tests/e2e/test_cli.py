@@ -227,3 +227,36 @@ def test_pack_silent(tmp_path):
     # Verify CPack output is suppressed
     assert "CPack:" not in result.stdout
     assert "CPack:" not in result.stderr
+
+def test_grievance_fixes(tmp_path):
+    project_dir = tmp_path / "grievance_project"
+    project_dir.mkdir()
+
+    # 1. Init project with IDE configuration
+    env = os.environ.copy()
+    result = subprocess.run([str(CATALYST_BIN), "init", "--ides", "vscode", "clion"], cwd=project_dir, capture_output=True, text=True, env=env)
+    assert result.returncode == 0
+
+    # Verify CLion misc.xml was generated with CompDBSettings
+    misc_xml = project_dir / ".idea" / "misc.xml"
+    assert misc_xml.exists()
+    misc_content = misc_xml.read_text()
+    assert "CompDBSettings" in misc_content
+    assert "CompDBWorkspace" in misc_content
+
+    # 2. Test sibling subcommands argument style (Grievance #3)
+    # Check that 'add system' rejects positional argument or missing name
+    result = subprocess.run([str(CATALYST_BIN), "add", "system", "my_dep"], cwd=project_dir, capture_output=True, text=True, env=env)
+    assert result.returncode != 0
+
+    # Check that 'add system' with -n/--name works
+    result = subprocess.run([str(CATALYST_BIN), "add", "system", "-n", "my_dep"], cwd=project_dir, capture_output=True, text=True, env=env)
+    assert result.returncode == 0
+
+    # 3. Build project and check compilation database propagation (Grievance #6)
+    result = subprocess.run([str(CATALYST_BIN), "build"], cwd=project_dir, capture_output=True, text=True, env=env)
+    assert result.returncode == 0
+
+    # Check compile_commands.json at stable root paths
+    assert (project_dir / "build" / "compile_commands.json").exists()
+    assert (project_dir / "compile_commands.json").exists()

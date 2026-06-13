@@ -331,6 +331,37 @@ std::expected<void, std::string> action(const Parse &parse_args) {
             return;
         }
 
+        // Publish compile commands to stable root path
+        fs::path source_compdb = build_dir / "compile_commands.json";
+        if (fs::exists(source_compdb)) {
+            // 1. Stable build path (e.g. build/compile_commands.json)
+            fs::path stable_compdb = build_dir.parent_path() / "compile_commands.json";
+            std::error_code ec;
+            if (fs::exists(stable_compdb)) {
+                fs::remove(stable_compdb, ec);
+            }
+            fs::copy_file(source_compdb, stable_compdb, fs::copy_options::overwrite_existing, ec);
+            if (ec) {
+                catalyst::logger.warn("Failed to publish compilation database to {}: {}", stable_compdb.string(), ec.message());
+            } else {
+                catalyst::logger.debug("Published compilation database to {}", stable_compdb.string());
+            }
+
+            // 2. Project root path (e.g. compile_commands.json)
+            fs::path root_compdb = fs::current_path() / "compile_commands.json";
+            if (source_compdb != root_compdb && stable_compdb != root_compdb) {
+                if (fs::exists(root_compdb)) {
+                    fs::remove(root_compdb, ec);
+                }
+                fs::copy_file(source_compdb, root_compdb, fs::copy_options::overwrite_existing, ec);
+                if (ec) {
+                    catalyst::logger.warn("Failed to publish compilation database to project root: {}", ec.message());
+                } else {
+                    catalyst::logger.debug("Published compilation database to project root");
+                }
+            }
+        }
+
         catalyst::logger.info("Running post-build hooks.");
         if (auto res = hooks::postBuild(config); !res) {
             catalyst::logger.error("Post-build hook failed: {}", res.error());
