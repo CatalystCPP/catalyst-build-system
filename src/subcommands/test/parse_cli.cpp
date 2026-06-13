@@ -4,5 +4,6 @@ auto catalyst::test::parse(CLI::App &app) -> std::pair<CLI::App *, std::unique_p
     CLI::App *test = app.add_subcommand("test", "Run the test executable.");
     auto ret = std::make_unique<Parse>();
     test->add_option("-P,--params", ret->params, "Params to pass to the test executable.");
+    test->add_flag("-r,--rebuild", ret->rebuild, "Rebuild before testing.")->default_val(false);
     return {test, std::move(ret)};
 }

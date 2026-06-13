@@ -1,7 +1,9 @@
+#include <cctype>
 #include <cstdlib>
 #include <expected>
 #include <filesystem>
 #include <format>
+#include <fstream>
 #include <future>
 #include <iostream>
 #include <print>
@@ -11,20 +13,152 @@
 #include <unordered_set>
 #include <vector>
 
-#include <yaml-cpp/yaml.h>
-
 #include "catalyst/hooks.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/fetch.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::fetch {
 namespace fs = std::filesystem;
 
+std::string getCompilerVersion(const std::string &compiler_exe) {
+    auto res = catalyst::processExecStdout({compiler_exe, "--version"});
+    if (!res)
+        return "";
+    const std::string &out = *res;
+    size_t pos = out.find("version");
+    if (pos == std::string::npos) {
+        pos = out.find(' ');
+    }
+    size_t digit_pos = std::string::npos;
+    for (size_t i = (pos != std::string::npos ? pos : 0); i < out.size(); ++i) {
+        if (std::isdigit(static_cast<unsigned char>(out[i]))) {
+            digit_pos = i;
+            break;
+        }
+    }
+    if (digit_pos == std::string::npos)
+        return "";
+    size_t end_pos = digit_pos;
+    while (end_pos < out.size() && (std::isdigit(static_cast<unsigned char>(out[end_pos])) || out[end_pos] == '.')) {
+        end_pos++;
+    }
+    std::string version = out.substr(digit_pos, end_pos - digit_pos);
+    size_t dot = version.find('.');
+    if (dot != std::string::npos) {
+        return version.substr(0, dot);
+    }
+    return version;
+}
+
+std::expected<void, std::string> fetchConanDeps(const std::vector<ryml::ConstNodeRef> &conan_deps,
+                                                const std::string &build_dir,
+                                                const utils::yaml::Configuration &config,
+                                                const std::vector<std::string> &profiles) {
+    namespace yaml = utils::yaml;
+    catalyst::logger.debug("Writing conanfile.txt in {}", build_dir);
+    fs::path build_path(build_dir);
+    fs::create_directories(build_path);
+    fs::path conanfile_path = build_path / "conanfile.txt";
+    std::ofstream conanfile(conanfile_path);
+    if (!conanfile.is_open()) {
+        return std::unexpected(std::format("Failed to open {} for writing", conanfile_path.string()));
+    }
+
+    conanfile << "[requires]\n";
+    for (ryml::ConstNodeRef dep : conan_deps) {
+        auto name = yaml::asString(yaml::child(dep, "name"));
+        auto version = yaml::asString(yaml::child(dep, "version"));
+        if (!name || !version) {
+            return std::unexpected("Conan dependency is missing 'name' or 'version'.");
+        }
+        conanfile << *name << "/" << *version << "\n";
+    }
+
+    conanfile << "\n[generators]\n";
+    conanfile << "PkgConfigDeps\n";
+    conanfile.close();
+
+    catalyst::logger.info("Installing Conan dependencies...");
+
+    // Build conan command
+    std::vector<std::string> conan_cmd = {"conan",
+                                          "install",
+                                          build_dir,
+                                          "--output-folder=" + (build_path / "conan").string(),
+                                          "--build=missing",
+                                          "-g",
+                                          "PkgConfigDeps"};
+
+    // 1. Determine build type
+    std::string build_type = "Release";
+    for (const auto &profile : profiles) {
+        if (profile == "debug") {
+            build_type = "Debug";
+            break;
+        }
+    }
+    conan_cmd.push_back("-s");
+    conan_cmd.push_back("build_type=" + build_type);
+
+    // 2. Determine compiler
+    auto cxx_opt = config.getString("manifest.tooling.CXX");
+    if (cxx_opt && !cxx_opt->empty()) {
+        std::string cxx = *cxx_opt;
+        std::string compiler = "";
+        if (cxx.find("clang++") != std::string::npos || cxx.find("clang") != std::string::npos) {
+            compiler = "clang";
+        } else if (cxx.find("g++") != std::string::npos || cxx.find("gcc") != std::string::npos) {
+            compiler = "gcc";
+        } else if (cxx.find("cl") != std::string::npos || cxx.find("MSVC") != std::string::npos) {
+            compiler = "msvc";
+        }
+
+        if (!compiler.empty()) {
+            conan_cmd.push_back("-s");
+            conan_cmd.push_back("compiler=" + compiler);
+
+            std::string version = getCompilerVersion(cxx);
+            if (!version.empty()) {
+                conan_cmd.push_back("-s");
+                conan_cmd.push_back("compiler.version=" + version);
+            }
+
+            if (compiler == "gcc" || compiler == "clang") {
+#if defined(__linux__)
+                conan_cmd.push_back("-s");
+                conan_cmd.push_back("compiler.libcxx=libstdc++11");
+#endif
+            }
+
+            conan_cmd.push_back("-s");
+            conan_cmd.push_back("compiler.cppstd=23");
+        }
+    }
+
+    std::string cmd_str;
+    for (const auto &arg : conan_cmd) {
+        cmd_str += arg + " ";
+    }
+    catalyst::logger.debug("Executing Conan command: {}", cmd_str);
+
+    auto res = catalyst::processExec(std::move(conan_cmd));
+    if (!res) {
+        return std::unexpected(res.error());
+    }
+
+    if (res.value().get() != 0) {
+        return std::unexpected("Conan installation failed.");
+    }
+
+    return {};
+}
+
 namespace {
 
-std::expected<void, std::string> fetchVcpkg(const std::string &name) {
-    catalyst::logger.debug("Fetching vcpkg dependency: {}", name);
+std::expected<void, std::string> fetchVcpkg(const std::string &name, const std::string &triplet) {
+    catalyst::logger.debug("Fetching vcpkg dependency: {} with triplet: {}", name, triplet);
     char *vcpkg_root_env = std::getenv("VCPKG_ROOT");
     if (vcpkg_root_env == nullptr) {
         return std::unexpected(
@@ -35,11 +169,12 @@ std::expected<void, std::string> fetchVcpkg(const std::string &name) {
 #if defined(_WIN32)
     vcpkg_exe.replace_extension(".exe");
 #endif
-    std::string command = std::format("\"{}\" install {}", vcpkg_exe.string(), name);
+    std::string target = name + ":" + triplet;
+    std::string command = std::format("\"{}\" install {}", vcpkg_exe.string(), target);
     catalyst::logger.debug("Executing command: {}", command);
-    catalyst::logger.debug("Fetching: {} from vcpkg", name);
-    if (catalyst::processExec({vcpkg_exe.string(), "install", name}).value().get() != 0) {
-        return std::unexpected(std::format("Failed to fetch dependency: {}", name));
+    catalyst::logger.debug("Fetching: {} from vcpkg", target);
+    if (catalyst::processExec({vcpkg_exe.string(), "install", target}).value().get() != 0) {
+        return std::unexpected(std::format("Failed to fetch dependency: {}", target));
     }
     return {};
 }
@@ -169,13 +304,13 @@ struct LockedDep {
     std::string path;
 };
 
-std::expected<void, std::string> fetchDependency(const YAML::Node &dep,
+std::expected<void, std::string> fetchDependency(ryml::ConstNodeRef dep,
                                                  const std::string &build_dir,
                                                  const std::unordered_map<std::string, LockedDep> &lockfile_deps,
                                                  const Parse &parse_args) {
-
-    auto name = dep["name"].as<std::string>();
-    auto source = dep["source"].as<std::string>();
+    namespace yaml = utils::yaml;
+    auto name = yaml::asString(yaml::child(dep, "name")).value_or("");
+    auto source = yaml::asString(yaml::child(dep, "source")).value_or("");
 
     if (parse_args.workspace) {
         if (auto member = parse_args.workspace->findPackage(name)) {
@@ -226,20 +361,20 @@ std::expected<void, std::string> fetchDependency(const YAML::Node &dep,
         std::string version;
         if (!locked_version.empty())
             version = locked_version;
-        else if (dep["version"])
-            version = dep["version"].as<std::string>();
+        else if (auto v = yaml::asString(yaml::child(dep, "version")))
+            version = *v;
         else
             return std::unexpected(std::format("vcpkg dependency '{}' is missing version.", name));
 
         std::string triplet;
         if (!locked_triplet.empty())
             triplet = locked_triplet;
-        else if (dep["triplet"])
-            triplet = dep["triplet"].as<std::string>();
+        else if (auto t = yaml::asString(yaml::child(dep, "triplet")))
+            triplet = *t;
         else
             return std::unexpected(std::format("vcpkg dependency '{}' is missing triplet.", name));
 
-        if (auto res = fetchVcpkg(name); !res)
+        if (auto res = fetchVcpkg(name, triplet); !res)
             return std::unexpected(res.error());
 
     } else if (source == "system") {
@@ -249,15 +384,13 @@ std::expected<void, std::string> fetchDependency(const YAML::Node &dep,
         std::string path;
         if (!locked_path.empty())
             path = locked_path;
-        else if (dep["path"])
-            path = dep["path"].as<std::string>();
+        else if (auto p = yaml::asString(yaml::child(dep, "path")))
+            path = *p;
         else
             return std::unexpected(std::format("Local dependency '{}' is missing path.", name));
 
-        std::vector<std::string> profiles_vec;
-        if (dep["profiles"] && dep["profiles"].IsSequence()) {
-            profiles_vec = dep["profiles"].as<std::vector<std::string>>();
-        }
+        std::vector<std::string> profiles_vec =
+            yaml::asStringVector(yaml::child(dep, "profiles")).value_or(std::vector<std::string>{});
         if (auto res = fetchLocal({.name = name, .path = path, .profiles = profiles_vec}); !res)
             return std::unexpected(res.error());
     } else {
@@ -268,16 +401,16 @@ std::expected<void, std::string> fetchDependency(const YAML::Node &dep,
             std::string version;
             if (!locked_version.empty())
                 version = locked_version;
-            else if (dep["version"])
-                version = dep["version"].as<std::string>();
+            else if (auto v = yaml::asString(yaml::child(dep, "version")))
+                version = *v;
             else
                 version = "latest";
 
             std::string url;
             if (!locked_url.empty())
                 url = locked_url;
-            else if (source == "git" && dep["url"])
-                url = dep["url"].as<std::string>();
+            else if (auto u = yaml::asString(yaml::child(dep, "url")); source == "git" && u)
+                url = *u;
             else
                 url = source;
 
@@ -308,49 +441,47 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     }
 
     if (fs::exists(lockfile_path)) {
+        namespace yaml = utils::yaml;
         catalyst::logger.info("Using lockfile at {}", lockfile_path.string());
-        try {
-            YAML::Node lock_node = YAML::LoadFile(lockfile_path.string());
-            if (lock_node["dependencies"] && lock_node["dependencies"].IsSequence()) {
-                for (const auto &dep : lock_node["dependencies"]) {
-                    if (dep["name"]) {
-                        LockedDep ld;
-                        if (dep["hash"])
-                            ld.hash = dep["hash"].as<std::string>();
-                        if (dep["url"])
-                            ld.url = dep["url"].as<std::string>();
-                        if (dep["version"])
-                            ld.version = dep["version"].as<std::string>();
-                        if (dep["triplet"])
-                            ld.triplet = dep["triplet"].as<std::string>();
-                        if (dep["path"])
-                            ld.path = dep["path"].as<std::string>();
-                        lockfile_deps[dep["name"].as<std::string>()] = ld;
-                    }
-                }
+        auto lock_tree = yaml::loadFile(lockfile_path);
+        if (!lock_tree) {
+            catalyst::logger.warn("Failed to load lockfile: {}", lock_tree.error());
+        } else if (ryml::ConstNodeRef lock_deps = yaml::child(lock_tree->crootref(), "dependencies");
+                   lock_deps.readable() && lock_deps.is_seq()) {
+            for (ryml::ConstNodeRef dep : lock_deps.children()) {
+                auto dep_name = yaml::asString(yaml::child(dep, "name"));
+                if (!dep_name)
+                    continue;
+                LockedDep ld;
+                ld.hash = yaml::asString(yaml::child(dep, "hash")).value_or("");
+                ld.url = yaml::asString(yaml::child(dep, "url")).value_or("");
+                ld.version = yaml::asString(yaml::child(dep, "version")).value_or("");
+                ld.triplet = yaml::asString(yaml::child(dep, "triplet")).value_or("");
+                ld.path = yaml::asString(yaml::child(dep, "path")).value_or("");
+                lockfile_deps[*dep_name] = ld;
             }
-        } catch (const std::exception &e) {
-            catalyst::logger.warn("Failed to load lockfile: {}", e.what());
         }
     }
 
+    namespace yaml = utils::yaml;
     std::string build_dir = config.getBuildDir().string();
-    if (auto deps = config.getRoot()["dependencies"]; deps && deps.IsSequence()) {
-        std::vector<YAML::Node> parallel_deps;
-        std::vector<YAML::Node> serial_deps;
+    if (auto deps = yaml::child(config.rootRef(), "dependencies"); deps.readable() && deps.is_seq()) {
+        std::vector<ryml::ConstNodeRef> parallel_deps;
+        std::vector<ryml::ConstNodeRef> serial_deps;
+        std::vector<ryml::ConstNodeRef> conan_deps;
         std::unordered_set<std::string> seen_deps;
 
-        for (int ii = 0; auto dep : deps) {
-            if (!dep["name"]) {
+        for (int ii = 0; ryml::ConstNodeRef dep : deps.children()) {
+            auto name_opt = yaml::asString(yaml::child(dep, "name"));
+            if (!name_opt) {
                 return std::unexpected(std::format("Dependency: {} does not define field: name", ii));
             }
-            if (!dep["source"]) {
-                catalyst::logger.error("Dependency: {} does not define field: source", dep["name"].as<std::string>());
-                return std::unexpected(
-                    std::format("Dependency: {} does not define field: source", dep["name"].as<std::string>()));
+            std::string name = *name_opt;
+            auto source_opt = yaml::asString(yaml::child(dep, "source"));
+            if (!source_opt) {
+                catalyst::logger.error("Dependency: {} does not define field: source", name);
+                return std::unexpected(std::format("Dependency: {} does not define field: source", name));
             }
-
-            std::string name = dep["name"].as<std::string>();
 
             // 1. Deduplicate by logical target name
             if (seen_deps.contains(name)) {
@@ -360,12 +491,14 @@ std::expected<void, std::string> action(const Parse &parse_args) {
             }
             seen_deps.insert(name);
 
-            std::string source = dep["source"].as<std::string>();
+            std::string source = *source_opt;
             bool is_workspace_member = parse_args.workspace && parse_args.workspace->findPackage(name).has_value();
 
             // 2. Categorize by safety
             // Workspace links, vcpkg installs, and local builds mutate shared state
-            if (is_workspace_member || source == "vcpkg" || source == "local") {
+            if (source == "conan") {
+                conan_deps.push_back(dep);
+            } else if (is_workspace_member || source == "vcpkg" || source == "local") {
                 serial_deps.push_back(dep);
             } else {
                 parallel_deps.push_back(dep);
@@ -405,6 +538,13 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         for (auto dep : serial_deps) {
             if (auto res = fetchDependency(dep, build_dir, lockfile_deps, parse_args); !res) {
                 return res; // Fail fast
+            }
+        }
+
+        // Execute Conan dependencies seperately from other dependencies since conan needs compiler info and stuff
+        if (!conan_deps.empty()) {
+            if (auto res = fetchConanDeps(conan_deps, build_dir, config, parse_args.profiles); !res) {
+                return res;
             }
         }
     }

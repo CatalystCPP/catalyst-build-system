@@ -4,11 +4,10 @@
 
 // NOTE: eventually get rid of all calls to profile_composition
 auto catalyst::generate::profileComposition(const std::vector<std::string> &p)
-    -> std::expected<YAML::Node, std::string> {
+    -> std::expected<utils::yaml::Configuration, std::string> {
     catalyst::logger.debug("Composing profiles.");
-    catalyst::logger.debug("Profile composition finished.");
     try {
-        return YAML::Clone(utils::yaml::Configuration{p}.getRoot());
+        return utils::yaml::Configuration{p};
     } catch (std::exception &err) {
         return std::unexpected(err.what());
     }

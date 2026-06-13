@@ -1,6 +1,5 @@
 #include <sys/wait.h>
 
-#include <algorithm>
 #include <cstdint>
 #include <expected>
 #include <filesystem>
@@ -10,14 +9,11 @@
 #include <unordered_set>
 #include <vector>
 
-#include <yaml-cpp/yaml.h>
-
 #include "catalyst/hooks.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
-
-#include "yaml-cpp/node/node.h"
+#include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::generate {
 namespace fs = std::filesystem;
@@ -27,6 +23,9 @@ namespace {
 bool isEnabled(bool default_enabled,
                const std::string &feature,
                const std::unordered_set<std::string> &enabled_features);
+
+// A feature's default state: either `feature: <bool>` or `feature: {default: <bool>}`.
+bool featureDefault(ryml::ConstNodeRef feature_node);
 
 void writeVariables(const catalyst::utils::yaml::Configuration &config,
                     catalyst::generate::buildwriters::BaseWriter &writer,
@@ -149,7 +148,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     if (!profile_comp_file) {
         return std::unexpected("Failed to open profile_composition.yaml for writing in " + build_dir.string());
     }
-    profile_comp_file << config.getRoot();
+    profile_comp_file << utils::yaml::emitYaml(config.rootRef());
 
     catalyst::logger.debug("Running post-generate hooks.");
     if (auto res = hooks::postGenerate(config); !res) {
@@ -273,15 +272,13 @@ void writeVariables(const catalyst::utils::yaml::Configuration &config,
     }
 
     std::unordered_set<std::string> enabled_features_set(enabled_features.begin(), enabled_features.end());
-    if (const auto &features_node = config.getRoot()["features"]; features_node && features_node.IsMap()) {
-        for (auto it = features_node.begin(); it != features_node.end(); ++it) {
-            auto feature = it->first.as<std::string>();
-            bool default_enabled = false;
-            if (it->second.IsMap() && it->second["default"]) {
-                default_enabled = it->second["default"].as<bool>();
-            } else if (it->second.IsScalar()) {
-                default_enabled = it->second.as<bool>();
-            }
+    if (ryml::ConstNodeRef features_node = utils::yaml::child(config.rootRef(), "features");
+        features_node.readable() && features_node.is_map()) {
+        for (ryml::ConstNodeRef feature_node : features_node.children()) {
+            if (!feature_node.has_key())
+                continue;
+            std::string feature{feature_node.key().str, feature_node.key().len};
+            bool default_enabled = featureDefault(feature_node);
 
             std::string flag =
                 " " +
@@ -303,17 +300,20 @@ void writeVariables(const catalyst::utils::yaml::Configuration &config,
     }
 
     std::string ldlibs;
-    for (const auto &dep : config.getRoot()["dependencies"]) {
-        auto find_dep_res = findDep(build_dir_str, dep, tc);
-        if (!find_dep_res) {
-            catalyst::logger.warn("Partial failure in dependency resolution: {}", find_dep_res.error());
-            continue;
+    if (ryml::ConstNodeRef deps = utils::yaml::child(config.rootRef(), "dependencies");
+        deps.readable() && deps.is_seq()) {
+        for (ryml::ConstNodeRef dep : deps.children()) {
+            auto find_dep_res = findDep(build_dir_str, dep, tc);
+            if (!find_dep_res) {
+                catalyst::logger.warn("Partial failure in dependency resolution: {}", find_dep_res.error());
+                continue;
+            }
+            const auto &dep_res = *find_dep_res;
+            ldflags += " " + dep_res.lib_path;
+            ldlibs += " " + dep_res.libs;
+            ccflags += " " + dep_res.inc_path;
+            cxxflags += " " + dep_res.inc_path;
         }
-        const auto &dep_res = *find_dep_res;
-        ldflags += " " + dep_res.lib_path;
-        ldlibs += " " + dep_res.libs;
-        ccflags += " " + dep_res.inc_path;
-        cxxflags += " " + dep_res.inc_path;
     }
 
     writer.addComment("Variables");
@@ -388,32 +388,24 @@ void writeRules(catalyst::generate::buildwriters::BaseWriter &writer, const cata
 void featureFilter(std::unordered_set<fs::path> &source_set,
                    const catalyst::utils::yaml::Configuration &config,
                    const std::vector<std::string> &enabled_features) {
+    namespace yaml = catalyst::utils::yaml;
     std::unordered_set<std::string> enabled_features_set(enabled_features.begin(), enabled_features.end());
-    std::unordered_set<std::string> inactive_features;
-    if (const auto &features_node = config.getRoot()["features"]; features_node && features_node.IsMap()) {
-        for (auto it = features_node.begin(); it != features_node.end(); ++it) {
-            auto feature = it->first.as<std::string>();
-            bool default_enabled = false;
-            if (it->second.IsMap() && it->second["default"]) {
-                default_enabled = it->second["default"].as<bool>();
-            } else if (it->second.IsScalar()) {
-                default_enabled = it->second.as<bool>();
-            }
 
-            if (!isEnabled(default_enabled, feature, enabled_features_set))
-                inactive_features.insert(feature);
-        }
-    }
+    ryml::ConstNodeRef features_node = yaml::child(config.rootRef(), "features");
+    if (!features_node.readable() || !features_node.is_map())
+        return;
 
     std::unordered_set<fs::path> files_to_remove;
-    if (const auto &features_node = config.getRoot()["features"]; features_node && features_node.IsMap()) {
-        for (const auto &inactive_feature : inactive_features) {
-            if (features_node[inactive_feature].IsMap() && features_node[inactive_feature]["files"] &&
-                features_node[inactive_feature]["files"].IsSequence()) {
-                const YAML::Node &excluded_files = features_node[inactive_feature]["files"];
-                for (const auto &file_node : excluded_files) {
-                    files_to_remove.insert(fs::absolute(file_node.as<std::string>()));
-                }
+    for (ryml::ConstNodeRef feature_node : features_node.children()) {
+        if (!feature_node.has_key())
+            continue;
+        std::string feature{feature_node.key().str, feature_node.key().len};
+        if (isEnabled(featureDefault(feature_node), feature, enabled_features_set))
+            continue;
+
+        if (auto excluded_files = yaml::asStringVector(yaml::child(feature_node, "files"))) {
+            for (const auto &file : *excluded_files) {
+                files_to_remove.insert(fs::absolute(file));
             }
         }
     }
@@ -422,6 +414,14 @@ void featureFilter(std::unordered_set<fs::path> &source_set,
         catalyst::logger.debug("Removing file: {} based on feature exclusion", file.string());
         source_set.erase(file);
     }
+}
+
+bool featureDefault(ryml::ConstNodeRef feature_node) {
+    namespace yaml = catalyst::utils::yaml;
+    if (feature_node.is_map()) {
+        return yaml::asBool(yaml::child(feature_node, "default")).value_or(false);
+    }
+    return yaml::asBool(feature_node).value_or(false);
 }
 
 bool isEnabled(bool default_enabled,

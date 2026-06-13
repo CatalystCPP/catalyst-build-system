@@ -1,45 +1,50 @@
 #include <regex>
+#include <span>
+#include <string_view>
 
 #include "catalyst/hooks.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::hooks {
 
 namespace {
 
 std::expected<std::string, std::string> substituteCmdArgs(std::string cmd,
-                                                          const std::vector<std::string> &inputs,
-                                                          const std::vector<std::string> &outputs,
-                                                          const std::string &hook_name);
+                                                          std::span<const std::string> inputs,
+                                                          std::span<const std::string> outputs,
+                                                          std::string_view hook_name);
+
+// Collects a scalar-or-sequence node ("input"/"output") into a string list.
+std::vector<std::string> collectPathList(ryml::ConstNodeRef node) {
+    std::vector<std::string> paths;
+    if (!node.readable())
+        return paths;
+    if (node.is_seq()) {
+        for (ryml::ConstNodeRef item : node.children())
+            if (auto s = catalyst::utils::yaml::asString(item))
+                paths.push_back(*s);
+    } else if (auto s = catalyst::utils::yaml::asString(node)) {
+        paths.push_back(*s);
+    }
+    return paths;
+}
 
 } // namespace
 
-std::expected<void, std::string> executeCodegenHook(const YAML::Node &codegen_node, const std::string &hook_name) {
-    if (!codegen_node["cmd"]) {
+std::expected<void, std::string> executeCodegenHook(ryml::ConstNodeRef codegen_node, std::string_view hook_name) {
+    using utils::yaml::asString;
+    using utils::yaml::child;
+
+    auto cmd_opt = asString(child(codegen_node, "cmd"));
+    if (!cmd_opt) {
         return std::unexpected(std::format("Hook '{}' codegen missing required 'cmd' field", hook_name));
     }
-    auto cmd = codegen_node["cmd"].as<std::string>();
+    std::string cmd = *cmd_opt;
 
-    std::vector<std::string> inputs;
-    if (codegen_node["input"]) {
-        if (codegen_node["input"].IsSequence()) {
-            for (const auto &in : codegen_node["input"])
-                inputs.push_back(in.as<std::string>());
-        } else if (codegen_node["input"].IsScalar()) {
-            inputs.push_back(codegen_node["input"].as<std::string>());
-        }
-    }
-
-    std::vector<std::string> outputs;
-    if (codegen_node["output"]) {
-        if (codegen_node["output"].IsSequence()) {
-            for (const auto &out : codegen_node["output"])
-                outputs.push_back(out.as<std::string>());
-        } else if (codegen_node["output"].IsScalar()) {
-            outputs.push_back(codegen_node["output"].as<std::string>());
-        }
-    }
+    std::vector<std::string> inputs = collectPathList(child(codegen_node, "input"));
+    std::vector<std::string> outputs = collectPathList(child(codegen_node, "output"));
 
     auto sub_res = substituteCmdArgs(cmd, inputs, outputs, hook_name);
     if (!sub_res) {
@@ -90,15 +95,15 @@ std::expected<void, std::string> executeCodegenHook(const YAML::Node &codegen_no
 
 namespace {
 std::expected<std::string, std::string> substituteCmdArgs(std::string cmd,
-                                                          const std::vector<std::string> &inputs,
-                                                          const std::vector<std::string> &outputs,
-                                                          const std::string &hook_name) {
+                                                          std::span<const std::string> inputs,
+                                                          std::span<const std::string> outputs,
+                                                          std::string_view hook_name) {
     // Substitute $IN/$OUT variables, indices, and slices in cmd.
-    auto quote_if_needed = [](const std::string &path) {
+    constexpr auto quote_if_needed = [](std::string_view path) -> std::string {
         if (path.empty())
             return std::string("''");
-        if (path.find_first_of(" \t\n\r\"'\\$&|;<>()`~*?[]{}#^") == std::string::npos) {
-            return path;
+        if (path.find_first_of(" \t\n\r\"'\\$&|;<>()`~*?[]{}#^") == std::string_view::npos) {
+            return std::string{path};
         }
         std::string escaped = "'";
         for (char c : path) {
@@ -116,11 +121,11 @@ std::expected<std::string, std::string> substituteCmdArgs(std::string cmd,
     std::sregex_iterator it(cmd.begin(), cmd.end(), var_regex);
     std::sregex_iterator end;
 
-    auto parse_int = [](const std::string &s, ssize_t &out) -> bool {
+    constexpr auto parse_int = [](std::string_view s, ssize_t &out) -> bool {
         if (s.empty() || s == "-")
             return false;
         try {
-            out = std::stoll(s);
+            out = std::stoll(std::string{s});
             return true;
         } catch (...) {
             return false;
@@ -141,7 +146,7 @@ std::expected<std::string, std::string> substituteCmdArgs(std::string cmd,
         }
 
         const std::string &var_name = match[3].str();
-        const std::vector<std::string> &target_list = (var_name == "IN") ? inputs : outputs;
+        std::span<const std::string> target_list = (var_name == "IN") ? inputs : outputs;
         ssize_t n = target_list.size();
 
         if (match[4].matched && match[4].length() > 0) {

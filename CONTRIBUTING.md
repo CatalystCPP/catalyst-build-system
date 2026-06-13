@@ -33,7 +33,7 @@ Catalyst is currently in its early stages of development.
 ### Prerequisites
 
 - **C++ Compiler:** Clang++ (preferred) or GCC with C++23 support.
-- **Dependencies:** The project depends on `yaml-cpp`, `CLI11`, `reproc`, `nlohmann-json`, and ``vcpkg``.
+- **Dependencies:** The project depends on `yaml-cpp`, `CLI11`, `reproc`, and `vcpkg`.
 
 ### Building Catalyst
 

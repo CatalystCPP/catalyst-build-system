@@ -7,27 +7,24 @@
 #include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/yaml/load_profile_file.hpp"
 #include "catalyst/utils/yaml/profile_write_back.hpp"
-
-#include "yaml-cpp/node/node.h"
+#include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace {
 std::expected<void, std::string> addToProfile(const std::string &profile, const catalyst::add::vcpkg::Parse &args) {
-    auto res = catalyst::utils::yaml::loadProfileFile(profile);
+    namespace yaml = catalyst::utils::yaml;
+    auto res = yaml::loadProfileFile(profile);
     if (!res) {
         return std::unexpected(res.error());
     }
-    auto profile_file = res.value();
-    YAML::Node profile_node = profile_file.profile_node;
+    yaml::ProfileFile &profile_file = res.value();
+    ryml::Tree &tree = profile_file.tree;
 
-    if (!profile_node["dependencies"]) {
-        profile_node["dependencies"] = YAML::Node(YAML::NodeType::Sequence);
-    }
-
-    YAML::Node dependencies = profile_node["dependencies"];
+    ryml::NodeRef dependencies = yaml::childOrCreate(profile_file.profile(), "dependencies");
+    dependencies |= ryml::SEQ;
 
     bool dependency_found = false;
-    for (const auto &dep : dependencies) {
-        if (dep["name"] && dep["name"].as<std::string>() == args.name) {
+    for (ryml::ConstNodeRef dep : dependencies.children()) {
+        if (yaml::asString(yaml::child(dep, "name")) == args.name) {
             dependency_found = true;
             break;
         }
@@ -37,24 +34,26 @@ std::expected<void, std::string> addToProfile(const std::string &profile, const 
         return std::unexpected("Dependency '" + args.name + "' already exists in profile '" + profile + "'.");
     }
 
-    YAML::Node new_dep;
-    new_dep["name"] = args.name;
+    ryml::NodeRef new_dep = dependencies.append_child();
+    new_dep |= ryml::MAP;
+    new_dep["name"] = tree.to_arena(args.name);
     new_dep["source"] = "vcpkg";
     if (!args.triplet.empty()) {
-        new_dep["triplet"] = args.triplet;
+        new_dep["triplet"] = tree.to_arena(args.triplet);
     }
     if (!args.version.empty()) {
-        new_dep["version"] = args.version;
+        new_dep["version"] = tree.to_arena(args.version);
     } else {
         new_dep["version"] = "latest";
     }
     if (!args.enabled_features.empty()) {
-        new_dep["using"] = args.enabled_features;
+        ryml::NodeRef using_node = yaml::childOrCreate(new_dep, "using");
+        using_node |= ryml::SEQ;
+        for (const auto &feature : args.enabled_features)
+            using_node.append_child() = tree.to_arena(feature);
     }
 
-    dependencies.push_back(new_dep);
-
-    return catalyst::utils::yaml::profileWriteBack(profile_file);
+    return yaml::profileWriteBack(profile_file);
 }
 } // namespace
 
@@ -63,7 +62,7 @@ std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &add) {
     CLI::App *add_vcpkg = add.add_subcommand("vcpkg", "add a vcpkg dependency");
     auto ret = std::make_unique<Parse>();
 
-    add_vcpkg->add_option("name", ret->name)->required();
+    add_vcpkg->add_option("-n,--name", ret->name)->required();
     add_vcpkg->add_option("-t,--triplet", ret->triplet)->required();
     add_vcpkg->add_option("-v,--version", ret->version)->default_str("latest");
     add_vcpkg->add_option("-p,--profiles", ret->profiles)->default_val(std::vector<std::string>{"common"});

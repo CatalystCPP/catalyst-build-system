@@ -15,20 +15,18 @@
 #include "catalyst/subcommands/tidy.hpp"
 #include "catalyst/utils/log/log.hpp"
 
-#include "yaml-cpp/node/node.h"
-
 namespace catalyst::tidy {
 std::expected<void, std::string> action(const Parse &parse_args) {
-    YAML::Node profile_comp;
     auto res = catalyst::generate::profileComposition(parse_args.profiles);
     if (!res)
         return std::unexpected(res.error());
-    profile_comp = *res;
+    const utils::yaml::Configuration &profile_comp = *res;
 
-    if (!profile_comp["manifest"]["tooling"]["LINTER"] || !profile_comp["manifest"]["tooling"]["LINTER"].IsScalar())
+    auto linter_opt = profile_comp.getString("manifest.tooling.LINTER");
+    if (!linter_opt)
         return std::unexpected("field: manifest.tooling.LINTER is not defined");
 
-    auto linter = profile_comp["manifest"]["tooling"]["LINTER"].as<std::string>();
+    const std::string &linter = *linter_opt;
     // call the linter on the source_set (we can expect clang-tidy like arg syntax) and go on about our day
 
     catalyst::logger.debug("Building source set.");
@@ -36,7 +34,10 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     namespace fs = std::filesystem;
 
     fs::path current_dir = fs::current_path();
-    auto relative_source_dirs = profile_comp["manifest"]["dirs"]["source"].as<std::vector<std::string>>();
+    auto source_dirs_opt = profile_comp.getStringVector("manifest.dirs.source");
+    if (!source_dirs_opt)
+        return std::unexpected("Unable to get value for manifest.dirs.source");
+    const std::vector<std::string> &relative_source_dirs = *source_dirs_opt;
     std::vector<std::string> absolute_source_dirs;
     absolute_source_dirs.reserve(relative_source_dirs.size());
     for (const auto &dir : relative_source_dirs) {

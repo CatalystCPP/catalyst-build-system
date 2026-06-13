@@ -8,14 +8,14 @@
 #include <type_traits>
 #include <typeinfo>
 
-// ANSI color codes
-inline const char *const RED = "\033[31m";
-inline const char *const ORANGE = "\033[33m";
-inline const char *const BLUE = "\033[34m";
-inline const char *const PURPLE = "\033[35m";
-inline const char *const RESET = "\033[0m";
-
 namespace catalyst {
+
+// ANSI color codes
+constexpr const char *RED = "\033[31m";
+constexpr const char *ORANGE = "\033[33m";
+constexpr const char *BLUE = "\033[34m";
+constexpr const char *PURPLE = "\033[35m";
+constexpr const char *RESET = "\033[0m";
 enum class LogLevel : std::uint8_t {
     DEBUG, // hidden info (unless asked for opt in with -V)
     INFO,  // user facing milestones

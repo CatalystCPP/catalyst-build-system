@@ -7,12 +7,11 @@
 #include <unordered_map>
 #include <vector>
 
-#include <yaml-cpp/yaml.h>
-
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/lock.hpp"
 #include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
+#include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::lock {
 namespace fs = std::filesystem;
@@ -79,35 +78,39 @@ struct DependencyInfo {
 void collectDependencies(const utils::yaml::Configuration &config,
                          std::unordered_map<std::string, DependencyInfo> &locked_deps,
                          const std::optional<Workspace> &workspace) {
-    if (auto deps = config.getRoot()["dependencies"]; deps && deps.IsSequence()) {
-        for (const auto &dep : deps) {
-            if (!dep["name"] || !dep["source"])
-                continue;
+    namespace yaml = utils::yaml;
+    ryml::ConstNodeRef deps = yaml::child(config.rootRef(), "dependencies");
+    if (!deps.readable() || !deps.is_seq())
+        return;
+    for (ryml::ConstNodeRef dep : deps.children()) {
+        auto name_opt = yaml::asString(yaml::child(dep, "name"));
+        auto source_opt = yaml::asString(yaml::child(dep, "source"));
+        if (!name_opt || !source_opt)
+            continue;
 
-            auto name = dep["name"].as<std::string>();
+        const std::string &name = *name_opt;
 
-            // Skip if it's a workspace member
-            if (workspace && workspace->findPackage(name)) {
-                catalyst::logger.debug("Skipping workspace dependency: {}", name);
-                continue;
-            }
-
-            DependencyInfo info;
-            info.name = name;
-            info.source = dep["source"].as<std::string>();
-
-            if (info.source == "git") {
-                info.url = dep["url"] ? dep["url"].as<std::string>() : dep["source"].as<std::string>();
-                info.version = dep["version"] ? dep["version"].as<std::string>() : "latest";
-            } else if (info.source == "vcpkg") {
-                info.version = dep["version"] ? dep["version"].as<std::string>() : "";
-                info.triplet = dep["triplet"] ? dep["triplet"].as<std::string>() : "";
-            } else if (info.source == "local") {
-                info.path = dep["path"] ? dep["path"].as<std::string>() : "";
-            }
-
-            locked_deps[name] = info;
+        // Skip if it's a workspace member
+        if (workspace && workspace->findPackage(name)) {
+            catalyst::logger.debug("Skipping workspace dependency: {}", name);
+            continue;
         }
+
+        DependencyInfo info;
+        info.name = name;
+        info.source = *source_opt;
+
+        if (info.source == "git") {
+            info.url = yaml::asString(yaml::child(dep, "url")).value_or(info.source);
+            info.version = yaml::asString(yaml::child(dep, "version")).value_or("latest");
+        } else if (info.source == "vcpkg") {
+            info.version = yaml::asString(yaml::child(dep, "version")).value_or("");
+            info.triplet = yaml::asString(yaml::child(dep, "triplet")).value_or("");
+        } else if (info.source == "local") {
+            info.path = yaml::asString(yaml::child(dep, "path")).value_or("");
+        }
+
+        locked_deps[name] = info;
     }
 }
 
@@ -164,8 +167,13 @@ std::expected<void, std::string> action(const Parse &parse_args) {
 
     std::println(std::cout, "Locking {} dependencies...", locked_deps.size());
 
-    YAML::Node lock_node;
-    lock_node["lockfile_version"] = "1.0.0";
+    namespace yaml = utils::yaml;
+    ryml::Tree lock_tree;
+    ryml::NodeRef lock_root = lock_tree.rootref();
+    lock_root |= ryml::MAP;
+    lock_root["lockfile_version"] = "1.0.0";
+    ryml::NodeRef deps_node = yaml::childOrCreate(lock_root, "dependencies");
+    deps_node |= ryml::SEQ;
 
     for (auto &[name, info] : locked_deps) {
         if (info.source == "git") {
@@ -178,28 +186,27 @@ std::expected<void, std::string> action(const Parse &parse_args) {
             catalyst::logger.info("Resolved {} to {}", name, info.hash);
         }
 
-        YAML::Node dep_node;
-        dep_node["name"] = info.name;
-        dep_node["source"] = info.source;
+        ryml::NodeRef dep_node = deps_node.append_child();
+        dep_node |= ryml::MAP;
+        dep_node["name"] = lock_tree.to_arena(info.name);
+        dep_node["source"] = lock_tree.to_arena(info.source);
         if (!info.url.empty())
-            dep_node["url"] = info.url;
+            dep_node["url"] = lock_tree.to_arena(info.url);
         if (!info.version.empty())
-            dep_node["version"] = info.version;
+            dep_node["version"] = lock_tree.to_arena(info.version);
         if (!info.hash.empty())
-            dep_node["hash"] = info.hash;
+            dep_node["hash"] = lock_tree.to_arena(info.hash);
         if (!info.triplet.empty())
-            dep_node["triplet"] = info.triplet;
+            dep_node["triplet"] = lock_tree.to_arena(info.triplet);
         if (!info.path.empty())
-            dep_node["path"] = info.path;
-
-        lock_node["dependencies"].push_back(dep_node);
+            dep_node["path"] = lock_tree.to_arena(info.path);
     }
 
     std::ofstream fout(lockfile_path);
     if (!fout.is_open()) {
         return std::unexpected(std::format("Failed to open {} for writing.", lockfile_path.string()));
     }
-    fout << lock_node;
+    fout << yaml::emitYaml(lock_tree);
 
     std::println(std::cout, "Generated lockfile at {}", lockfile_path.string());
     return {};

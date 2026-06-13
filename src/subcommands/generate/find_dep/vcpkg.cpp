@@ -10,6 +10,7 @@
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::generate {
 namespace fs = std::filesystem;
@@ -43,22 +44,21 @@ void append_pkg_config_libs(FindRes &result,
 }
 } // namespace
 
-std::expected<FindRes, std::string> findVcpkg(const YAML::Node &dep, const catalyst::toolchain::ToolchainDef &tc) {
-    auto triplet = dep["triplet"].as<std::string>();
-    std::string linkage;
-    if (dep["linkage"] && dep["linkage"].IsScalar()) {
-        linkage = dep["linkage"].Scalar();
-    } else {
-        linkage = "shared";
+std::expected<FindRes, std::string> findVcpkg(ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc) {
+    namespace yaml = catalyst::utils::yaml;
+    std::string dep_name = yaml::asString(yaml::child(dep, "name")).value_or("<unnamed>");
+    auto triplet_opt = yaml::asString(yaml::child(dep, "triplet"));
+    if (!triplet_opt) {
+        return std::unexpected(std::format("vcpkg dependency '{}' does not define a triplet.", dep_name));
     }
+    std::string triplet = *triplet_opt;
+    std::string linkage = yaml::asString(yaml::child(dep, "linkage")).value_or("shared");
 
     const char *vcpkg_root_env = std::getenv("VCPKG_ROOT");
     if (vcpkg_root_env == nullptr) {
-        return std::unexpected(
-            std::format("VCPKG_ROOT is not set, cannot resolve vcpkg dependency '{}'.", dep["name"].as<std::string>()));
+        return std::unexpected(std::format("VCPKG_ROOT is not set, cannot resolve vcpkg dependency '{}'.", dep_name));
     }
 
-    std::string dep_name = dep["name"].as<std::string>();
     catalyst::logger.debug("Resolving vcpkg dependency: {}", dep_name);
 
     // Construct the path to the library directory within the specific package folder

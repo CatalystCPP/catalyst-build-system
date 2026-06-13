@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "yaml-cpp/yaml.h"
+#include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::utils::yaml {
 
@@ -35,12 +35,13 @@ public:
 
     std::filesystem::path getBuildDir() const;
 
-    const YAML::Node &getRoot() const & {
-        return root;
+    /** The composed configuration tree (rapidyaml). */
+    ryml::ConstNodeRef rootRef() const {
+        return composition.crootref();
     }
 
 private:
-    YAML::Node root;
+    ryml::Tree composition;
     std::vector<std::string> profile_names;
 };
 } // namespace catalyst::utils::yaml

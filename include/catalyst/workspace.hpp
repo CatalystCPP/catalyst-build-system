@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -34,7 +35,7 @@ public:
 
     // Find member by package name (manifest.name)
     // Note: This involves loading configuration of members
-    std::optional<WorkspaceMember> findPackage(const std::string &package_name) const;
+    std::optional<WorkspaceMember> findPackage(std::string_view package_name) const;
 
 private:
     std::filesystem::path root_path;

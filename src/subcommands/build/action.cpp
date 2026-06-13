@@ -8,8 +8,6 @@
 #include <unordered_set>
 #include <vector>
 
-#include <yaml-cpp/node/node.h>
-
 #include "catalyst/hooks.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/build.hpp"
@@ -24,6 +22,30 @@ namespace catalyst::build {
 namespace fs = std::filesystem;
 
 namespace {
+
+struct BuildFailureGuard {
+    const utils::yaml::Configuration &config;
+    std::expected<void, std::string> &result;
+
+    BuildFailureGuard(const BuildFailureGuard &) = delete;
+    BuildFailureGuard(BuildFailureGuard &&) = delete;
+    BuildFailureGuard &operator=(const BuildFailureGuard &) = delete;
+    BuildFailureGuard &operator=(BuildFailureGuard &&) = delete;
+    BuildFailureGuard(const utils::yaml::Configuration &cfg, std::expected<void, std::string> &res)
+        : config(cfg), result(res) {
+    }
+
+    ~BuildFailureGuard() {
+        if (!result) {
+            if (auto hook_res = hooks::onBuildFailure(config); !hook_res) {
+                catalyst::logger.error("on_build_failure hook failed: {}", hook_res.error());
+                result =
+                    std::unexpected(result.error() +
+                                    "\nAdditionally, the on_build_failure hook failed with error: " + hook_res.error());
+            }
+        }
+    }
+};
 
 struct PackageInfo {
     std::string name;
@@ -55,11 +77,12 @@ std::vector<WorkspaceMember> buildOrderTopSort(const Workspace &ws) {
             info.name = name;
             info.workspace_member_key = key;
 
-            const auto &root = config.getRoot();
-            if (root["dependencies"]) {
-                for (const auto &dep : root["dependencies"]) {
-                    if (dep["name"]) {
-                        info.dependencies.push_back(dep["name"].as<std::string>());
+            namespace yaml = utils::yaml;
+            if (ryml::ConstNodeRef deps = yaml::child(config.rootRef(), "dependencies");
+                deps.readable() && deps.is_seq()) {
+                for (ryml::ConstNodeRef dep : deps.children()) {
+                    if (auto dep_name = yaml::asString(yaml::child(dep, "name"))) {
+                        info.dependencies.push_back(std::move(*dep_name));
                     }
                 }
             }
@@ -116,17 +139,22 @@ bool depMissing(const utils::yaml::Configuration &config) {
         return false;
     }
     // TODO: needs to be updated to respect actual dependency types
-    const auto &pc = config.getRoot();
-    return std::any_of(pc["dependencies"].begin(), pc["dependencies"].end(), [&](const YAML::Node &dep) {
-        if (auto type = dep["source"].as<std::string>(); type == "git") {
-            bool missing = !fs::exists(build_dir / "catalyst-libs" / dep["name"].as<std::string>());
-            if (missing) {
-                catalyst::logger.warn("Missing dependency: {}", dep["name"].as<std::string>());
-            }
-            return missing;
-        }
+    namespace yaml = utils::yaml;
+    ryml::ConstNodeRef deps = yaml::child(config.rootRef(), "dependencies");
+    if (!deps.readable() || !deps.is_seq()) {
         return false;
-    });
+    }
+    for (ryml::ConstNodeRef dep : deps.children()) {
+        if (yaml::asString(yaml::child(dep, "source")) != "git") {
+            continue;
+        }
+        std::string dep_name = yaml::asString(yaml::child(dep, "name")).value_or("");
+        if (!fs::exists(build_dir / "catalyst-libs" / dep_name)) {
+            catalyst::logger.warn("Missing dependency: {}", dep_name);
+            return true;
+        }
+    }
+    return false;
 }
 
 std::expected<void, std::string> generateCompileCommands(const fs::path &build_dir, const std::string &generator) {
@@ -220,36 +248,55 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     catalyst::logger.debug("Composing profiles.");
     utils::yaml::Configuration config{parse_args.profiles};
 
-    auto run_build = [&]() -> std::expected<void, std::string> {
+    std::expected<void, std::string> result;
+
+    auto run_build = [&]() -> void {
+        BuildFailureGuard guard{config, result};
+
         catalyst::logger.info("Running pre-build hooks.");
         if (auto res = hooks::preBuild(config); !res) {
             catalyst::logger.error("Pre-build hook failed: {}", res.error());
-            if (auto hook_res = hooks::onBuildFailure(config); !hook_res) {
-                catalyst::logger.error("on_build_failure hook failed: {}", hook_res.error());
-                return std::unexpected(
-                    res.error() + "\nAdditionally, the on_build_failure hook failed with error: " + hook_res.error());
-            }
-            return res;
+            result = std::unexpected(res.error());
+            return;
         }
 
         fs::path build_dir = config.getBuildDir();
         std::string generator = config.getString("meta.generator").value_or("cob");
         std::string build_filename = (generator == "ninja") ? "build.ninja" : "catalyst.build";
 
-        if (!fs::exists(build_dir / build_filename) || parse_args.regen) {
+        bool needs_regen = !fs::exists(build_dir / build_filename) || parse_args.regen;
+        if (!needs_regen) {
+            auto build_time = fs::last_write_time(build_dir / build_filename);
+            if (fs::exists("CATALYST.yaml") && fs::last_write_time("CATALYST.yaml") > build_time) {
+                needs_regen = true;
+            } else {
+                for (const auto &profile : parse_args.profiles) {
+                    fs::path profile_path =
+                        (profile == "common") ? "catalyst.yaml" : std::format("catalyst_{}.yaml", profile);
+                    if (fs::exists(profile_path) && fs::last_write_time(profile_path) > build_time) {
+                        needs_regen = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (needs_regen) {
             catalyst::logger.info("Generating build files.");
             auto res = catalyst::generate::action({.profiles = parse_args.profiles,
                                                    .enabled_features = parse_args.enabled_features,
                                                    .backend = parse_args.backend});
             if (!res) {
                 catalyst::logger.error("Failed to generate build files: {}", res.error());
-                if (auto hook_res = hooks::onBuildFailure(config); !hook_res) {
-                    catalyst::logger.error("on_build_failure hook failed: {}", hook_res.error());
-                    return std::unexpected(
-                        res.error() +
-                        "\nAdditionally, the on_build_failure hook failed with error: " + hook_res.error());
-                }
-                return std::unexpected(res.error());
+                result = std::unexpected(res.error());
+                return;
+            }
+        } else {
+            catalyst::logger.info("Running pre-generate hooks.");
+            if (auto res = hooks::preGenerate(config); !res) {
+                catalyst::logger.error("Pre-generate hook failed: {}", res.error());
+                result = std::unexpected(res.error());
+                return;
             }
         }
 
@@ -263,13 +310,8 @@ std::expected<void, std::string> action(const Parse &parse_args) {
                     catalyst::fetch::action({.profiles = parse_args.profiles, .workspace = parse_args.workspace});
                 !res) {
                 catalyst::logger.error("Failed to fetch dependencies: {}", res.error());
-                if (auto hook_res = hooks::onBuildFailure(config); !hook_res) {
-                    catalyst::logger.error("on_build_failure hook failed: {}", hook_res.error());
-                    return std::unexpected(
-                        res.error() +
-                        "\nAdditionally, the on_build_failure hook failed with error: " + hook_res.error());
-                }
-                return std::unexpected(res.error());
+                result = std::unexpected(res.error());
+                return;
             }
         }
 
@@ -278,42 +320,59 @@ std::expected<void, std::string> action(const Parse &parse_args) {
 
         if (int res = catalyst::processExec(std::move(build_command)).value().get(); res != 0) {
             catalyst::logger.error("Failed to build project.");
-            if (auto hook_res = hooks::onBuildFailure(config); !hook_res) {
-                catalyst::logger.error("on_build_failure hook failed: {}", hook_res.error());
-                return std::unexpected(
-                    "Failed to build project.\nAdditionally, the on_build_failure hook failed with error: " +
-                    hook_res.error());
-            }
-            return std::unexpected(std::format("Build process failed. {} exited with code: {}", generator, res));
+            result = std::unexpected(std::format("Build process failed. {} exited with code: {}", generator, res));
+            return;
         }
 
         catalyst::logger.info("Generating compile commands.");
         if (auto res = generateCompileCommands(build_dir, generator); !res) {
             catalyst::logger.error("Failed to generate compile commands: {}", res.error());
-            if (auto hook_res = hooks::onBuildFailure(config); !hook_res) {
-                catalyst::logger.error("on_build_failure hook failed: {}", hook_res.error());
-                return std::unexpected(
-                    res.error() + "\nAdditionally, the on_build_failure hook failed with error: " + hook_res.error());
+            result = res;
+            return;
+        }
+
+        // Publish compile commands to stable root path
+        fs::path source_compdb = build_dir / "compile_commands.json";
+        if (fs::exists(source_compdb)) {
+            // 1. Stable build path (e.g. build/compile_commands.json)
+            fs::path stable_compdb = build_dir.parent_path() / "compile_commands.json";
+            std::error_code ec;
+            if (fs::exists(stable_compdb)) {
+                fs::remove(stable_compdb, ec);
             }
-            return res;
+            fs::copy_file(source_compdb, stable_compdb, fs::copy_options::overwrite_existing, ec);
+            if (ec) {
+                catalyst::logger.warn("Failed to publish compilation database to {}: {}", stable_compdb.string(), ec.message());
+            } else {
+                catalyst::logger.debug("Published compilation database to {}", stable_compdb.string());
+            }
+
+            // 2. Project root path (e.g. compile_commands.json)
+            fs::path root_compdb = fs::current_path() / "compile_commands.json";
+            if (source_compdb != root_compdb && stable_compdb != root_compdb) {
+                if (fs::exists(root_compdb)) {
+                    fs::remove(root_compdb, ec);
+                }
+                fs::copy_file(source_compdb, root_compdb, fs::copy_options::overwrite_existing, ec);
+                if (ec) {
+                    catalyst::logger.warn("Failed to publish compilation database to project root: {}", ec.message());
+                } else {
+                    catalyst::logger.debug("Published compilation database to project root");
+                }
+            }
         }
 
         catalyst::logger.info("Running post-build hooks.");
         if (auto res = hooks::postBuild(config); !res) {
             catalyst::logger.error("Post-build hook failed: {}", res.error());
-            if (auto hook_res = hooks::onBuildFailure(config); !hook_res) {
-                catalyst::logger.error("on_build_failure hook failed: {}", hook_res.error());
-                return std::unexpected(
-                    res.error() + "\nAdditionally, the on_build_failure hook failed with error: " + hook_res.error());
-            }
-            return res;
+            result = res;
+            return;
         }
-        return {};
     };
 
-    auto res = run_build();
-    if (!res && !parse_args.watch)
-        return res;
+    run_build();
+    if (!result && !parse_args.watch)
+        return result;
 
     if (parse_args.watch) {
         auto src_dirs = config.getStringVector("manifest.dirs.source").value_or(std::vector<std::string>{"src"});
@@ -326,14 +385,25 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         for (const auto &d : inc_dirs)
             watch_paths.push_back(fs::absolute(d));
 
+        if (fs::exists("CATALYST.yaml")) {
+            watch_paths.push_back(fs::absolute("CATALYST.yaml"));
+        }
+        for (const auto &profile : parse_args.profiles) {
+            fs::path profile_path = (profile == "common") ? "catalyst.yaml" : std::format("catalyst_{}.yaml", profile);
+            if (fs::exists(profile_path)) {
+                watch_paths.push_back(fs::absolute(profile_path));
+            }
+        }
+
         catalyst::logger.info("Watching for changes in: {} and {}", src_dirs, inc_dirs);
 
         utils::watcher::Watcher watcher(watch_paths);
         watcher.watch([&](const fs::path &changed) {
             catalyst::logger.info("File changed: {}. Rebuilding...", changed.string());
-            auto watch_res = run_build();
-            if (!watch_res) {
-                catalyst::logger.error("Rebuild failed: {}", watch_res.error());
+            result = {}; // reset to success
+            run_build();
+            if (!result) {
+                catalyst::logger.error("Rebuild failed: {}", result.error());
             } else {
                 catalyst::logger.info("Rebuild successful.");
             }

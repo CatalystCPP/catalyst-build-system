@@ -184,6 +184,3 @@ Schreiner under NSF AWARD 1414736. All rights reserved.
 
 Copyright (c) Daan De Meyer
 
-## License: nlohmann-json
-
-Copyright (c) 2013-2026 Niels Lohmann

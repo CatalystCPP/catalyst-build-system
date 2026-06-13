@@ -8,8 +8,7 @@
 
 #include "catalyst/subcommands/profile_ls.hpp"
 #include "catalyst/utils/log/log.hpp"
-
-#include "yaml-cpp/yaml.h"
+#include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace fs = std::filesystem;
 
@@ -37,9 +36,15 @@ std::expected<void, std::string> catalyst::profile_ls::action([[maybe_unused]] c
 
 namespace {
 void addCombinedProfiles(std::vector<std::string> &out_profiles) {
-    YAML::Node profiles = YAML::LoadFile("CATALYST.yaml");
-    for (auto it : profiles) {
-        out_profiles.push_back(it.first.as<std::string>());
+    auto tree = catalyst::utils::yaml::loadFile("CATALYST.yaml");
+    if (!tree)
+        return;
+    ryml::ConstNodeRef root = tree->crootref();
+    if (!root.is_map())
+        return;
+    for (ryml::ConstNodeRef profile : root.children()) {
+        if (profile.has_key())
+            out_profiles.emplace_back(profile.key().str, profile.key().len);
     }
 }
 

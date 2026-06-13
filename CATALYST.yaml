@@ -5,7 +5,7 @@ common:
   manifest:
     name: catalyst
     type: BINARY
-    version: 1.4.3
+    version: 1.5.0-dev
     description: Catalyst is a Declarative C++ Build System
     provides: catalyst
     tooling:
@@ -26,20 +26,18 @@ common:
         - src
       build: build
   dependencies:
-    - name: yaml-cpp
-      source: vcpkg
-      triplet: x64-linux
-      version: latest
-      using: []
     - name: reproc
       source: vcpkg
       triplet: x64-linux
       version: latest
-    - name: nlohmann-json
+    - name: ryml
       source: vcpkg
       triplet: x64-linux
       version: latest
-      linkage: interface
+    - name: c4core # static-lib dependency of ryml; vcpkg packages it separately
+      source: vcpkg
+      triplet: x64-linux
+      version: latest
   hooks:
     pre-fetch:
       - script: "scripts/fetch_cli_11.sh"
@@ -66,20 +64,25 @@ test:
       source: vcpkg
       triplet: x64-linux
       version: latest
+    - name: yaml-cpp # second parser for cross-parser checks in test_yaml_characterization.cpp
+      source: vcpkg
+      triplet: x64-linux
+      version: latest
 debug:
   manifest:
     tooling:
-      CCFLAGS: -g --std=c++23 -Wall -Wextra -Wpedantic
-      CXXFLAGS: -g --std=c++23 -Wall -Wextra -Wpedantic
+      CCFLAGS: -std=c23 -O0 -ggdb -Wall -Wextra -Wpedantic -Wshadow -DDEBUG
+      CXXFLAGS: -std=c++23 -O0 -ggdb -Wall -Wextra -Wpedantic -Wshadow -DDEBUG
+      LDFLAGS: -fuse-ld=mold -flto=thin -Wl,--as-needed -Wl,--no-undefined -Wl,--hash-style=gnu -Wl,--build-id=fast
 release:
   manifest:
     tooling:
-      CCFLAGS: -O3 -DNDEBUG --std=c++23 -Wall -Wextra -Wpedantic
-      CXXFLAGS: -O3 -DNDEBUG --std=c++23 -Wall -Wextra -Wpedantic
-      LDFLAGS: -static -fuse-ld=mold -flto=full -Wl,-O3 -Wl,--gc-sections -Wl,--icf=safe -Wl,--as-needed -Wl, --no-undefined -Wl,-z,relro,-z,now -Wl,--hash-style=gnu -Wl,--build-id=sha1 -Wl,--strip-all
+      CCFLAGS: -std=c23 -O3 -Wall -Wextra -Wpedantic -DNDEBUG -march=native -flto=full -ffunction-sections -fdata-sections
+      CXXFLAGS: -std=c++23 -O3 -Wall -Wextra -Wpedantic -DNDEBUG -march=native -flto=full -ffunction-sections -fdata-sections
+      LDFLAGS: -fuse-ld=mold -flto=full -Wl,-O3 -Wl,--gc-sections -Wl,--icf=safe -Wl,--as-needed -Wl,--no-undefined -Wl,-z,relro,-z,now -Wl,--hash-style=gnu -Wl,--build-id=sha1 -Wl,--strip-all -static
   hooks:
     post-build:
-      - catalyst: pack -q -p common ccache release -a
+      - catalyst: pack -q -p common release -a
       - script: "scripts/generate_cli_docs.sh"
 
 linux_x86_64:

@@ -31,7 +31,7 @@ Uses `vcpkg` to satisfy the dependency.
 |---|---|---|
 | `name` | Yes | Package name in vcpkg. |
 | `source` | Yes | Must be `vcpkg`. |
-| `version` | No | Package version. |
+| `version` | No | Package version (informative only; vcpkg classic mode resolves versions based on VCPKG_ROOT's registry). |
 | `triplet` | No | vcpkg triplet (e.g., `x64-linux`). |
 | `using` | No | List of features to enable. |
 
@@ -70,6 +70,21 @@ Uses `pkg-config` to find a system-installed library.
 ```yaml
 - name: openssl
   source: system
+```
+
+### 5. `conan`
+Uses Conan 2.x to fetch and resolve dependencies using Conan's native `PkgConfigDeps` generator.
+
+| Field | Required | Description |
+|---|---|---|
+| `name` | Yes | Name of the Conan package (e.g. `fmt`). |
+| `source` | Yes | Must be `conan`. |
+| `version` | Yes | Package version reference. |
+
+```yaml
+- name: fmt
+  source: conan
+  version: 10.1.1
 ```
 
 ## Adding Dependencies via CLI

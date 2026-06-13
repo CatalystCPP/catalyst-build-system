@@ -213,6 +213,32 @@ template <> std::expected<void, std::string> emitIDEConfig<Parse::IdeType::clion
         fs::create_directories(tools_dir);
     }
 
+    // misc.xml
+    {
+        const fs::path misc_xml_path{idea_dir / "misc.xml"};
+        auto misc_xml{createFile(misc_xml_path, parse_args.force_emit_ide)};
+        if (!misc_xml) {
+            return std::unexpected(misc_xml.error());
+        }
+        *misc_xml << R"xml(<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompDBSettings">
+    <option name="linkedExternalProjectsSettings">
+      <CompDBProjectSettings>
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$" />
+          </set>
+        </option>
+      </CompDBProjectSettings>
+    </option>
+  </component>
+  <component name="CompDBWorkspace" PROJECT_DIR="$PROJECT_DIR$" />
+</project>
+)xml";
+    }
+
     // External Tools
     {
         const fs::path tools_xml_path{tools_dir / "External Tools.xml"};

@@ -2,10 +2,9 @@
 
 #include <format>
 
-#include <yaml-cpp/yaml.h>
-
 #include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
+#include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst {
 
@@ -32,46 +31,48 @@ std::optional<Workspace> Workspace::findRoot(const fs::path &start_path) {
 }
 
 std::optional<Workspace> Workspace::load(const fs::path &workspace_file) {
-    try {
-        YAML::Node node = YAML::LoadFile(workspace_file.string());
-        Workspace workspace;
-        workspace.root_path = workspace_file.parent_path();
-
-        if (!node.IsMap()) {
-            logger.warn("WORKSPACE.yaml must be a map. Continuing in non-workspace build.");
-            return std::nullopt;
-        }
-
-        for (const auto &kv : node) {
-            auto key = kv.first.as<std::string>();
-            YAML::Node value = kv.second;
-
-            WorkspaceMember member;
-            member.name = key;
-
-            if (value["path"]) {
-                member.path = workspace.root_path / value["path"].as<std::string>();
-            } else {
-                member.path = workspace.root_path / key;
-            }
-
-            if (value["profiles"]) {
-                if (value["profiles"].IsSequence()) {
-                    member.profiles = value["profiles"].as<std::vector<std::string>>();
-                } else {
-                    logger.warn("Member '{}' profiles is not a sequence, ignoring.", key);
-                }
-            }
-
-            workspace.members[key] = member;
-        }
-
-        return workspace;
-
-    } catch (const YAML::Exception &e) {
-        logger.warn("Failed to parse WORKSPACE.yaml: {}. Continuing in non-workspace build.", e.what());
+    namespace yaml = utils::yaml;
+    auto tree = yaml::loadFile(workspace_file);
+    if (!tree) {
+        logger.warn("Failed to parse WORKSPACE.yaml: {}. Continuing in non-workspace build.", tree.error());
         return std::nullopt;
     }
+
+    Workspace workspace;
+    workspace.root_path = workspace_file.parent_path();
+
+    ryml::ConstNodeRef root = tree->crootref();
+    if (!root.is_map()) {
+        logger.warn("WORKSPACE.yaml must be a map. Continuing in non-workspace build.");
+        return std::nullopt;
+    }
+
+    for (ryml::ConstNodeRef member_node : root.children()) {
+        if (!member_node.has_key())
+            continue;
+        std::string key{member_node.key().str, member_node.key().len};
+
+        WorkspaceMember member;
+        member.name = key;
+
+        if (auto path = yaml::asString(yaml::child(member_node, "path"))) {
+            member.path = workspace.root_path / *path;
+        } else {
+            member.path = workspace.root_path / key;
+        }
+
+        if (ryml::ConstNodeRef profiles = yaml::child(member_node, "profiles"); profiles.readable()) {
+            if (auto profile_list = yaml::asStringVector(profiles)) {
+                member.profiles = std::move(*profile_list);
+            } else {
+                logger.warn("Member '{}' profiles is not a sequence, ignoring.", key);
+            }
+        }
+
+        workspace.members[key] = member;
+    }
+
+    return workspace;
 }
 
 bool Workspace::contains(const fs::path &path) const {
@@ -90,7 +91,7 @@ std::optional<WorkspaceMember> Workspace::getMemberByPath(const fs::path &path) 
     return std::nullopt;
 }
 
-std::optional<WorkspaceMember> Workspace::findPackage(const std::string &package_name) const {
+std::optional<WorkspaceMember> Workspace::findPackage(std::string_view package_name) const {
     for (const auto &[key, member] : members) {
         try {
             std::vector<std::string> profiles = member.profiles;

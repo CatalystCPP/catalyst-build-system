@@ -6,8 +6,6 @@
 #include <string>
 #include <vector>
 
-#include <yaml-cpp/yaml.h>
-
 #include "catalyst/hooks.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/generate.hpp"
@@ -39,16 +37,15 @@ std::expected<void, std::string> action(const Parse &args) {
     profiles.push_back(args.profile);
 
     catalyst::logger.debug("Composing profiles.");
-    YAML::Node profile_comp;
-    std::expected<YAML::Node, std::string> res = generate::profileComposition(profiles);
+    auto res = generate::profileComposition(profiles);
     if (!res) {
         return std::unexpected(res.error());
     }
-    profile_comp = res.value();
+    const utils::yaml::Configuration &profile_comp = res.value();
 
     catalyst::logger.debug("Running pre-run hooks.");
-    if (std::expected<void, std::string> res = hooks::preRun(profile_comp); !res) {
-        return res;
+    if (std::expected<void, std::string> hook_res = hooks::preRun(profile_comp); !hook_res) {
+        return hook_res;
     }
 
     std::string exe;
@@ -58,29 +55,27 @@ std::expected<void, std::string> action(const Parse &args) {
         std::ranges::transform(input, input.begin(), lower);
         return;
     };
-    std::string target_type = profile_comp["manifest"]["type"].Scalar();
+    std::optional<std::string> type_opt = profile_comp.getString("manifest.type");
+    std::string target_type = type_opt.value_or("");
     str_to_lower(target_type);
 
-    if (!profile_comp["manifest"]["type"].IsDefined() || target_type != "binary") {
-        if (!profile_comp["manifest"]["type"].IsDefined()) {
+    if (!type_opt || target_type != "binary") {
+        if (!type_opt) {
             return std::unexpected(std::format("Profile: {} does not define field: 'manifest.type'.", args.profile));
         }
         return std::unexpected(std::format(
             "Profile: {} defines 'manifest.type' = {}. Expected 'manifest.type' = BINARY", args.profile, target_type));
     }
 
-    std::string build_dir_base = "build";
-    if (profile_comp["manifest"]["dirs"]["build"]) {
-        build_dir_base = profile_comp["manifest"]["dirs"]["build"].as<std::string>();
-        if (build_dir_base.empty())
-            build_dir_base = "build";
-    }
+    std::string build_dir_base = profile_comp.getString("manifest.dirs.build").value_or("build");
+    if (build_dir_base.empty())
+        build_dir_base = "build";
     build_dir = catalyst::utils::yaml::multiplexedBuildDir(build_dir_base, profiles).string();
 
-    if (profile_comp["manifest"]["provides"] && profile_comp["manifest"]["provides"].as<std::string>() != "") {
-        exe = profile_comp["manifest"]["provides"].as<std::string>();
-    } else if (profile_comp["manifest"]["name"] && profile_comp["manifest"]["name"].as<std::string>() != "") {
-        exe = profile_comp["manifest"]["name"].as<std::string>();
+    if (auto provides = profile_comp.getString("manifest.provides"); provides && !provides->empty()) {
+        exe = *provides;
+    } else if (auto name = profile_comp.getString("manifest.name"); name && !name->empty()) {
+        exe = *name;
     } else {
         return std::unexpected("Unable to figure out executable name."
                                "manifest.name and manifest.provides are undefined");
@@ -89,11 +84,10 @@ std::expected<void, std::string> action(const Parse &args) {
     fs::path exe_path = fs::absolute(fs::path(std::format("{}/{}", build_dir, exe)));
     std::string command = commandStr(exe_path, args.params);
     catalyst::toolchain::ToolchainDef tc;
-    if (profile_comp["manifest"]["toolchain"] && profile_comp["manifest"]["toolchain"].IsScalar()) {
-        auto tc_path = profile_comp["manifest"]["toolchain"].as<std::string>();
-        auto parsed = catalyst::toolchain::parse_toolchain(tc_path);
+    if (auto tc_path = profile_comp.getString("manifest.toolchain")) {
+        auto parsed = catalyst::toolchain::parse_toolchain(*tc_path);
         if (!parsed) {
-            return std::unexpected(std::format("Failed to load toolchain {}: {}", tc_path, parsed.error()));
+            return std::unexpected(std::format("Failed to load toolchain {}: {}", *tc_path, parsed.error()));
         }
         tc = std::move(*parsed);
     }

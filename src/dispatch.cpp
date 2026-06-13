@@ -12,6 +12,7 @@
 
 #include "catalyst/subcommands/profile_ls.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/os/os_defs.hpp"
 
 namespace {
 std::string concatArgv(int argc, char **argv) {
@@ -19,6 +20,21 @@ std::string concatArgv(int argc, char **argv) {
     for (int ii = 0; ii < argc; ++ii)
         res += std::string{argv[ii]} + " ";
     return res;
+}
+
+void checkRequiredTools() {
+    if (!catalyst::utils::os::isCommandInstalled("vcpkg")) {
+        catalyst::logger.warn("vcpkg is not installed or not in PATH.");
+    }
+    if (!catalyst::utils::os::isCommandInstalled("git")) {
+        catalyst::logger.warn("git is not installed or not in PATH.");
+    }
+    if (!catalyst::utils::os::isCommandInstalled("pkg-config")) {
+        catalyst::logger.warn("pkg-config is not installed or not in PATH.");
+    }
+    if (!catalyst::utils::os::isCommandInstalled("conan")) {
+        catalyst::logger.warn("conan is not installed or not in PATH.");
+    }
 }
 
 void setupCli(catalyst::CliContext &ctx) {
@@ -85,8 +101,9 @@ template <typename ParseRes_T> int dispatchFN(const char *subc_name, const Parse
         catalyst::logger.error("recursive hook detected: {}", chain);
         return 1;
     }
-    if (g_call_chain.size() >= 4) {
-        catalyst::logger.error("maximum hook dispatch depth exceeded");
+    constexpr auto TUNABLE_MAX_DEPTH = 8;
+    if (g_call_chain.size() >= TUNABLE_MAX_DEPTH) {
+        catalyst::logger.error("maximum hook dispatch depth ({}) exceeded", TUNABLE_MAX_DEPTH);
         return 1;
     }
 
@@ -139,11 +156,11 @@ std::pair<int, bool> parseCli(int argc, char **argv, catalyst::CliContext &ctx) 
     return {0, false};
 }
 
-std::pair<int, bool> parseCli(const std::string &args, catalyst::CliContext &ctx) {
+std::pair<int, bool> parseCli(std::string_view args, catalyst::CliContext &ctx) {
     setupCli(ctx);
 
     try {
-        ctx.app.parse(args, true);
+        ctx.app.parse(std::string{args}, true);
     } catch (const CLI::ParseError &e) {
         if (!args.contains("--help") && !args.contains("-h")) {
             catalyst::logger.error("Failed to parse provided arguments: {}", args);
@@ -158,7 +175,7 @@ std::pair<int, bool> parseCli(const std::string &args, catalyst::CliContext &ctx
     return {0, false};
 }
 
-std::pair<int, bool> parseCli(const std::vector<std::string> &args, catalyst::CliContext &ctx) {
+std::pair<int, bool> parseCli(std::span<const std::string> args, catalyst::CliContext &ctx) {
     std::string arg_str = "catalyst ";
     for (const auto &a : args) {
         arg_str += a + " ";
@@ -168,6 +185,7 @@ std::pair<int, bool> parseCli(const std::vector<std::string> &args, catalyst::Cl
 
 int dispatch(const catalyst::CliContext &ctx) {
     if (*ctx.add_subc) {
+        checkRequiredTools();
         if (*ctx.add_git_subc)
             return dispatchFN("add git", *ctx.add_git_res, catalyst::add::git::action);
         if (*ctx.add_system_subc)
@@ -179,24 +197,31 @@ int dispatch(const catalyst::CliContext &ctx) {
         return 1;
     }
     if (*ctx.build_subc) {
+        checkRequiredTools();
         injectCommon(ctx.build_res->profiles);
         return dispatchFN("build", *ctx.build_res, catalyst::build::action);
     }
     if (*ctx.clean_subc) {
+        checkRequiredTools();
         injectCommon(ctx.clean_res->profiles);
         return dispatchFN("clean", *ctx.clean_res, catalyst::clean::action);
     }
     if (*ctx.download_subc) {
+        checkRequiredTools();
         injectCommon(ctx.download_res->profiles);
         return dispatchFN("download", *ctx.download_res, catalyst::download::action);
     }
     if (*ctx.fetch_subc) {
+        checkRequiredTools();
         injectCommon(ctx.fetch_res->profiles);
         return dispatchFN("fetch", *ctx.fetch_res, catalyst::fetch::action);
     }
-    if (*ctx.fmt_subc)
+    if (*ctx.fmt_subc) {
+        checkRequiredTools();
         return dispatchFN("fmt", *ctx.fmt_res, catalyst::fmt::action);
+    }
     if (*ctx.generate_subc) {
+        checkRequiredTools();
         injectCommon(ctx.generate_res->profiles);
         return dispatchFN("generate", *ctx.generate_res, catalyst::generate::action);
     }
@@ -204,36 +229,52 @@ int dispatch(const catalyst::CliContext &ctx) {
         injectCommon(ctx.ide_sync_res->profiles);
         return dispatchFN("ide-sync", *ctx.ide_sync_res, catalyst::ide_sync::action);
     }
-    if (*ctx.init_subc)
+    if (*ctx.init_subc) {
         return dispatchFN("init", *ctx.init_res, catalyst::init::action);
+    }
     if (*ctx.install_subc) {
+        checkRequiredTools();
         injectCommon(ctx.install_res->profiles);
         return dispatchFN("install", *ctx.install_res, catalyst::install::action);
     }
     if (*ctx.lock_subc) {
+        checkRequiredTools();
         injectCommon(ctx.lock_res->profiles);
         return dispatchFN("lock", *ctx.lock_res, catalyst::lock::action);
     }
-    if (*ctx.run_subc)
+    if (*ctx.run_subc) {
+        checkRequiredTools();
         return dispatchFN("run", *ctx.run_res, catalyst::run::action);
-    if (*ctx.test_subc)
+    }
+    if (*ctx.test_subc) {
+        checkRequiredTools();
         return dispatchFN("test", *ctx.test_res, catalyst::test::action);
-    if (*ctx.bench_subc)
+    }
+    if (*ctx.bench_subc) {
+        checkRequiredTools();
         return dispatchFN("bench", *ctx.bench_res, catalyst::bench::action);
+    }
     if (*ctx.tidy_subc) {
+        checkRequiredTools();
         injectCommon(ctx.tidy_res->profiles);
         return dispatchFN("tidy", *ctx.tidy_res, catalyst::tidy::action);
     }
     if (*ctx.pack_subc) {
+        checkRequiredTools();
         injectCommon(ctx.pack_res->profiles);
         return dispatchFN("pack", *ctx.pack_res, catalyst::pack::action);
     }
-    if (*ctx.doc_subc)
+    if (*ctx.doc_subc) {
+        checkRequiredTools();
         return dispatchFN("doc", *ctx.doc_res, catalyst::doc::action);
-    if (*ctx.profiles_ls_subc)
+    }
+    if (*ctx.profiles_ls_subc) {
         return dispatchFN("profile-ls", *ctx.profile_ls_res, catalyst::profile_ls::action);
-    if (*ctx.feature_ls_subc)
+    }
+    if (*ctx.feature_ls_subc) {
+        checkRequiredTools();
         return dispatchFN("feature-ls", *ctx.feature_ls_res, catalyst::feature_ls::action);
+    }
     catalyst::logger.info("run catalyst --help for info on available commands.");
     return 1;
 }
@@ -274,11 +315,11 @@ std::expected<void, std::string> dispatchHookImpl(auto &&args) {
 }
 } // namespace
 
-std::expected<void, std::string> dispatchHook(const std::string &args) {
+std::expected<void, std::string> dispatchHook(std::string_view args) {
     return dispatchHookImpl(args);
 }
 
-std::expected<void, std::string> dispatchHook(const std::vector<std::string> &args) {
+std::expected<void, std::string> dispatchHook(std::span<const std::string> args) {
     return dispatchHookImpl(args);
 }
 

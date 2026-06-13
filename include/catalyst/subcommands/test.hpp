@@ -9,6 +9,7 @@
 
 namespace catalyst::test {
 struct Parse {
+    bool rebuild;
     std::vector<std::string> params;
     std::optional<Workspace> workspace;
 };
