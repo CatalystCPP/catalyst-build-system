@@ -31,7 +31,7 @@ def main():
         remote_url = "https://github.com/CatalystCPP/catalyst-orchestrated-builder"
         branch_name = "main"
 
-        cmd = ["catalyst", "download", "--backend", "ninja", "--target", download_target, remote_url, branch_name]
+        cmd = ["catalyst", "download", "--backend", "cob", "--target", download_target, remote_url, branch_name] # < cob is installed on gh actions runner
         print(f"Executing: {' '.join(cmd)}")
 
         res = subprocess.run(cmd)
