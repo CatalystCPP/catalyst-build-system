@@ -8,6 +8,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "catalyst/utils/result.hpp"
 #include "catalyst/hooks.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/build.hpp"
@@ -25,13 +26,13 @@ namespace {
 
 struct BuildFailureGuard {
     const utils::yaml::Configuration &config;
-    std::expected<void, std::string> &result;
+    Result<void> &result;
 
     BuildFailureGuard(const BuildFailureGuard &) = delete;
     BuildFailureGuard(BuildFailureGuard &&) = delete;
     BuildFailureGuard &operator=(const BuildFailureGuard &) = delete;
     BuildFailureGuard &operator=(BuildFailureGuard &&) = delete;
-    BuildFailureGuard(const utils::yaml::Configuration &cfg, std::expected<void, std::string> &res)
+    BuildFailureGuard(const utils::yaml::Configuration &cfg, Result<void> &res)
         : config(cfg), result(res) {
     }
 
@@ -157,7 +158,7 @@ bool depMissing(const utils::yaml::Configuration &config) {
     return false;
 }
 
-std::expected<void, std::string> generateCompileCommands(const fs::path &build_dir, const std::string &generator) {
+Result<void> generateCompileCommands(const fs::path &build_dir, const std::string &generator) {
     if (generator == "cob") {
         catalyst::logger.info("Generating compile commands database.");
         if (auto res = catalyst::processExec({"cob", "-C", build_dir, "-t", "compdb"}); !res)
@@ -186,7 +187,7 @@ std::expected<void, std::string> generateCompileCommands(const fs::path &build_d
 
 } // namespace
 
-std::expected<void, std::string> action(const Parse &parse_args) {
+Result<void> action(const Parse &parse_args) {
     catalyst::logger.debug("Build subcommand invoked.");
 
     if (parse_args.workspace) {
@@ -248,7 +249,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     catalyst::logger.debug("Composing profiles.");
     utils::yaml::Configuration config{parse_args.profiles};
 
-    std::expected<void, std::string> result;
+    Result<void> result;
 
     auto run_build = [&]() -> void {
         BuildFailureGuard guard{config, result};

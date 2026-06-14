@@ -4,6 +4,7 @@
 #include <format>
 #include <random>
 
+#include "catalyst/utils/result.hpp"
 #include "catalyst/dir_guard.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/build.hpp"
@@ -32,7 +33,7 @@ std::string randomString(size_t length) {
 }
 } // namespace
 
-std::expected<void, std::string> action(const Parse &args) {
+Result<void> action(const Parse &args) {
     catalyst::logger.debug("Download subcommand invoked.");
 
     constexpr size_t TEMP_DIR_NAME_LEN = 8UZ;

@@ -6,6 +6,7 @@
 
 #include <CLI11.hpp>
 
+#include "catalyst/utils/result.hpp"
 #include "catalyst/globals.hpp"
 #include "catalyst/subcommands/add.hpp"
 #include "catalyst/subcommands/bench.hpp"
@@ -109,6 +110,6 @@ std::pair<int, bool> parseCli(int argc, char **argv, catalyst::CliContext &ctx);
 std::pair<int, bool> parseCli(std::string_view args, catalyst::CliContext &ctx);
 std::pair<int, bool> parseCli(std::span<const std::string> args, catalyst::CliContext &ctx);
 int dispatch(const catalyst::CliContext &ctx);
-std::expected<void, std::string> dispatchHook(std::string_view args);
-std::expected<void, std::string> dispatchHook(std::span<const std::string> args);
+Result<void> dispatchHook(std::string_view args);
+Result<void> dispatchHook(std::span<const std::string> args);
 } // namespace catalyst

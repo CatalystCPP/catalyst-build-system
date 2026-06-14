@@ -10,6 +10,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "catalyst/utils/result.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/fmt.hpp"
 #include "catalyst/subcommands/generate.hpp"
@@ -17,7 +18,7 @@
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::fmt {
-std::expected<void, std::string> action(const Parse &parse_args) {
+Result<void> action(const Parse &parse_args) {
     catalyst::logger.debug("Fmt subcommand invoked.");
     const std::vector<std::string> &profiles = parse_args.profiles;
     catalyst::logger.debug("Composing profiles.");
@@ -119,12 +120,12 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         return {};
     }
 
-    std::vector<std::future<std::expected<void, std::string>>> futures;
+    std::vector<std::future<Result<void>>> futures;
     futures.reserve(files_to_format.size());
 
     for (const auto &file : files_to_format) {
         futures.push_back(
-            std::async(std::launch::async, [formatter, file_str = file.string()]() -> std::expected<void, std::string> {
+            std::async(std::launch::async, [formatter, file_str = file.string()]() -> Result<void> {
                 auto process_res = catalyst::processExec({formatter, "-i", file_str});
                 if (!process_res) {
                     return std::unexpected(process_res.error());

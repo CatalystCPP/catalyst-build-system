@@ -6,6 +6,7 @@
 #include <catalyst/hooks.hpp>
 #include <catalyst/subcommands/clean.hpp>
 
+#include "catalyst/utils/result.hpp"
 #include "catalyst/dir_guard.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/generate.hpp"
@@ -15,7 +16,7 @@
 namespace catalyst::clean {
 namespace fs = std::filesystem;
 
-std::expected<void, std::string> action(const Parse &parse_args) {
+Result<void> action(const Parse &parse_args) {
     catalyst::logger.debug("Clean subcommand invoked.");
 
     if (parse_args.workspace) {

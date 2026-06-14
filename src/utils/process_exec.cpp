@@ -1,3 +1,4 @@
+#include "catalyst/utils/result.hpp"
 #include "catalyst/process_exec.hpp"
 
 #include <expected>
@@ -40,7 +41,7 @@ void workingDir(const std::optional<std::string> &working_dir, reproc::options &
 }
 } // namespace configure_opt
 
-std::expected<std::future<int>, std::string>
+Result<std::future<int>>
 ProcessExecutor::processExec(std::vector<std::string> &&args,
                              std::optional<std::string> working_dir,
                              std::optional<std::unordered_map<std::string, std::string>> env,
@@ -74,7 +75,7 @@ ProcessExecutor::processExec(std::vector<std::string> &&args,
         });
 }
 
-std::expected<std::string, std::string>
+Result<std::string>
 ProcessExecutor::processExecStdout(const std::vector<std::string> &args,
                                    const std::optional<std::string> &working_dir,
                                    const std::optional<std::unordered_map<std::string, std::string>> &env) {
@@ -113,7 +114,7 @@ void setProcessExecutor(std::shared_ptr<IProcessExecutor> executor) {
     g_executor = g_executor_owner.get();
 }
 
-std::expected<std::future<int>, std::string>
+Result<std::future<int>>
 processExec(std::vector<std::string> &&args,
             std::optional<std::string> working_dir,
             std::optional<std::unordered_map<std::string, std::string>> env,
@@ -121,7 +122,7 @@ processExec(std::vector<std::string> &&args,
     return getProcessExecutor().processExec(std::move(args), std::move(working_dir), std::move(env), silent);
 }
 
-std::expected<std::string, std::string>
+Result<std::string>
 processExecStdout(const std::vector<std::string> &args,
                   const std::optional<std::string> &working_dir,
                   const std::optional<std::unordered_map<std::string, std::string>> &env) {

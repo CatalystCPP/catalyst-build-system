@@ -4,6 +4,7 @@
 #include <fstream>
 #include <string>
 
+#include "catalyst/utils/result.hpp"
 #include "catalyst/globals.hpp"
 #include "catalyst/subcommands/init.hpp"
 #include "catalyst/utils/log/log.hpp"
@@ -13,7 +14,7 @@ namespace catalyst::init {
 
 namespace fs = std::filesystem;
 
-std::expected<void, std::string> action(const Parse &parse_args) {
+Result<void> action(const Parse &parse_args) {
     catalyst::logger.debug("Init subcommand invoked.");
     namespace yaml = catalyst::utils::yaml;
     // TODO: change directory to parse_args->path;

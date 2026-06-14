@@ -5,6 +5,7 @@
 #include <string_view>
 #include <vector>
 
+#include "catalyst/utils/result.hpp"
 #include "catalyst/subcommands/generate.hpp"
 
 namespace {
@@ -25,14 +26,14 @@ std::string escape(std::string_view str) {
 namespace catalyst::generate::buildwriters {
 
 template <>
-std::expected<void, std::string> DerivedWriter<TargetType::COB>::addVariable(std::string_view name,
+Result<void> DerivedWriter<TargetType::COB>::addVariable(std::string_view name,
                                                                              std::string_view value) {
     std::println(stream, "DEF|{}|{}", name, escape(value));
     return {};
 }
 
 template <>
-std::expected<void, std::string> DerivedWriter<TargetType::COB>::addRule([[maybe_unused]] std::string_view name,
+Result<void> DerivedWriter<TargetType::COB>::addRule([[maybe_unused]] std::string_view name,
                                                                          [[maybe_unused]] std::string_view command,
                                                                          [[maybe_unused]] std::string_view description,
                                                                          [[maybe_unused]] std::string_view depfile,
@@ -44,7 +45,7 @@ std::expected<void, std::string> DerivedWriter<TargetType::COB>::addRule([[maybe
 }
 
 template <>
-std::expected<void, std::string>
+Result<void>
 DerivedWriter<TargetType::COB>::addBuild(const std::vector<std::string> &outputs,
                                          std::string_view rule,
                                          const std::vector<std::string> &inputs,

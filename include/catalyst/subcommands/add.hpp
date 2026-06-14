@@ -1,5 +1,6 @@
 #pragma once
 #include <expected>
+#include "catalyst/utils/result.hpp"
 #include <string>
 #include <vector>
 
@@ -23,7 +24,7 @@ struct Parse {
     std::vector<std::string> enabled_features;
 };
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);
-std::expected<void, std::string> action(const Parse &);
+Result<void> action(const Parse &);
 } // namespace git
 
 namespace system {
@@ -34,7 +35,7 @@ struct Parse {
     std::vector<std::string> profiles{{"common"}};
 };
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);
-std::expected<void, std::string> action(const Parse &);
+Result<void> action(const Parse &);
 } // namespace system
 
 namespace local {
@@ -45,7 +46,7 @@ struct Parse {
     std::vector<std::string> enabled_features;
 };
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);
-std::expected<void, std::string> action(const Parse &);
+Result<void> action(const Parse &);
 } // namespace local
 
 namespace vcpkg {
@@ -57,9 +58,9 @@ struct Parse {
     std::vector<std::string> enabled_features;
 };
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);
-std::expected<void, std::string> action(const Parse &);
+Result<void> action(const Parse &);
 } // namespace vcpkg
 
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);
-std::expected<void, std::string> action(const Parse &);
+Result<void> action(const Parse &);
 } // namespace catalyst::add

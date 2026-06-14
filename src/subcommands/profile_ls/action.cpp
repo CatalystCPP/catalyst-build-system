@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "catalyst/utils/result.hpp"
 #include "catalyst/subcommands/profile_ls.hpp"
 #include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
@@ -18,7 +19,7 @@ void addIndividualProfiles(std::vector<std::string> &out_profiles);
 void filterUnique(std::vector<std::string> &profiles);
 } // namespace
 
-std::expected<void, std::string> catalyst::profile_ls::action([[maybe_unused]] const Parse &parse_res) {
+catalyst::Result<void> catalyst::profile_ls::action([[maybe_unused]] const Parse &parse_res) {
     catalyst::logger.debug("profile-ls subcommand invoked.");
     std::vector<std::string> profiles;
     // load everything from CATALYST.yaml

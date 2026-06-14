@@ -9,6 +9,7 @@
 #include <tuple>
 #include <vector>
 
+#include "catalyst/utils/result.hpp"
 #include "catalyst/hooks.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/build.hpp"
@@ -89,7 +90,7 @@ void warnIfStale(const fs::path &exe_path,
 }
 } // namespace
 
-std::expected<void, std::string> action(const Parse &args) {
+Result<void> action(const Parse &args) {
     catalyst::logger.debug("Test subcommand invoked.");
 
     if (args.workspace) {

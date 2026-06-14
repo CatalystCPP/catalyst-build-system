@@ -7,6 +7,7 @@
 
 #include <catalyst/hooks.hpp>
 
+#include "catalyst/utils/result.hpp"
 #include "catalyst/dir_guard.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/install.hpp"
@@ -46,7 +47,7 @@ struct CleanupGuard {
 };
 } // namespace
 
-std::expected<void, std::string> action(const Parse &parse_args) {
+Result<void> action(const Parse &parse_args) {
     catalyst::logger.debug("Pack subcommand invoked.");
 
     fs::path source_path = fs::absolute(parse_args.source_path);

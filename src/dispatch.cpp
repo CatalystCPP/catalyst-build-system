@@ -1,3 +1,4 @@
+#include "catalyst/utils/result.hpp"
 #include "catalyst/dispatch.hpp"
 
 #include <algorithm>
@@ -116,7 +117,7 @@ template <typename ParseRes_T> int dispatchFN(const char *subc_name, const Parse
 
     catalyst::logger.debug("Executing {} subcommand", subc_name);
     try {
-        if (std::expected<void, std::string> res = fn(parse_res); !res) {
+        if (Result<void> res = fn(parse_res); !res) {
             catalyst::logger.error("{}", res.error());
             return 1;
         }
@@ -280,7 +281,7 @@ int dispatch(const catalyst::CliContext &ctx) {
 }
 
 namespace {
-std::expected<void, std::string> dispatchHookImpl(auto &&args) {
+Result<void> dispatchHookImpl(auto &&args) {
     catalyst::CliContext ctx;
     ctx.workspace = catalyst::Workspace::findRoot();
     auto [exit_code, should_return] = catalyst::parseCli(args, ctx);
@@ -315,11 +316,11 @@ std::expected<void, std::string> dispatchHookImpl(auto &&args) {
 }
 } // namespace
 
-std::expected<void, std::string> dispatchHook(std::string_view args) {
+Result<void> dispatchHook(std::string_view args) {
     return dispatchHookImpl(args);
 }
 
-std::expected<void, std::string> dispatchHook(std::span<const std::string> args) {
+Result<void> dispatchHook(std::span<const std::string> args) {
     return dispatchHookImpl(args);
 }
 

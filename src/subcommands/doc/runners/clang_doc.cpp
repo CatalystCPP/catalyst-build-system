@@ -3,13 +3,14 @@
 #include <string>
 #include <vector>
 
+#include "catalyst/utils/result.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/doc.hpp"
 #include "catalyst/utils/log/log.hpp"
 
 namespace catalyst::doc {
 
-template <> std::expected<void, std::string> DerivedRunner<DocEngine::ClangDoc>::run() {
+template <> Result<void> DerivedRunner<DocEngine::ClangDoc>::run() {
     catalyst::logger.info("Running clang-doc documentation engine");
 
     std::string out_dir = config.getString("manifest.tooling.doc.out_dir").value_or("docs/");

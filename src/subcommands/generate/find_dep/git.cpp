@@ -3,6 +3,7 @@
 #include <format>
 #include <string>
 
+#include "catalyst/utils/result.hpp"
 #include "catalyst/dir_guard.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
@@ -12,7 +13,7 @@
 namespace catalyst::generate {
 namespace fs = std::filesystem;
 
-std::expected<FindRes, std::string>
+Result<FindRes>
 findGit(const std::string &build_dir, ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc) {
     namespace yaml = catalyst::utils::yaml;
     std::string dep_name = yaml::asString(yaml::child(dep, "name")).value_or("<unnamed>");

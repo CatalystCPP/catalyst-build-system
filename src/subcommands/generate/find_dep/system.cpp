@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "catalyst/utils/result.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
@@ -61,7 +62,7 @@ std::optional<FindRes> findSystemFromPkgConfig(const std::string &dep_name,
 }
 } // namespace
 
-std::expected<FindRes, std::string> findSystem(ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc) {
+Result<FindRes> findSystem(ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc) {
     namespace yaml = catalyst::utils::yaml;
     auto dep_name = yaml::asString(yaml::child(dep, "name")).value_or("");
     catalyst::logger.debug("Resolving system dependency: {}", dep_name);
