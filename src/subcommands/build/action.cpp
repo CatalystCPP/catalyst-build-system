@@ -8,13 +8,13 @@
 #include <unordered_set>
 #include <vector>
 
-#include "catalyst/utils/result.hpp"
 #include "catalyst/hooks.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/build.hpp"
 #include "catalyst/subcommands/fetch.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/watcher.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 #include "catalyst/workspace.hpp"
@@ -32,8 +32,7 @@ struct BuildFailureGuard {
     BuildFailureGuard(BuildFailureGuard &&) = delete;
     BuildFailureGuard &operator=(const BuildFailureGuard &) = delete;
     BuildFailureGuard &operator=(BuildFailureGuard &&) = delete;
-    BuildFailureGuard(const utils::yaml::Configuration &cfg, Result<void> &res)
-        : config(cfg), result(res) {
+    BuildFailureGuard(const utils::yaml::Configuration &cfg, Result<void> &res) : config(cfg), result(res) {
     }
 
     ~BuildFailureGuard() {
@@ -262,7 +261,8 @@ Result<void> action(const Parse &parse_args) {
         }
 
         fs::path build_dir = config.getBuildDir();
-        std::string generator = config.getString("meta.generator").value_or("cob");
+        std::string generator =
+            parse_args.backend.empty() ? config.getString("meta.generator").value_or("cob") : parse_args.backend;
         std::string build_filename = (generator == "ninja") ? "build.ninja" : "catalyst.build";
 
         bool needs_regen = !fs::exists(build_dir / build_filename) || parse_args.regen;
@@ -343,7 +343,8 @@ Result<void> action(const Parse &parse_args) {
             }
             fs::copy_file(source_compdb, stable_compdb, fs::copy_options::overwrite_existing, ec);
             if (ec) {
-                catalyst::logger.warn("Failed to publish compilation database to {}: {}", stable_compdb.string(), ec.message());
+                catalyst::logger.warn(
+                    "Failed to publish compilation database to {}: {}", stable_compdb.string(), ec.message());
             } else {
                 catalyst::logger.debug("Published compilation database to {}", stable_compdb.string());
             }

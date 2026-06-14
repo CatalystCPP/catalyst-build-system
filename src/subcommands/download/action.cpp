@@ -4,13 +4,13 @@
 #include <format>
 #include <random>
 
-#include "catalyst/utils/result.hpp"
 #include "catalyst/dir_guard.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/build.hpp"
 #include "catalyst/subcommands/download.hpp"
 #include "catalyst/subcommands/install.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 
 namespace fs = std::filesystem;
 
@@ -71,7 +71,7 @@ Result<void> action(const Parse &args) {
         .package = "",
         .profiles = args.profiles,
         .enabled_features = args.enabled_features,
-        .backend = "",
+        .backend = args.backend,
         .workspace = std::nullopt,
     };
 

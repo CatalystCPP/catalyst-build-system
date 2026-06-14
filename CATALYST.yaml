@@ -41,6 +41,12 @@ common:
   hooks:
     pre-fetch:
       - script: "scripts/fetch_cli_11.sh"
+      - codegen:
+          cmd: "python3 $IN[0]"
+          input: "scripts/embed_cob.py"
+          output:
+            - "include/catalyst/cob_embedded.hpp"
+            - "src/utils/cob_embedded.cpp"
   features:
     uniform_logs: false
     log_machine_info: false
