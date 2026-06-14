@@ -1,9 +1,10 @@
 #pragma once
 #include <expected>
-#include "catalyst/utils/result.hpp"
 #include <utility>
 
 #include <CLI11.hpp>
+
+#include "catalyst/utils/result.hpp"
 
 namespace catalyst::download {
 struct Parse {
@@ -12,6 +13,7 @@ struct Parse {
     std::filesystem::path target_path;
     std::vector<std::string> profiles;
     std::vector<std::string> enabled_features;
+    std::string backend;
 };
 
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);
