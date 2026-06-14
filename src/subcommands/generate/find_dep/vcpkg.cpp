@@ -7,6 +7,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "catalyst/utils/result.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
@@ -44,7 +45,7 @@ void append_pkg_config_libs(FindRes &result,
 }
 } // namespace
 
-std::expected<FindRes, std::string> findVcpkg(ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc) {
+Result<FindRes> findVcpkg(ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc) {
     namespace yaml = catalyst::utils::yaml;
     std::string dep_name = yaml::asString(yaml::child(dep, "name")).value_or("<unnamed>");
     auto triplet_opt = yaml::asString(yaml::child(dep, "triplet"));

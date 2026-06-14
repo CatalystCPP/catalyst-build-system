@@ -1,12 +1,13 @@
 #include <string_view>
 
+#include "catalyst/utils/result.hpp"
 #include "catalyst/hooks.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::hooks {
-std::expected<void, std::string> executeScriptHook(ryml::ConstNodeRef item, std::string_view hook_name) {
+Result<void> executeScriptHook(ryml::ConstNodeRef item, std::string_view hook_name) {
     auto script = utils::yaml::asString(utils::yaml::child(item, "script"));
     if (!script)
         return std::unexpected(std::format("Hook '{}' script is not a string", hook_name));

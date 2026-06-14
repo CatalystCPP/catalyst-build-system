@@ -3,13 +3,14 @@
 #include <string>
 #include <vector>
 
+#include "catalyst/utils/result.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/doc.hpp"
 #include "catalyst/utils/log/log.hpp"
 
 namespace catalyst::doc {
 
-template <> std::expected<void, std::string> DerivedRunner<DocEngine::Doxygen>::run() {
+template <> Result<void> DerivedRunner<DocEngine::Doxygen>::run() {
     catalyst::logger.info("Running Doxygen documentation engine");
 
     std::string config_file = config.getString("manifest.tooling.doc.config").value_or("Doxyfile");

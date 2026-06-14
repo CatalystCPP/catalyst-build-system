@@ -1,3 +1,4 @@
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/toolchain.hpp"
 
 #include <format>
@@ -31,7 +32,7 @@ std::string expand_template(std::string_view tmpl, const std::unordered_map<std:
     return result;
 }
 
-std::expected<ToolchainDef, std::string> parse_toolchain(const std::filesystem::path &path) {
+Result<ToolchainDef> parse_toolchain(const std::filesystem::path &path) {
     namespace yaml = catalyst::utils::yaml;
     ToolchainDef tc;
 

@@ -1,5 +1,6 @@
 #pragma once
 #include <expected>
+#include "catalyst/utils/result.hpp"
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -41,14 +42,14 @@ struct Parse {
 };
 
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);
-std::expected<void, std::string> action(const Parse &);
+Result<void> action(const Parse &);
 
-std::expected<void, std::string> invokeIDEConfigEmitters(const Parse &parse_args);
-template <Parse::IdeType Ide_T> std::expected<void, std::string> emitIDEConfig(const Parse &) {
+Result<void> invokeIDEConfigEmitters(const Parse &parse_args);
+template <Parse::IdeType Ide_T> Result<void> emitIDEConfig(const Parse &) {
     static_assert(Ide_T == Parse::IdeType::vsc || Ide_T == Parse::IdeType::clion,
                   "emitIDEConfig is not implemented for this IdeType");
 }
 
-template <> std::expected<void, std::string> emitIDEConfig<Parse::IdeType::vsc>(const Parse &parse_args);
-template <> std::expected<void, std::string> emitIDEConfig<Parse::IdeType::clion>(const Parse &parse_args);
+template <> Result<void> emitIDEConfig<Parse::IdeType::vsc>(const Parse &parse_args);
+template <> Result<void> emitIDEConfig<Parse::IdeType::clion>(const Parse &parse_args);
 } // namespace catalyst::init

@@ -4,6 +4,7 @@
 #include <string>
 #include <string_view>
 
+#include "catalyst/utils/result.hpp"
 #include "catalyst/subcommands/generate.hpp"
 
 namespace {
@@ -38,14 +39,14 @@ std::string escape(std::string_view str) {
 
 namespace catalyst::generate::buildwriters {
 template <>
-std::expected<void, std::string> DerivedWriter<TargetType::Make>::addVariable(std::string_view name,
+Result<void> DerivedWriter<TargetType::Make>::addVariable(std::string_view name,
                                                                               std::string_view value) {
     std::println(stream, "{} := {}", name, value);
     return {};
 }
 
 template <>
-std::expected<void, std::string> DerivedWriter<TargetType::Make>::addRule(std::string_view name,
+Result<void> DerivedWriter<TargetType::Make>::addRule(std::string_view name,
                                                                           std::string_view command,
                                                                           [[maybe_unused]] std::string_view description,
                                                                           [[maybe_unused]] std::string_view depfile,
@@ -56,7 +57,7 @@ std::expected<void, std::string> DerivedWriter<TargetType::Make>::addRule(std::s
 }
 
 template <>
-std::expected<void, std::string>
+Result<void>
 DerivedWriter<TargetType::Make>::addBuild(const std::vector<std::string> &outputs,
                                           std::string_view rule,
                                           const std::vector<std::string> &inputs,

@@ -13,6 +13,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "catalyst/utils/result.hpp"
 #include "catalyst/hooks.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/fetch.hpp"
@@ -52,7 +53,7 @@ std::string getCompilerVersion(const std::string &compiler_exe) {
     return version;
 }
 
-std::expected<void, std::string> fetchConanDeps(const std::vector<ryml::ConstNodeRef> &conan_deps,
+Result<void> fetchConanDeps(const std::vector<ryml::ConstNodeRef> &conan_deps,
                                                 const std::string &build_dir,
                                                 const utils::yaml::Configuration &config,
                                                 const std::vector<std::string> &profiles) {
@@ -157,7 +158,7 @@ std::expected<void, std::string> fetchConanDeps(const std::vector<ryml::ConstNod
 
 namespace {
 
-std::expected<void, std::string> fetchVcpkg(const std::string &name, const std::string &triplet) {
+Result<void> fetchVcpkg(const std::string &name, const std::string &triplet) {
     catalyst::logger.debug("Fetching vcpkg dependency: {} with triplet: {}", name, triplet);
     char *vcpkg_root_env = std::getenv("VCPKG_ROOT");
     if (vcpkg_root_env == nullptr) {
@@ -179,7 +180,7 @@ std::expected<void, std::string> fetchVcpkg(const std::string &name, const std::
     return {};
 }
 
-std::expected<void, std::string> fetchGit(
+Result<void> fetchGit(
     const std::string &build_dir, std::string name, std::string source, std::string version, std::string hash = "") {
     catalyst::logger.debug("Fetching git dependency: {}@{} (hash: {}) from {}", name, version, hash, source);
     fs::path dep_path = fs::path(build_dir) / "catalyst-libs" / name;
@@ -222,7 +223,7 @@ std::expected<void, std::string> fetchGit(
     return {};
 }
 
-std::expected<void, std::string> fetchSystem(const std::string &name) {
+Result<void> fetchSystem(const std::string &name) {
     // assuming installed on system
     catalyst::logger.debug("Skipping fetch for system dependency: {}", name);
     return {};
@@ -234,7 +235,7 @@ struct FetchLocalArgs {
     std::vector<std::string> profiles;
 };
 
-std::expected<void, std::string> fetchLocal(const FetchLocalArgs &fn_args) {
+Result<void> fetchLocal(const FetchLocalArgs &fn_args) {
     const std::string &name = fn_args.name;
     const std::string &path = fn_args.path;
     const std::vector<std::string> &profiles = fn_args.profiles;
@@ -304,7 +305,7 @@ struct LockedDep {
     std::string path;
 };
 
-std::expected<void, std::string> fetchDependency(ryml::ConstNodeRef dep,
+Result<void> fetchDependency(ryml::ConstNodeRef dep,
                                                  const std::string &build_dir,
                                                  const std::unordered_map<std::string, LockedDep> &lockfile_deps,
                                                  const Parse &parse_args) {
@@ -423,7 +424,7 @@ std::expected<void, std::string> fetchDependency(ryml::ConstNodeRef dep,
 
 } // namespace
 
-std::expected<void, std::string> action(const Parse &parse_args) {
+Result<void> action(const Parse &parse_args) {
     catalyst::logger.debug("Fetch subcommand invoked.");
     catalyst::logger.debug("Composing profiles.");
     utils::yaml::Configuration config{parse_args.profiles};
@@ -508,7 +509,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
 
         // 3. Execute parallel-safe (git, system)
         if (!parallel_deps.empty()) {
-            std::vector<std::future<std::expected<void, std::string>>> futures;
+            std::vector<std::future<Result<void>>> futures;
             for (auto dep : parallel_deps) {
                 // Launch fetch in parallel
                 futures.push_back(std::async(std::launch::async, [dep, build_dir, &lockfile_deps, &parse_args]() {

@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "catalyst/utils/result.hpp"
 #include "catalyst/hooks.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/generate.hpp"
@@ -28,7 +29,7 @@ std::string commandStr(const fs::path &executable, const std::vector<std::string
 }
 } // namespace
 
-std::expected<void, std::string> action(const Parse &args) {
+Result<void> action(const Parse &args) {
     catalyst::logger.debug("Run subcommand invoked.");
     std::vector<std::string> profiles;
     if (args.profile != "common") {
@@ -44,7 +45,7 @@ std::expected<void, std::string> action(const Parse &args) {
     const utils::yaml::Configuration &profile_comp = res.value();
 
     catalyst::logger.debug("Running pre-run hooks.");
-    if (std::expected<void, std::string> hook_res = hooks::preRun(profile_comp); !hook_res) {
+    if (Result<void> hook_res = hooks::preRun(profile_comp); !hook_res) {
         return hook_res;
     }
 
@@ -92,7 +93,7 @@ std::expected<void, std::string> action(const Parse &args) {
         tc = std::move(*parsed);
     }
 
-    std::expected<std::string, std::string> lib_path_res = catalyst::generate::libPath(profile_comp, profiles, tc);
+    Result<std::string> lib_path_res = catalyst::generate::libPath(profile_comp, profiles, tc);
     if (!lib_path_res) {
         return std::unexpected("Failed to generate LD_LIBRARY_PATH");
     }
@@ -118,7 +119,7 @@ std::expected<void, std::string> action(const Parse &args) {
     }
 
     catalyst::logger.debug("Running post-run hooks.");
-    if (std::expected<void, std::string> res = hooks::postRun(profile_comp); !res) {
+    if (Result<void> res = hooks::postRun(profile_comp); !res) {
         return res;
     }
 

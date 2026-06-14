@@ -3,13 +3,16 @@
 
 #include <catalyst/subcommands/add.hpp>
 
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/load_profile_file.hpp"
 #include "catalyst/utils/yaml/profile_write_back.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
+using catalyst::Result;
+
 namespace {
 
-std::expected<void, std::string> addToProfile(const std::string &profile, const catalyst::add::local::Parse &args) {
+Result<void> addToProfile(const std::string &profile, const catalyst::add::local::Parse &args) {
     namespace yaml = catalyst::utils::yaml;
     auto profile_file = yaml::loadProfileFile(profile);
     if (!profile_file)
@@ -57,7 +60,7 @@ std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app) {
     return {cmd, std::move(ret)};
 }
 
-std::expected<void, std::string> action(const Parse &args) {
+Result<void> action(const Parse &args) {
     for (const auto &profile : args.profiles)
         if (auto res = addToProfile(profile, args); !res)
             return std::unexpected(res.error());

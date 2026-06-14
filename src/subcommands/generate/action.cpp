@@ -9,6 +9,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "catalyst/utils/result.hpp"
 #include "catalyst/hooks.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
@@ -46,7 +47,7 @@ void featureFilter(std::unordered_set<fs::path> &source_set,
 
 } // namespace
 
-std::expected<void, std::string> action(const Parse &parse_args) {
+Result<void> action(const Parse &parse_args) {
     catalyst::logger.debug("Generate subcommand invoked.");
 
     catalyst::logger.debug("Composing profiles.");

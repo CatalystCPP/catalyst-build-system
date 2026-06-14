@@ -10,6 +10,7 @@
 #include <CLI11.hpp>
 #include <ryml/ryml.hpp>
 
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/toolchain.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 
@@ -27,24 +28,24 @@ struct FindRes {
     std::vector<std::string> lib_dirs;
 };
 
-std::expected<utils::yaml::Configuration, std::string> profileComposition(const std::vector<std::string> &profiles);
+Result<utils::yaml::Configuration> profileComposition(const std::vector<std::string> &profiles);
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);
-std::expected<void, std::string> action(const Parse &);
+Result<void> action(const Parse &);
 
-std::expected<std::string, std::string> libPath(const utils::yaml::Configuration &profile_comp,
+Result<std::string> libPath(const utils::yaml::Configuration &profile_comp,
                                                 const std::vector<std::string> &profiles,
                                                 const catalyst::toolchain::ToolchainDef &tc);
-std::expected<FindRes, std::string>
+Result<FindRes>
 findDep(const std::string &build_dir, ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
-std::expected<FindRes, std::string> findLocal(ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
-std::expected<FindRes, std::string> findSystem(ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
-std::expected<FindRes, std::string> findVcpkg(ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
-std::expected<FindRes, std::string>
+Result<FindRes> findLocal(ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
+Result<FindRes> findSystem(ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
+Result<FindRes> findVcpkg(ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
+Result<FindRes>
 findGit(const std::string &build_dir, ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
-std::expected<FindRes, std::string>
+Result<FindRes>
 findConan(const std::string &build_dir, ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
 
-std::expected<std::unordered_set<std::filesystem::path>, std::string>
+Result<std::unordered_set<std::filesystem::path>>
 buildSourceSet(const std::vector<std::string> &source_dirs, const std::vector<std::string> &profiles);
 
 namespace buildwriters {
@@ -82,13 +83,13 @@ public:
     BaseWriter &operator=(BaseWriter &&) = delete;
     virtual ~BaseWriter() = default;
 
-    virtual std::expected<void, std::string> addVariable(std::string_view name, std::string_view value) = 0;
-    virtual std::expected<void, std::string> addRule(std::string_view name,
+    virtual Result<void> addVariable(std::string_view name, std::string_view value) = 0;
+    virtual Result<void> addRule(std::string_view name,
                                                      std::string_view command,
                                                      std::string_view description,
                                                      std::string_view depfile = "",
                                                      std::string_view deps = "") = 0;
-    virtual std::expected<void, std::string> addBuild(const std::vector<std::string> &outputs,
+    virtual Result<void> addBuild(const std::vector<std::string> &outputs,
                                                       std::string_view rule,
                                                       const std::vector<std::string> &inputs,
                                                       const std::vector<std::string> &implicit_deps = {}
@@ -152,12 +153,12 @@ public:
     DerivedWriter(DerivedWriter &&) = delete;
     DerivedWriter &operator=(DerivedWriter &&) = delete;
 
-    std::expected<void, std::string> addVariable([[maybe_unused]] std::string_view name,
+    Result<void> addVariable([[maybe_unused]] std::string_view name,
                                                  [[maybe_unused]] std::string_view value) override {
         throw std::logic_error("Unimplemented base template method");
     }
 
-    std::expected<void, std::string> addRule([[maybe_unused]] std::string_view name,
+    Result<void> addRule([[maybe_unused]] std::string_view name,
                                              [[maybe_unused]] std::string_view command,
                                              [[maybe_unused]] std::string_view description,
                                              [[maybe_unused]] std::string_view depfile = "",
@@ -165,7 +166,7 @@ public:
         throw std::logic_error("Unimplemented base template method");
     }
 
-    std::expected<void, std::string>
+    Result<void>
     addBuild([[maybe_unused]] const std::vector<std::string> &outputs,
              [[maybe_unused]] std::string_view rule,
              [[maybe_unused]] const std::vector<std::string> &inputs,

@@ -8,11 +8,13 @@
 #include <unordered_set>
 #include <vector>
 
+#include "catalyst/utils/result.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace fs = std::filesystem;
+using catalyst::Result;
 
 namespace {
 
@@ -49,7 +51,7 @@ std::optional<std::unordered_set<std::string>> createIgnorePatterns(const fs::pa
     return ignore_patterns;
 }
 
-std::expected<std::unordered_set<fs::path>, std::string> buildSourceSet(const fs::path &dir,
+Result<std::unordered_set<fs::path>> buildSourceSet(const fs::path &dir,
                                                                         const std::vector<std::string> &profiles) {
     using catalyst::LogLevel, catalyst::logger;
 
@@ -104,7 +106,7 @@ std::expected<std::unordered_set<fs::path>, std::string> buildSourceSet(const fs
 } // namespace
 
 namespace catalyst::generate {
-std::expected<std::unordered_set<fs::path>, std::string> buildSourceSet(const std::vector<std::string> &source_dirs,
+Result<std::unordered_set<fs::path>> buildSourceSet(const std::vector<std::string> &source_dirs,
                                                                         const std::vector<std::string> &profiles) {
     catalyst::logger.debug("Building source set.");
     namespace sv = std::views;

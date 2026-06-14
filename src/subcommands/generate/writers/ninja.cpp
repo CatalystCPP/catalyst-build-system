@@ -3,6 +3,7 @@
 #include <string>
 #include <string_view>
 
+#include "catalyst/utils/result.hpp"
 #include "catalyst/subcommands/generate.hpp"
 
 namespace {
@@ -37,7 +38,7 @@ std::string escape(std::string_view str) {
 
 namespace catalyst::generate::buildwriters {
 template <>
-std::expected<void, std::string> DerivedWriter<TargetType::Ninja>::addVariable(std::string_view name,
+Result<void> DerivedWriter<TargetType::Ninja>::addVariable(std::string_view name,
                                                                                std::string_view value) {
     static auto escape_quotes = [](std::string_view str) -> std::string {
         std::string result;
@@ -61,7 +62,7 @@ std::expected<void, std::string> DerivedWriter<TargetType::Ninja>::addVariable(s
 }
 
 template <>
-std::expected<void, std::string> DerivedWriter<TargetType::Ninja>::addRule(std::string_view name,
+Result<void> DerivedWriter<TargetType::Ninja>::addRule(std::string_view name,
                                                                            std::string_view command,
                                                                            std::string_view description,
                                                                            std::string_view depfile,
@@ -81,7 +82,7 @@ std::expected<void, std::string> DerivedWriter<TargetType::Ninja>::addRule(std::
 }
 
 template <>
-std::expected<void, std::string>
+Result<void>
 DerivedWriter<TargetType::Ninja>::addBuild(const std::vector<std::string> &outputs,
                                            std::string_view rule,
                                            const std::vector<std::string> &inputs,

@@ -1,3 +1,4 @@
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
 #include <algorithm>
@@ -27,7 +28,7 @@ std::optional<ryml::csubstr> scalarVal(ryml::ConstNodeRef node) {
 
 } // namespace
 
-std::expected<ryml::Tree, std::string> parseYaml(std::string_view contents, std::string_view filename) {
+Result<ryml::Tree> parseYaml(std::string_view contents, std::string_view filename) {
     try {
         return ryml::parse_in_arena(toSubstr(filename), toSubstr(contents));
     } catch (const std::exception &err) {
@@ -35,7 +36,7 @@ std::expected<ryml::Tree, std::string> parseYaml(std::string_view contents, std:
     }
 }
 
-std::expected<ryml::Tree, std::string> loadFile(const std::filesystem::path &path) {
+Result<ryml::Tree> loadFile(const std::filesystem::path &path) {
     std::ifstream in{path, std::ios::binary};
     if (!in)
         return std::unexpected(std::format("Failed to open YAML file: {}", path.string()));

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <expected>
+#include "catalyst/utils/result.hpp"
 #include <filesystem>
 #include <string>
 #include <string_view>
@@ -57,6 +58,6 @@ struct ToolchainDef {
 std::string expand_template(std::string_view tmpl, const std::unordered_map<std::string_view, std::string> &vars);
 
 // Parse a ToolchainDef from a YAML file
-std::expected<ToolchainDef, std::string> parse_toolchain(const std::filesystem::path &path);
+Result<ToolchainDef> parse_toolchain(const std::filesystem::path &path);
 
 } // namespace catalyst::toolchain

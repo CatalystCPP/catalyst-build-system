@@ -6,6 +6,7 @@
 
 #include <catalyst/utils/yaml/load_profile_file.hpp>
 
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
@@ -29,7 +30,7 @@ void ensureMapRoot(ryml::Tree &tree) {
 }
 
 auto loadFromCombined(const std::string &profile, const fs::path &combined_path, const fs::path &profile_path)
-    -> std::expected<ProfileFile, std::string> {
+    -> Result<ProfileFile> {
     auto parsed = loadFile(combined_path);
     if (!parsed)
         return std::unexpected(parsed.error());
@@ -69,7 +70,7 @@ auto loadFromCombined(const std::string &profile, const fs::path &combined_path,
 }
 
 auto loadFromIsolate(const std::string &profile, const fs::path &profile_path)
-    -> std::expected<ProfileFile, std::string> {
+    -> Result<ProfileFile> {
     if (!fs::exists(profile_path))
         return std::unexpected(std::format("Profile file: {} for {} not found", profile_path.string(), profile));
 
@@ -86,7 +87,7 @@ auto loadFromIsolate(const std::string &profile, const fs::path &profile_path)
 
 } // anonymous namespace
 
-auto loadProfileFile(const std::string &profile, const fs::path &root_dir) -> std::expected<ProfileFile, std::string> {
+auto loadProfileFile(const std::string &profile, const fs::path &root_dir) -> Result<ProfileFile> {
     catalyst::logger.debug("Loading profile file: {} from {}", profile, root_dir.string());
 
     const fs::path combined_path = root_dir / "CATALYST.yaml";

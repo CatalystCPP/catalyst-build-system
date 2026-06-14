@@ -6,6 +6,7 @@
 
 #include <CLI11.hpp>
 
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 
 namespace catalyst::doc {
@@ -16,7 +17,7 @@ struct Parse {
 };
 
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);
-std::expected<void, std::string> action(const Parse &parse_args);
+Result<void> action(const Parse &parse_args);
 
 enum class DocEngine : std::uint8_t { Doxygen, ClangDoc, Jocasta };
 
@@ -30,7 +31,7 @@ public:
     }
     virtual ~BaseRunner() = default;
 
-    virtual std::expected<void, std::string> run() = 0;
+    virtual Result<void> run() = 0;
 };
 
 template <DocEngine DocEngine_T> class DerivedRunner : public BaseRunner {
@@ -70,7 +71,7 @@ public:
     DerivedRunner(DerivedRunner &&) = delete;
     DerivedRunner &operator=(DerivedRunner &&) = delete;
 
-    std::expected<void, std::string> run() override {
+    Result<void> run() override {
         throw std::logic_error("Unimplemented base template method");
     }
 };

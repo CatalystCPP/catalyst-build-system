@@ -1,5 +1,6 @@
 #pragma once
 #include <expected>
+#include "catalyst/utils/result.hpp"
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -33,5 +34,5 @@ struct Parse {
 };
 
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);
-std::expected<void, std::string> action(const Parse &parse_args);
+Result<void> action(const Parse &parse_args);
 } // namespace catalyst::pack

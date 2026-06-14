@@ -1,5 +1,6 @@
 #pragma once
 #include <expected>
+#include "catalyst/utils/result.hpp"
 #include <filesystem>
 #include <string>
 
@@ -27,6 +28,6 @@ struct ProfileFile {
     }
 };
 
-std::expected<ProfileFile, std::string>
+Result<ProfileFile>
 loadProfileFile(const std::string &profile, const std::filesystem::path &root_dir = std::filesystem::current_path());
 } // namespace catalyst::utils::yaml

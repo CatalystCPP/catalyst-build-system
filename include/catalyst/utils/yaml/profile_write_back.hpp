@@ -1,10 +1,11 @@
 #pragma once
 
 #include <expected>
+#include "catalyst/utils/result.hpp"
 #include <string>
 
 #include <catalyst/utils/yaml/load_profile_file.hpp>
 
 namespace catalyst::utils::yaml {
-std::expected<void, std::string> profileWriteBack(const ProfileFile &profile_file);
+Result<void> profileWriteBack(const ProfileFile &profile_file);
 }
