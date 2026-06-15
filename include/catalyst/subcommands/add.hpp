@@ -1,10 +1,11 @@
 #pragma once
 #include <expected>
-#include "catalyst/utils/result.hpp"
 #include <string>
 #include <vector>
 
 #include <CLI11.hpp>
+
+#include "catalyst/utils/result.hpp"
 
 namespace catalyst::add {
 struct Parse {
@@ -14,6 +15,16 @@ struct Parse {
     std::vector<std::string> profiles{{"common"}};
     std::vector<std::string> enabled_features;
 };
+
+namespace conan {
+struct Parse {
+    std::string name;
+    std::string version;
+    std::vector<std::string> profiles{{"common"}};
+};
+std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);
+Result<void> action(const Parse &);
+} // namespace conan
 
 namespace git {
 struct Parse {

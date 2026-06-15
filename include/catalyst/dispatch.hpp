@@ -104,6 +104,9 @@ struct CliContext {
 
     CLI::App *add_vcpkg_subc{nullptr};
     std::unique_ptr<catalyst::add::vcpkg::Parse> add_vcpkg_res{nullptr};
+
+    CLI::App *add_conan_subc{nullptr};
+    std::unique_ptr<catalyst::add::conan::Parse> add_conan_res{nullptr};
 };
 
 std::pair<int, bool> parseCli(int argc, char **argv, catalyst::CliContext &ctx);

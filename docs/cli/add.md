@@ -15,6 +15,7 @@ SUBCOMMANDS:
   system                      add a system dependency
   local                       add a local dependency
   vcpkg                       add a vcpkg dependency
+  conan                       add a conan dependency
 ```
 
 ### git
@@ -90,6 +91,20 @@ OPTIONS:
   -p,     --profiles TEXT [[common]]  ... 
   -f,     --features TEXT ... 
 ```
+### conan
+```
+add a conan dependency
+
+
+catalyst add conan [OPTIONS]
+
+
+OPTIONS:
+  -h,     --help              Print this help message and exit
+  -n,     --name TEXT REQUIRED
+  -v,     --version TEXT REQUIRED
+  -p,     --profiles TEXT [[common]]  ...
+```
 
 ## Examples
 
@@ -99,6 +114,9 @@ catalyst add git https://github.com/fmtlib/fmt.git -v 10.1.0
 
 # Add fmt from vcpkg
 catalyst add vcpkg fmt -t x64-linux
+
+# Add fmt from conan
+catalyst add conan -n fmt -v 10.1.1
 
 # Add a local library to the debug profile
 catalyst add local my-lib ../libs/my-lib -p debug

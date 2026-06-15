@@ -64,6 +64,7 @@ void setupCli(catalyst::CliContext &ctx) {
     tie(ctx.add_system_subc, ctx.add_system_res) = catalyst::add::system::parse(*ctx.add_subc);
     tie(ctx.add_local_subc, ctx.add_local_res) = catalyst::add::local::parse(*ctx.add_subc);
     tie(ctx.add_vcpkg_subc, ctx.add_vcpkg_res) = catalyst::add::vcpkg::parse(*ctx.add_subc);
+    tie(ctx.add_conan_subc, ctx.add_conan_res) = catalyst::add::conan::parse(*ctx.add_subc);
 
     ctx.app.add_flag("-v,--version", ctx.show_version, "current version");
     ctx.app.add_flag("-V,--verbose", catalyst::logger.getVerboseLogging(), "verbose stdout logging output");
@@ -195,6 +196,8 @@ int dispatch(const catalyst::CliContext &ctx) {
             return dispatchFN("add local", *ctx.add_local_res, catalyst::add::local::action);
         if (*ctx.add_vcpkg_subc)
             return dispatchFN("add vcpkg", *ctx.add_vcpkg_res, catalyst::add::vcpkg::action);
+        if (*ctx.add_conan_subc)
+            return dispatchFN("add conan", *ctx.add_conan_res, catalyst::add::conan::action);
         return 1;
     }
     if (*ctx.build_subc) {
