@@ -10,6 +10,7 @@ catalyst test [OPTIONS]
 OPTIONS:
   -h,     --help              Print this help message and exit
   -P,     --params TEXT ...   Params to pass to the test executable.
+  -r,     --rebuild [0]       Rebuild before testing.
 ```
 
 ## Examples

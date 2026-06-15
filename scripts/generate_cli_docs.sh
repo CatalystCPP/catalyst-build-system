@@ -10,12 +10,23 @@ echo "================================================"
 CATALYST_BIN="${1:-}"
 if [ -z "$CATALYST_BIN" ]; then
     echo "Searching for catalyst executable in build/ directory..."
-    # Find any executable named catalyst in the build directory
-    FOUND_BINS=$(find build/ -type f -name catalyst -executable 2>/dev/null || true)
-    if [ -n "$FOUND_BINS" ]; then
-        # Take the first one found
-        CATALYST_BIN=$(echo "$FOUND_BINS" | head -n 1)
-        echo "Found binary: $CATALYST_BIN"
+    # Search in release directories first
+    for dir in build/release build/common-release build/common-ccache-release; do
+        if [ -x "$dir/catalyst" ] && [ -f "$dir/catalyst" ]; then
+            CATALYST_BIN="$dir/catalyst"
+            echo "Found binary: $CATALYST_BIN"
+            break
+        fi
+    done
+
+    # Fallback to searching the build directory, skipping build/pack/
+    if [ -z "$CATALYST_BIN" ]; then
+        FOUND_BINS=$(find build/ -path "build/pack" -prune -o -type f -name catalyst -executable -print 2>/dev/null || true)
+        if [ -n "$FOUND_BINS" ]; then
+            # Take the first one found
+            CATALYST_BIN=$(echo "$FOUND_BINS" | head -n 1)
+            echo "Found binary: $CATALYST_BIN"
+        fi
     fi
 fi
 

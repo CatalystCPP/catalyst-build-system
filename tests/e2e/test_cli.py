@@ -260,3 +260,29 @@ def test_grievance_fixes(tmp_path):
     # Check compile_commands.json at stable root paths
     assert (project_dir / "build" / "compile_commands.json").exists()
     assert (project_dir / "compile_commands.json").exists()
+
+def test_add_conan(tmp_path):
+    project_dir = tmp_path / "conan_project"
+    project_dir.mkdir()
+
+    env = os.environ.copy()
+    result = subprocess.run([str(CATALYST_BIN), "init"], cwd=project_dir, capture_output=True, text=True, env=env)
+    assert result.returncode == 0
+
+    # 1. Reject missing name or version
+    result = subprocess.run([str(CATALYST_BIN), "add", "conan", "-n", "fmt"], cwd=project_dir, capture_output=True, text=True, env=env)
+    assert result.returncode != 0
+
+    result = subprocess.run([str(CATALYST_BIN), "add", "conan", "-v", "10.1.1"], cwd=project_dir, capture_output=True, text=True, env=env)
+    assert result.returncode != 0
+
+    # 2. Add conan dependency successfully
+    result = subprocess.run([str(CATALYST_BIN), "add", "conan", "-n", "fmt", "-v", "10.1.1"], cwd=project_dir, capture_output=True, text=True, env=env)
+    assert result.returncode == 0
+
+    # Verify dependency added to catalyst.yaml
+    yaml_content = (project_dir / "catalyst.yaml").read_text()
+    assert "source: conan" in yaml_content
+    assert "name: fmt" in yaml_content
+    assert "version: 10.1.1" in yaml_content
+
