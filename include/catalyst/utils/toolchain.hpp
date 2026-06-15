@@ -1,16 +1,17 @@
 #pragma once
 
 #include <expected>
-#include "catalyst/utils/result.hpp"
 #include <filesystem>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 
+#include "catalyst/utils/result.hpp"
+
 namespace catalyst::toolchain {
 
 struct ToolchainDef {
-    std::string name = "gcc_clang";
+    std::string name = "gcc";
 
     struct Extensions {
         std::string object = ".o";
@@ -35,15 +36,15 @@ struct ToolchainDef {
     };
 
     struct Compiler {
-        CompilerDef c = {.executable = "clang",
+        CompilerDef c = {.executable = "cc",
                          .command = "{cc} {cflags} -MMD -MF {object}.d -c {source} -o {object} {includes} {defines}"};
-        CompilerDef cxx = {.executable = "clang++",
+        CompilerDef cxx = {.executable = "c++",
                            .command =
                                "{cxx} {cxxflags} -MMD -MF {object}.d -c {source} -o {object} {includes} {defines}"};
     } compiler;
 
     struct Linker {
-        std::string executable = "clang++";
+        std::string executable = "c++";
         std::string executable_command = "{linker} {objects} -o {output} {ldflags} {lib_dirs} {libs}";
         std::string shared_lib_command = "{linker} -shared {objects} -o {output} {ldflags} {lib_dirs} {libs}";
     } linker;
