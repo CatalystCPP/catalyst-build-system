@@ -16,6 +16,7 @@ OPTIONS:
   -p,     --profiles TEXT [[common]]  ... 
                               the profiles to compose in the build artifact
   -f,     --features TEXT ... the features to enable in the build
+  -b,     --backend TEXT      Backend to use for generation (ninja, gmake, cob).
   -t,     --target TEXT REQUIRED 
                               the path to install to
 ```

@@ -42,14 +42,12 @@ OPTIONS:
 add a system dependency
 
 
-catalyst add system [OPTIONS] name
+catalyst add system [OPTIONS]
 
-
-POSITIONALS:
-  name TEXT REQUIRED          
 
 OPTIONS:
   -h,     --help              Print this help message and exit
+  -n,     --name TEXT REQUIRED 
   -l,     --lib TEXT          
   -i,     --inc TEXT          
   -p,     --profiles TEXT ... 
@@ -60,15 +58,15 @@ OPTIONS:
 add a local dependency
 
 
-catalyst add local [OPTIONS] name path
+catalyst add local [OPTIONS] path
 
 
 POSITIONALS:
-  name TEXT REQUIRED          
   path TEXT REQUIRED          
 
 OPTIONS:
   -h,     --help              Print this help message and exit
+  -n,     --name TEXT REQUIRED 
   -p,     --profiles TEXT ... 
   -f,     --features TEXT ... 
 ```
@@ -78,19 +76,18 @@ OPTIONS:
 add a vcpkg dependency
 
 
-catalyst add vcpkg [OPTIONS] name
+catalyst add vcpkg [OPTIONS]
 
-
-POSITIONALS:
-  name TEXT REQUIRED          
 
 OPTIONS:
   -h,     --help              Print this help message and exit
+  -n,     --name TEXT REQUIRED 
   -t,     --triplet TEXT REQUIRED 
   -v,     --version TEXT [latest]  
   -p,     --profiles TEXT [[common]]  ... 
   -f,     --features TEXT ... 
 ```
+
 ### conan
 ```
 add a conan dependency
@@ -101,9 +98,9 @@ catalyst add conan [OPTIONS]
 
 OPTIONS:
   -h,     --help              Print this help message and exit
-  -n,     --name TEXT REQUIRED
-  -v,     --version TEXT REQUIRED
-  -p,     --profiles TEXT [[common]]  ...
+  -n,     --name TEXT REQUIRED 
+  -v,     --version TEXT REQUIRED 
+  -p,     --profiles TEXT [[common]]  ... 
 ```
 
 ## Examples
