@@ -10,8 +10,6 @@ common:
     provides: catalyst
     toolchain: tc_catalyst.yaml
     tooling:
-      CC: clang
-      CXX: clang++
       CCFLAGS: --std=c++23 -Wall -Wextra -Wpedantic
       CXXFLAGS: --std=c++23 -Wall -Wextra -Wpedantic
       LDFLAGS: -static

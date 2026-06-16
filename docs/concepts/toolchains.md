@@ -2,7 +2,7 @@
 
 Catalyst toolchains are standalone YAML files that describe how Catalyst should
 format compiler, linker, and archiver commands for a target environment. They let
-projects override the built-in `gcc`/`clang`-style defaults without modifying
+projects override the built-in `gcc`-style defaults without modifying
 Catalyst source code.
 
 ## Overview
@@ -15,7 +15,7 @@ manifest:
   toolchain: msvc.yaml
 ```
 
-If `manifest.toolchain` is omitted, Catalyst uses its default `gcc_clang`
+If `manifest.toolchain` is omitted, Catalyst uses its default `gcc`
 toolchain definition.
 
 ---
@@ -42,7 +42,7 @@ Defines the metadata and command templates Catalyst will use during generation.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `name` | String | `gcc_clang` | Toolchain identifier. |
+| `name` | String | `gcc` | Toolchain identifier. |
 | `extensions` | Object | - | Output file extensions and library prefixes. |
 | `flags` | Object | - | Templates for include paths, library paths, library names, and preprocessor defines. |
 | `compiler` | Object | - | C and C++ compiler executables and command templates. |
@@ -83,14 +83,14 @@ Defines the metadata and command templates Catalyst will use during generation.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `executable` | String | `clang` | C compiler executable. |
+| `executable` | String | `cc` | C compiler executable. |
 | `command` | String | `{cc} {cflags} -MMD -MF {object}.d -c {source} -o {object} {includes} {defines}` | Command template for compiling C sources. |
 
 ### `toolchain.compiler.cxx`
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `executable` | String | `clang++` | C++ compiler executable. |
+| `executable` | String | `c++` | C++ compiler executable. |
 | `command` | String | `{cxx} {cxxflags} -MMD -MF {object}.d -c {source} -o {object} {includes} {defines}` | Command template for compiling C++ sources. |
 
 > **Note**: Compiler command templates interpolate `{cc}` or `{cxx}`, plus
@@ -100,7 +100,7 @@ Defines the metadata and command templates Catalyst will use during generation.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `executable` | String | `clang++` | Linker executable. |
+| `executable` | String | `c++` | Linker executable. |
 | `executable_command` | String | `{linker} {objects} -o {output} {ldflags} {lib_dirs} {libs}` | Command template for building executables. |
 | `shared_lib_command` | String | `{linker} -shared {objects} -o {output} {ldflags} {lib_dirs} {libs}` | Command template for building shared libraries. |
 
@@ -155,4 +155,4 @@ toolchain:
 
 Fields omitted from a toolchain file retain their built-in defaults, so custom
 toolchains only need to override the pieces that differ from the default
-`gcc_clang` behavior.
+`gcc` behavior.
