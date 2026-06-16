@@ -16,14 +16,17 @@ toolchain:
   compiler:
     c:
       executable: "clang"
+      flags: -std=c23 -O3 -Wall -Wextra -Wpedantic -DNDEBUG -march=native -flto=full -ffunction-sections -fdata-sections
       command: "{cc} {cflags} -MMD -MF {object}.d -c {source} -o {object} {includes} {defines}"
     cxx:
       executable: "clang++"
+      flags: -std=c++23 -O3 -Wall -Wextra -Wpedantic -DNDEBUG -march=native -flto=full -ffunction-sections -fdata-sections
       command: "{cxx} {cxxflags} -MMD -MF {object}.d -c {source} -o {object} {includes} {defines}"
   linker:
     executable: "clang++"
     executable_command: "{linker} {objects} -o {output} {ldflags} {lib_dirs} {libs}"
     shared_lib_command: "{linker} -shared {objects} -o {output} {ldflags} {lib_dirs} {libs}"
+    flags: -fuse-ld=mold -flto=full -Wl,-O3 -Wl,--gc-sections -Wl,--icf=safe -Wl,--as-needed -Wl,--no-undefined -Wl,-z,relro,-z,now -Wl,--hash-style=gnu -Wl,--build-id=sha1 -Wl,--strip-all -static
   archiver:
     executable: "ar"
     command: "{archiver} rcs {output} {objects}"

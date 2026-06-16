@@ -20,8 +20,10 @@ OPTIONS:
   -d,     --description TEXT [Your Description Goes Here.]  
                               a description for the project
           --provides TEXT     Artifact provided by this project.
-          --cc TEXT [cc]      the c compiler to use
-          --cxx TEXT [c++]    the cxx compiler to use
+          --cc TEXT           the c compiler to use (defaults to the active toolchain's
+                              compiler)
+          --cxx TEXT          the cxx compiler to use (defaults to the active toolchain's
+                              compiler)
           --ccflags TEXT      c compiler flags
           --cxxflags TEXT     cxx compiler flags
           --ldflags TEXT      linker flags

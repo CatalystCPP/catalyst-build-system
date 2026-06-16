@@ -82,9 +82,9 @@ debug:
 release:
   manifest:
     tooling:
-      CCFLAGS: -std=c23 -O3 -Wall -Wextra -Wpedantic -DNDEBUG -march=native -flto=full -ffunction-sections -fdata-sections
-      CXXFLAGS: -std=c++23 -O3 -Wall -Wextra -Wpedantic -DNDEBUG -march=native -flto=full -ffunction-sections -fdata-sections
-      LDFLAGS: -fuse-ld=mold -flto=full -Wl,-O3 -Wl,--gc-sections -Wl,--icf=safe -Wl,--as-needed -Wl,--no-undefined -Wl,-z,relro,-z,now -Wl,--hash-style=gnu -Wl,--build-id=sha1 -Wl,--strip-all -static
+      CCFLAGS: null
+      CXXFLAGS: null
+      LDFLAGS: null
   hooks:
     post-build:
       - catalyst: pack -q -p common release -a
