@@ -5,7 +5,7 @@ common:
   manifest:
     name: catalyst
     type: BINARY
-    version: 1.6.0-dev
+    version: 1.6.0
     description: Catalyst is a Declarative C++ Build System
     provides: catalyst
     toolchain: tc_catalyst.yaml
