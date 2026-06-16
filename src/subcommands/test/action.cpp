@@ -15,6 +15,7 @@
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/subcommands/test.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 
 namespace fs = std::filesystem;
@@ -89,7 +90,7 @@ void warnIfStale(const fs::path &exe_path,
 }
 } // namespace
 
-std::expected<void, std::string> action(const Parse &args) {
+Result<void> action(const Parse &args) {
     catalyst::logger.debug("Test subcommand invoked.");
 
     if (args.workspace) {
@@ -179,8 +180,8 @@ std::expected<void, std::string> action(const Parse &args) {
     exec_args.insert(exec_args.end(), args.params.begin(), args.params.end());
 
     if (!args.rebuild) {
-         catalyst::logger.debug("Rebuild not requested, checking for staleness.");
-         warnIfStale(exe_path, profile_comp, profiles);
+        catalyst::logger.debug("Rebuild not requested, checking for staleness.");
+        warnIfStale(exe_path, profile_comp, profiles);
     } else {
         catalyst::logger.debug("Rebuild requested, skipping staleness check.");
         auto res = catalyst::build::action({
@@ -193,7 +194,8 @@ std::expected<void, std::string> action(const Parse &args) {
             .profiles = profiles,
             .enabled_features = {},
             .backend = "",
-            .workspace = std::nullopt, // Prevent build from recursing into workspace members, we'll handle that in test logic
+            .workspace =
+                std::nullopt, // Prevent build from recursing into workspace members, we'll handle that in test logic
         });
     }
 

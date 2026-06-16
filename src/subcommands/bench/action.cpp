@@ -12,6 +12,7 @@
 #include "catalyst/subcommands/bench.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 
 namespace fs = std::filesystem;
@@ -29,7 +30,7 @@ std::string commandStr(const fs::path &executable, const std::vector<std::string
 }
 } // namespace
 
-std::expected<void, std::string> action(const Parse &args) {
+Result<void> action(const Parse &args) {
     catalyst::logger.debug("Bench subcommand invoked.");
 
     if (args.workspace) {
@@ -122,7 +123,7 @@ std::expected<void, std::string> action(const Parse &args) {
         tc = std::move(*parsed);
     }
 
-    std::expected<std::string, std::string> lib_path_res = catalyst::generate::libPath(profile_comp, profiles, tc);
+    Result<std::string> lib_path_res = catalyst::generate::libPath(profile_comp, profiles, tc);
     if (!lib_path_res) {
         return std::unexpected("Failed to generate LD_LIBRARY_PATH");
     }

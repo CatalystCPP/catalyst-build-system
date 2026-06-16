@@ -8,6 +8,9 @@
 namespace catalyst::utils::os {
 
 bool isCommandInstalled(const std::string &command) {
+    if (command == "cob") {
+        return true;
+    }
     // 1. Try checking PATH
     const char *path_env = std::getenv("PATH");
     if (path_env) {

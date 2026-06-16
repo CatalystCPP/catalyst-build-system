@@ -44,7 +44,8 @@ Defines the project's identity, build settings, and directory structure.
 | `license_file` | String | "" | Path to the license file. Used by the `pack` subcommand. |
 | `readme_file` | String | "" | Path to the readme file. Used by the `pack` subcommand. |
 | `provides` | String | - | Output artifact name pattern (e.g., `*.so`). |
-| `tooling` | Object | - | Compiler toolchain overrides. |
+| `tooling` | Object | - | Compiler executable and flag overrides. |
+| `toolchain` | Path | - | Toolchain overrides. |
 | `dirs` | Object | - | Source and build directory configuration. |
 
 > **Note**: Fields like `author`, `maintainer`, `vendor`, `license_file`, and `readme_file` are currently only utilized by the `catalyst pack` subcommand to generate package metadata.
@@ -53,13 +54,23 @@ Defines the project's identity, build settings, and directory structure.
 
 | Field | Description | Default |
 |---|---|---|
-| `CC` | C Compiler | `clang` |
-| `CXX` | C++ Compiler | `clang++` |
+| `CC` | C Compiler | toolchain's C compiler (`cc`) |
+| `CXX` | C++ Compiler | toolchain's C++ compiler (`c++`) |
 | `CC_LAUNCHER` | C Compiler Launcher (e.g., ccache) | "" |
 | `CXX_LAUNCHER`| C++ Compiler Launcher (e.g., ccache) | "" |
 | `CCFLAGS` | C Compiler Flags | "" |
 | `CXXFLAGS` | C++ Compiler Flags | "" |
 | `LDFLAGS` | Linker Flags | "" |
+
+> **Note**: `CC` and `CXX` override the compiler executables defined by the active
+> [toolchain](toolchains.md). When omitted, the toolchain's compilers are used (the
+> default `gcc` toolchain resolves to `cc`/`c++`).
+
+> **Deprecation**: `manifest.tooling` is slated for removal in 1.7.0. Prefer defining
+> compiler and linker settings in a [toolchain](toolchains.md) file. `CCFLAGS`,
+> `CXXFLAGS`, and `LDFLAGS` map to `compiler.c.flags`, `compiler.cxx.flags`, and
+> `linker.flags` respectively; when both are set, `manifest.tooling` flags are
+> appended on top of the toolchain's base flags.
 
 ### `manifest.dirs`
 
@@ -70,6 +81,10 @@ Defines the project's identity, build settings, and directory structure.
 | `build` | Output directory | `build` |
 
 > **Note**: `dirs.source` is recursive. Use `.catalystignore` to exclude files.
+
+### `manifest.toolchain`
+
+A path to a toolchain file. See [Toolchains](toolchains.md) for the schema.
 
 ---
 

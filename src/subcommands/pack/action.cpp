@@ -12,6 +12,7 @@
 #include "catalyst/subcommands/install.hpp"
 #include "catalyst/subcommands/pack.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 
 namespace catalyst::pack {
@@ -46,7 +47,7 @@ struct CleanupGuard {
 };
 } // namespace
 
-std::expected<void, std::string> action(const Parse &parse_args) {
+Result<void> action(const Parse &parse_args) {
     catalyst::logger.debug("Pack subcommand invoked.");
 
     fs::path source_path = fs::absolute(parse_args.source_path);

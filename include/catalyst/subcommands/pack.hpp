@@ -6,6 +6,8 @@
 
 #include <CLI11.hpp>
 
+#include "catalyst/utils/result.hpp"
+
 namespace catalyst::pack {
 enum class Generator : std::uint8_t {
     TGZ,
@@ -33,5 +35,5 @@ struct Parse {
 };
 
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);
-std::expected<void, std::string> action(const Parse &parse_args);
+Result<void> action(const Parse &parse_args);
 } // namespace catalyst::pack

@@ -1,6 +1,9 @@
 #include "catalyst/process_exec.hpp"
 
+#include <cstdlib>
 #include <expected>
+#include <filesystem>
+#include <fstream>
 #include <future>
 #include <optional>
 #include <string>
@@ -10,10 +13,76 @@
 
 #include <reproc++/run.hpp>
 
+#include "catalyst/cob_embedded.hpp"
+#include "catalyst/utils/result.hpp"
+
 #include "reproc++/drain.hpp"
 #include "reproc++/reproc.hpp"
 
 namespace catalyst {
+
+namespace fs = std::filesystem;
+
+namespace {
+fs::path getEmbeddedCobPath() {
+    const char *home = std::getenv(
+#ifdef _WIN32
+        "USERPROFILE"
+#else
+        "HOME"
+#endif
+    );
+    fs::path base_dir;
+    if (home) {
+        base_dir = fs::path(home) / ".catalyst" / "bin";
+    } else {
+        base_dir = fs::temp_directory_path() / "catalyst" / "bin";
+    }
+
+    fs::path cob_name = "cob";
+#ifdef _WIN32
+    cob_name.replace_extension(".exe");
+#endif
+    return base_dir / cob_name;
+}
+
+Result<void> ensureEmbeddedCobExtracted() {
+    fs::path cob_path = getEmbeddedCobPath();
+    std::error_code ec;
+
+    if (fs::exists(cob_path, ec)) {
+        if (fs::file_size(cob_path, ec) == catalyst::embedded::cob_binary_len) {
+            return {};
+        }
+    }
+
+    fs::create_directories(cob_path.parent_path(), ec);
+    if (ec) {
+        return std::unexpected("Failed to create directories for embedded cob: " + ec.message());
+    }
+
+    std::ofstream out(cob_path, std::ios::binary);
+    if (!out) {
+        return std::unexpected("Failed to open embedded cob destination file for writing: " + cob_path.string());
+    }
+
+    out.write(reinterpret_cast<const char *>(catalyst::embedded::cob_binary), catalyst::embedded::cob_binary_len);
+    out.close();
+
+#ifndef _WIN32
+    fs::permissions(cob_path,
+                    fs::perms::owner_all | fs::perms::group_read | fs::perms::group_exec | fs::perms::others_read |
+                        fs::perms::others_exec,
+                    fs::perm_options::replace,
+                    ec);
+    if (ec) {
+        return std::unexpected("Failed to set executable permissions on embedded cob: " + ec.message());
+    }
+#endif
+
+    return {};
+}
+} // namespace
 
 namespace configure_opt {
 void env(const std::optional<std::unordered_map<std::string, std::string>> &env,
@@ -40,18 +109,25 @@ void workingDir(const std::optional<std::string> &working_dir, reproc::options &
 }
 } // namespace configure_opt
 
-std::expected<std::future<int>, std::string>
-ProcessExecutor::processExec(std::vector<std::string> &&args,
-                             std::optional<std::string> working_dir,
-                             std::optional<std::unordered_map<std::string, std::string>> env,
-                             bool silent) {
+Result<std::future<int>> ProcessExecutor::processExec(std::vector<std::string> &&args,
+                                                      std::optional<std::string> working_dir,
+                                                      std::optional<std::unordered_map<std::string, std::string>> env,
+                                                      bool silent) {
     if (args.empty()) {
         return std::unexpected("Cannot execute empty command");
     }
 
+    std::vector<std::string> local_args = std::move(args);
+    if (local_args[0] == "cob") {
+        if (auto res = ensureEmbeddedCobExtracted(); !res) {
+            return std::unexpected(res.error());
+        }
+        local_args[0] = getEmbeddedCobPath().string();
+    }
+
     return std::async(
         std::launch::async,
-        [args = std::move(args), working_dir = std::move(working_dir), env = std::move(env), silent]() -> int {
+        [args = std::move(local_args), working_dir = std::move(working_dir), env = std::move(env), silent]() -> int {
             reproc::options options;
             if (silent) {
                 options.redirect.out.type = reproc::redirect::discard;
@@ -74,12 +150,20 @@ ProcessExecutor::processExec(std::vector<std::string> &&args,
         });
 }
 
-std::expected<std::string, std::string>
+Result<std::string>
 ProcessExecutor::processExecStdout(const std::vector<std::string> &args,
                                    const std::optional<std::string> &working_dir,
                                    const std::optional<std::unordered_map<std::string, std::string>> &env) {
     if (args.empty()) {
         return std::unexpected("Cannot execute empty command");
+    }
+
+    std::vector<std::string> local_args = args;
+    if (local_args[0] == "cob") {
+        if (auto res = ensureEmbeddedCobExtracted(); !res) {
+            return std::unexpected(res.error());
+        }
+        local_args[0] = getEmbeddedCobPath().string();
     }
 
     reproc::options options;
@@ -91,7 +175,7 @@ ProcessExecutor::processExecStdout(const std::vector<std::string> &args,
 
     std::string output;
     reproc::sink::string sink(output);
-    auto [status, ec] = reproc::run(args, options, sink, reproc::sink::null);
+    auto [status, ec] = reproc::run(local_args, options, sink, reproc::sink::null);
 
     if (ec) {
         return std::unexpected(ec.message());
@@ -113,18 +197,16 @@ void setProcessExecutor(std::shared_ptr<IProcessExecutor> executor) {
     g_executor = g_executor_owner.get();
 }
 
-std::expected<std::future<int>, std::string>
-processExec(std::vector<std::string> &&args,
-            std::optional<std::string> working_dir,
-            std::optional<std::unordered_map<std::string, std::string>> env,
-            bool silent) {
+Result<std::future<int>> processExec(std::vector<std::string> &&args,
+                                     std::optional<std::string> working_dir,
+                                     std::optional<std::unordered_map<std::string, std::string>> env,
+                                     bool silent) {
     return getProcessExecutor().processExec(std::move(args), std::move(working_dir), std::move(env), silent);
 }
 
-std::expected<std::string, std::string>
-processExecStdout(const std::vector<std::string> &args,
-                  const std::optional<std::string> &working_dir,
-                  const std::optional<std::unordered_map<std::string, std::string>> &env) {
+Result<std::string> processExecStdout(const std::vector<std::string> &args,
+                                      const std::optional<std::string> &working_dir,
+                                      const std::optional<std::unordered_map<std::string, std::string>> &env) {
     return getProcessExecutor().processExecStdout(args, working_dir, env);
 }
 } // namespace catalyst

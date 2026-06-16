@@ -10,6 +10,7 @@
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/lock.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
@@ -18,7 +19,7 @@ namespace fs = std::filesystem;
 
 namespace {
 
-std::expected<std::string, std::string> resolveGitHash(const std::string &url, const std::string &version) {
+Result<std::string> resolveGitHash(const std::string &url, const std::string &version) {
     catalyst::logger.debug("Resolving git hash for {}@{}", url, version);
 
     std::string ref = version;
@@ -116,7 +117,7 @@ void collectDependencies(const utils::yaml::Configuration &config,
 
 } // namespace
 
-std::expected<void, std::string> action(const Parse &parse_args) {
+Result<void> action(const Parse &parse_args) {
     catalyst::logger.debug("Lock subcommand invoked.");
 
     std::unordered_map<std::string, DependencyInfo> locked_deps;

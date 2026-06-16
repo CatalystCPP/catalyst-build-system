@@ -5,6 +5,8 @@
 
 #include <catalyst/utils/yaml/ryml_utils.hpp>
 
+#include "catalyst/utils/result.hpp"
+
 namespace catalyst::utils::yaml {
 
 /**
@@ -27,6 +29,6 @@ struct ProfileFile {
     }
 };
 
-std::expected<ProfileFile, std::string>
-loadProfileFile(const std::string &profile, const std::filesystem::path &root_dir = std::filesystem::current_path());
+Result<ProfileFile> loadProfileFile(const std::string &profile,
+                                    const std::filesystem::path &root_dir = std::filesystem::current_path());
 } // namespace catalyst::utils::yaml

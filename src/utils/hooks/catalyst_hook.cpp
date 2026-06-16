@@ -5,10 +5,10 @@
 #include "catalyst/dispatch.hpp"
 #include "catalyst/hooks.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
-auto catalyst::hooks::executeCatalystHook(ryml::ConstNodeRef item, std::string_view hook_name)
-    -> std::expected<void, std::string> {
+auto catalyst::hooks::executeCatalystHook(ryml::ConstNodeRef item, std::string_view hook_name) -> Result<void> {
     using utils::yaml::asString;
     using utils::yaml::child;
 

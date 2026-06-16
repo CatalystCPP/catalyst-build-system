@@ -5,6 +5,7 @@
 
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
@@ -21,8 +22,7 @@ constexpr char DELIMITER = ':';
 
 auto catalyst::generate::libPath(const utils::yaml::Configuration &profile_comp,
                                  const std::vector<std::string> &profiles,
-                                 const catalyst::toolchain::ToolchainDef &tc)
-    -> std::expected<std::string, std::string> {
+                                 const catalyst::toolchain::ToolchainDef &tc) -> Result<std::string> {
     namespace yaml = catalyst::utils::yaml;
     catalyst::logger.debug("Calculating LD_LIBRARY_PATH.");
     std::filesystem::path build_dir = catalyst::utils::yaml::multiplexedBuildDir(

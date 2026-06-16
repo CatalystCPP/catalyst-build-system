@@ -7,19 +7,21 @@
 #include <unordered_map>
 #include <vector>
 
+#include "catalyst/utils/result.hpp"
+
 namespace catalyst {
 
 class IProcessExecutor {
 public:
     virtual ~IProcessExecutor() = default;
 
-    virtual std::expected<std::future<int>, std::string>
+    virtual Result<std::future<int>>
     processExec(std::vector<std::string> &&args,
                 std::optional<std::string> working_dir = std::nullopt,
                 std::optional<std::unordered_map<std::string, std::string>> env = std::nullopt,
                 bool silent = false) = 0;
 
-    virtual std::expected<std::string, std::string>
+    virtual Result<std::string>
     processExecStdout(const std::vector<std::string> &args,
                       const std::optional<std::string> &working_dir = std::nullopt,
                       const std::optional<std::unordered_map<std::string, std::string>> &env = std::nullopt) = 0;
@@ -27,13 +29,12 @@ public:
 
 class ProcessExecutor : public IProcessExecutor {
 public:
-    std::expected<std::future<int>, std::string>
-    processExec(std::vector<std::string> &&args,
-                std::optional<std::string> working_dir = std::nullopt,
-                std::optional<std::unordered_map<std::string, std::string>> env = std::nullopt,
-                bool silent = false) override;
+    Result<std::future<int>> processExec(std::vector<std::string> &&args,
+                                         std::optional<std::string> working_dir = std::nullopt,
+                                         std::optional<std::unordered_map<std::string, std::string>> env = std::nullopt,
+                                         bool silent = false) override;
 
-    std::expected<std::string, std::string>
+    Result<std::string>
     processExecStdout(const std::vector<std::string> &args,
                       const std::optional<std::string> &working_dir = std::nullopt,
                       const std::optional<std::unordered_map<std::string, std::string>> &env = std::nullopt) override;
@@ -44,13 +45,12 @@ IProcessExecutor &getProcessExecutor();
 void setProcessExecutor(std::shared_ptr<IProcessExecutor> executor);
 
 // Legacy free functions for backwards compatibility (optional, but good to keep until full refactor)
-std::expected<std::future<int>, std::string>
-processExec(std::vector<std::string> &&args,
-            std::optional<std::string> working_dir = std::nullopt,
-            std::optional<std::unordered_map<std::string, std::string>> env = std::nullopt,
-            bool silent = false);
+Result<std::future<int>> processExec(std::vector<std::string> &&args,
+                                     std::optional<std::string> working_dir = std::nullopt,
+                                     std::optional<std::unordered_map<std::string, std::string>> env = std::nullopt,
+                                     bool silent = false);
 
-std::expected<std::string, std::string>
+Result<std::string>
 processExecStdout(const std::vector<std::string> &args,
                   const std::optional<std::string> &working_dir = std::nullopt,
                   const std::optional<std::unordered_map<std::string, std::string>> &env = std::nullopt);

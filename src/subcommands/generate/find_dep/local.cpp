@@ -5,13 +5,14 @@
 #include "catalyst/dir_guard.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::generate {
 namespace fs = std::filesystem;
 
-std::expected<FindRes, std::string> findLocal(ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc) {
+Result<FindRes> findLocal(ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc) {
     namespace yaml = catalyst::utils::yaml;
     std::string dep_name = yaml::asString(yaml::child(dep, "name")).value_or("<unnamed>");
     catalyst::logger.debug("Resolving local dependency: {}", dep_name);

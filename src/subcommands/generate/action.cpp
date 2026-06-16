@@ -12,6 +12,7 @@
 #include "catalyst/hooks.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
@@ -46,7 +47,7 @@ void featureFilter(std::unordered_set<fs::path> &source_set,
 
 } // namespace
 
-std::expected<void, std::string> action(const Parse &parse_args) {
+Result<void> action(const Parse &parse_args) {
     catalyst::logger.debug("Generate subcommand invoked.");
 
     catalyst::logger.debug("Composing profiles.");
@@ -245,9 +246,21 @@ void writeVariables(const catalyst::utils::yaml::Configuration &config,
          {"value", "\"" + config.getString("manifest.version").value_or("0.0.0") + "\""}});
     std::string default_defines = build_sys_def + " " + proj_name_def + " " + proj_ver_def;
 
-    std::string cxxflags = config.getString("manifest.tooling.CXXFLAGS").value_or("") + " " + default_defines;
-    std::string ccflags = config.getString("manifest.tooling.CCFLAGS").value_or("") + " " + default_defines;
-    std::string ldflags = config.getString("manifest.tooling.LDFLAGS").value_or("") + " " +
+    // Base flags come from the toolchain. manifest.tooling.*FLAGS still append on top
+    // (winning on conflicts) so projects can migrate gradually; manifest.tooling is
+    // slated for deprecation in favour of toolchain-defined flags.
+    auto with_manifest = [&config](std::string base, const std::string &key) {
+        if (auto manifest_flags = config.getString(key); manifest_flags && !manifest_flags->empty()) {
+            if (!base.empty())
+                base += " ";
+            base += *manifest_flags;
+        }
+        return base;
+    };
+
+    std::string cxxflags = with_manifest(tc.compiler.cxx.flags, "manifest.tooling.CXXFLAGS") + " " + default_defines;
+    std::string ccflags = with_manifest(tc.compiler.c.flags, "manifest.tooling.CCFLAGS") + " " + default_defines;
+    std::string ldflags = with_manifest(tc.linker.flags, "manifest.tooling.LDFLAGS") + " " +
                           catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", "catalyst-libs"}});
 
     if (const char *vcpkg_root = std::getenv("VCPKG_ROOT"); vcpkg_root != nullptr) {
@@ -354,8 +367,8 @@ void writeRules(catalyst::generate::buildwriters::BaseWriter &writer, const cata
                                                                   {"object", "$out"},
                                                                   {"includes", ""},
                                                                   {"defines", ""}});
-    const bool cxx_has_depfile = cxx_compile.find("$out.d") != std::string::npos;
-    const bool c_has_depfile = c_compile.find("$out.d") != std::string::npos;
+    const bool cxx_has_depfile = cxx_compile.contains("$out.d");
+    const bool c_has_depfile = c_compile.contains("$out.d");
     void(writer.addRule(
         "cxx_compile", cxx_compile, "CXX $out", cxx_has_depfile ? "$out.d" : "", cxx_has_depfile ? "gcc" : ""));
     void(writer.addRule("cc_compile", c_compile, "CC $out", c_has_depfile ? "$out.d" : "", c_has_depfile ? "gcc" : ""));

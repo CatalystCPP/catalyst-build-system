@@ -26,6 +26,7 @@
 #include "catalyst/subcommands/run.hpp"
 #include "catalyst/subcommands/test.hpp"
 #include "catalyst/subcommands/tidy.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/workspace.hpp"
 
 namespace catalyst {
@@ -103,12 +104,15 @@ struct CliContext {
 
     CLI::App *add_vcpkg_subc{nullptr};
     std::unique_ptr<catalyst::add::vcpkg::Parse> add_vcpkg_res{nullptr};
+
+    CLI::App *add_conan_subc{nullptr};
+    std::unique_ptr<catalyst::add::conan::Parse> add_conan_res{nullptr};
 };
 
 std::pair<int, bool> parseCli(int argc, char **argv, catalyst::CliContext &ctx);
 std::pair<int, bool> parseCli(std::string_view args, catalyst::CliContext &ctx);
 std::pair<int, bool> parseCli(std::span<const std::string> args, catalyst::CliContext &ctx);
 int dispatch(const catalyst::CliContext &ctx);
-std::expected<void, std::string> dispatchHook(std::string_view args);
-std::expected<void, std::string> dispatchHook(std::span<const std::string> args);
+Result<void> dispatchHook(std::string_view args);
+Result<void> dispatchHook(std::span<const std::string> args);
 } // namespace catalyst

@@ -4,6 +4,8 @@
 
 #include <CLI11.hpp>
 
+#include "catalyst/utils/result.hpp"
+
 namespace catalyst::download {
 struct Parse {
     std::string git_remote;
@@ -11,8 +13,9 @@ struct Parse {
     std::filesystem::path target_path;
     std::vector<std::string> profiles;
     std::vector<std::string> enabled_features;
+    std::string backend;
 };
 
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);
-std::expected<void, std::string> action(const Parse &);
+Result<void> action(const Parse &);
 } // namespace catalyst::download

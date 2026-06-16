@@ -14,9 +14,10 @@
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/subcommands/tidy.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 
 namespace catalyst::tidy {
-std::expected<void, std::string> action(const Parse &parse_args) {
+Result<void> action(const Parse &parse_args) {
     auto res = catalyst::generate::profileComposition(parse_args.profiles);
     if (!res)
         return std::unexpected(res.error());

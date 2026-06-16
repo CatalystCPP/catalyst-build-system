@@ -14,6 +14,7 @@
 #include "catalyst/subcommands/fetch.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/watcher.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 #include "catalyst/workspace.hpp"
@@ -25,14 +26,13 @@ namespace {
 
 struct BuildFailureGuard {
     const utils::yaml::Configuration &config;
-    std::expected<void, std::string> &result;
+    Result<void> &result;
 
     BuildFailureGuard(const BuildFailureGuard &) = delete;
     BuildFailureGuard(BuildFailureGuard &&) = delete;
     BuildFailureGuard &operator=(const BuildFailureGuard &) = delete;
     BuildFailureGuard &operator=(BuildFailureGuard &&) = delete;
-    BuildFailureGuard(const utils::yaml::Configuration &cfg, std::expected<void, std::string> &res)
-        : config(cfg), result(res) {
+    BuildFailureGuard(const utils::yaml::Configuration &cfg, Result<void> &res) : config(cfg), result(res) {
     }
 
     ~BuildFailureGuard() {
@@ -157,7 +157,7 @@ bool depMissing(const utils::yaml::Configuration &config) {
     return false;
 }
 
-std::expected<void, std::string> generateCompileCommands(const fs::path &build_dir, const std::string &generator) {
+Result<void> generateCompileCommands(const fs::path &build_dir, const std::string &generator) {
     if (generator == "cob") {
         catalyst::logger.info("Generating compile commands database.");
         if (auto res = catalyst::processExec({"cob", "-C", build_dir, "-t", "compdb"}); !res)
@@ -186,7 +186,7 @@ std::expected<void, std::string> generateCompileCommands(const fs::path &build_d
 
 } // namespace
 
-std::expected<void, std::string> action(const Parse &parse_args) {
+Result<void> action(const Parse &parse_args) {
     catalyst::logger.debug("Build subcommand invoked.");
 
     if (parse_args.workspace) {
@@ -248,7 +248,7 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     catalyst::logger.debug("Composing profiles.");
     utils::yaml::Configuration config{parse_args.profiles};
 
-    std::expected<void, std::string> result;
+    Result<void> result;
 
     auto run_build = [&]() -> void {
         BuildFailureGuard guard{config, result};
@@ -261,7 +261,8 @@ std::expected<void, std::string> action(const Parse &parse_args) {
         }
 
         fs::path build_dir = config.getBuildDir();
-        std::string generator = config.getString("meta.generator").value_or("cob");
+        std::string generator =
+            parse_args.backend.empty() ? config.getString("meta.generator").value_or("cob") : parse_args.backend;
         std::string build_filename = (generator == "ninja") ? "build.ninja" : "catalyst.build";
 
         bool needs_regen = !fs::exists(build_dir / build_filename) || parse_args.regen;
@@ -342,7 +343,8 @@ std::expected<void, std::string> action(const Parse &parse_args) {
             }
             fs::copy_file(source_compdb, stable_compdb, fs::copy_options::overwrite_existing, ec);
             if (ec) {
-                catalyst::logger.warn("Failed to publish compilation database to {}: {}", stable_compdb.string(), ec.message());
+                catalyst::logger.warn(
+                    "Failed to publish compilation database to {}: {}", stable_compdb.string(), ec.message());
             } else {
                 catalyst::logger.debug("Published compilation database to {}", stable_compdb.string());
             }

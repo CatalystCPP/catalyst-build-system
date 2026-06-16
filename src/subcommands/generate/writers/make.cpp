@@ -5,6 +5,7 @@
 #include <string_view>
 
 #include "catalyst/subcommands/generate.hpp"
+#include "catalyst/utils/result.hpp"
 
 namespace {
 std::string translateNinjaToMake(std::string_view command) {
@@ -37,30 +38,27 @@ std::string escape(std::string_view str) {
 } // namespace
 
 namespace catalyst::generate::buildwriters {
-template <>
-std::expected<void, std::string> DerivedWriter<TargetType::Make>::addVariable(std::string_view name,
-                                                                              std::string_view value) {
+template <> Result<void> DerivedWriter<TargetType::Make>::addVariable(std::string_view name, std::string_view value) {
     std::println(stream, "{} := {}", name, value);
     return {};
 }
 
 template <>
-std::expected<void, std::string> DerivedWriter<TargetType::Make>::addRule(std::string_view name,
-                                                                          std::string_view command,
-                                                                          [[maybe_unused]] std::string_view description,
-                                                                          [[maybe_unused]] std::string_view depfile,
-                                                                          [[maybe_unused]] std::string_view deps) {
+Result<void> DerivedWriter<TargetType::Make>::addRule(std::string_view name,
+                                                      std::string_view command,
+                                                      [[maybe_unused]] std::string_view description,
+                                                      [[maybe_unused]] std::string_view depfile,
+                                                      [[maybe_unused]] std::string_view deps) {
     // In Make, we define a variable that holds the command.
     std::println(stream, "{} = {}", name, translateNinjaToMake(command));
     return {};
 }
 
 template <>
-std::expected<void, std::string>
-DerivedWriter<TargetType::Make>::addBuild(const std::vector<std::string> &outputs,
-                                          std::string_view rule,
-                                          const std::vector<std::string> &inputs,
-                                          const std::vector<std::string> &implicit_deps) {
+Result<void> DerivedWriter<TargetType::Make>::addBuild(const std::vector<std::string> &outputs,
+                                                       std::string_view rule,
+                                                       const std::vector<std::string> &inputs,
+                                                       const std::vector<std::string> &implicit_deps) {
     if (outputs.empty())
         return {};
 

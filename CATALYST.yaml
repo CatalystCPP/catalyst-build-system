@@ -5,12 +5,11 @@ common:
   manifest:
     name: catalyst
     type: BINARY
-    version: 1.5.0
+    version: 1.6.0-dev
     description: Catalyst is a Declarative C++ Build System
     provides: catalyst
+    toolchain: tc_catalyst.yaml
     tooling:
-      CC: clang
-      CXX: clang++
       CCFLAGS: --std=c++23 -Wall -Wextra -Wpedantic
       CXXFLAGS: --std=c++23 -Wall -Wextra -Wpedantic
       LDFLAGS: -static
@@ -41,6 +40,12 @@ common:
   hooks:
     pre-fetch:
       - script: "scripts/fetch_cli_11.sh"
+      - codegen:
+          cmd: "python3 $IN[0]"
+          input: "scripts/embed_cob.py"
+          output:
+            - "include/catalyst/cob_embedded.hpp"
+            - "src/utils/cob_embedded.cpp"
   features:
     uniform_logs: false
     log_machine_info: false

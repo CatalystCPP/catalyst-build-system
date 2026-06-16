@@ -7,13 +7,14 @@
 #include "catalyst/globals.hpp"
 #include "catalyst/subcommands/init.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::init {
 
 namespace fs = std::filesystem;
 
-std::expected<void, std::string> action(const Parse &parse_args) {
+Result<void> action(const Parse &parse_args) {
     catalyst::logger.debug("Init subcommand invoked.");
     namespace yaml = catalyst::utils::yaml;
     // TODO: change directory to parse_args->path;
@@ -46,13 +47,24 @@ std::expected<void, std::string> action(const Parse &parse_args) {
     manifest["description"] = tree.to_arena(parse_args.description);
     manifest["provides"] = tree.to_arena(parse_args.provides);
 
-    ryml::NodeRef tooling = yaml::childOrCreate(manifest, "tooling");
-    tooling |= ryml::MAP;
-    tooling["CC"] = tree.to_arena(parse_args.tooling.cc);
-    tooling["CXX"] = tree.to_arena(parse_args.tooling.cxx);
-    tooling["CCFLAGS"] = tree.to_arena(parse_args.tooling.ccflags);
-    tooling["CXXFLAGS"] = tree.to_arena(parse_args.tooling.cxxflags);
-    tooling["LDFLAGS"] = tree.to_arena(parse_args.tooling.ldflags);
+    // Only emit tooling fields the user explicitly set. Anything omitted falls back
+    // to the active toolchain's defaults, so we avoid pinning CC/CXX (and their flags)
+    // into every generated profile.
+    const auto &t = parse_args.tooling;
+    if (!t.cc.empty() || !t.cxx.empty() || !t.ccflags.empty() || !t.cxxflags.empty() || !t.ldflags.empty()) {
+        ryml::NodeRef tooling = yaml::childOrCreate(manifest, "tooling");
+        tooling |= ryml::MAP;
+        if (!t.cc.empty())
+            tooling["CC"] = tree.to_arena(t.cc);
+        if (!t.cxx.empty())
+            tooling["CXX"] = tree.to_arena(t.cxx);
+        if (!t.ccflags.empty())
+            tooling["CCFLAGS"] = tree.to_arena(t.ccflags);
+        if (!t.cxxflags.empty())
+            tooling["CXXFLAGS"] = tree.to_arena(t.cxxflags);
+        if (!t.ldflags.empty())
+            tooling["LDFLAGS"] = tree.to_arena(t.ldflags);
+    }
 
     ryml::NodeRef dirs = yaml::childOrCreate(manifest, "dirs");
     dirs |= ryml::MAP;

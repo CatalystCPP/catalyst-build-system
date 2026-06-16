@@ -10,6 +10,8 @@
 #include <ryml/ryml.hpp>
 #include <ryml/ryml_std.hpp> // std::string interop for emit/serialize
 
+#include "catalyst/utils/result.hpp"
+
 namespace catalyst::utils::yaml {
 
 /** @brief Converts a string_view to a ryml csubstr (no copy — same lifetime). */
@@ -26,14 +28,14 @@ inline ryml::csubstr toSubstr(std::string_view sv) {
  * ryml_init.hpp being installed (done in main), otherwise rapidyaml aborts on
  * parse errors instead.
  */
-std::expected<ryml::Tree, std::string> loadFile(const std::filesystem::path &path);
+Result<ryml::Tree> loadFile(const std::filesystem::path &path);
 
 /**
  * @brief Parses YAML from an in-memory string into a self-contained tree.
  *
  * @param filename Used in parse error messages only.
  */
-std::expected<ryml::Tree, std::string> parseYaml(std::string_view contents, std::string_view filename = "<string>");
+Result<ryml::Tree> parseYaml(std::string_view contents, std::string_view filename = "<string>");
 
 /**
  * @brief Safe child lookup: returns an invalid (empty) ref if @p node is not

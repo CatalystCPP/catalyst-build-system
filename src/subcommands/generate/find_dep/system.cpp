@@ -7,17 +7,18 @@
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::generate {
 namespace {
 std::optional<FindRes> findSystemFromPkgConfig(const std::string &dep_name,
                                                const catalyst::toolchain::ToolchainDef &tc) {
-    auto res_cflags = processExecStdout({"pkg-config", "--cflags", dep_name});
-    auto res_L = processExecStdout({"pkg-config", "--libs-only-L", dep_name});
-    auto res_l = processExecStdout({"pkg-config", "--libs-only-l", "--libs-only-other", dep_name});
+    auto cflags_res = processExecStdout({"pkg-config", "--cflags", dep_name});
+    auto link_dirs_res = processExecStdout({"pkg-config", "--libs-only-L", dep_name});
+    auto link_libs_res = processExecStdout({"pkg-config", "--libs-only-l", "--libs-only-other", dep_name});
 
-    if (!(res_cflags && res_L && res_l)) {
+    if (!(cflags_res && link_dirs_res && link_libs_res)) {
         return std::nullopt;
     }
 
@@ -30,16 +31,16 @@ std::optional<FindRes> findSystemFromPkgConfig(const std::string &dep_name,
         }
     };
 
-    append_tokens(*res_cflags, [&](const std::string &token) {
-        if (token.rfind("-I", 0) == 0) {
+    append_tokens(*cflags_res, [&](const std::string &token) {
+        if (token.starts_with("-I")) {
             result.inc_path +=
                 " " + catalyst::toolchain::expand_template(tc.flags.include_dir, {{"path", token.substr(2)}});
         } else {
             result.inc_path += " " + token;
         }
     });
-    append_tokens(*res_L, [&](const std::string &token) {
-        if (token.rfind("-L", 0) == 0) {
+    append_tokens(*link_dirs_res, [&](const std::string &token) {
+        if (token.starts_with("-L")) {
             std::string path = token.substr(2);
             result.lib_path += " " + catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", path}});
             result.lib_dirs.push_back(path);
@@ -47,8 +48,8 @@ std::optional<FindRes> findSystemFromPkgConfig(const std::string &dep_name,
             result.lib_path += " " + token;
         }
     });
-    append_tokens(*res_l, [&](const std::string &token) {
-        if (token.rfind("-l", 0) == 0) {
+    append_tokens(*link_libs_res, [&](const std::string &token) {
+        if (token.starts_with("-l")) {
             result.libs += " " + catalyst::toolchain::expand_template(tc.flags.lib, {{"name", token.substr(2)}});
         } else {
             result.libs += " " + token;
@@ -61,7 +62,7 @@ std::optional<FindRes> findSystemFromPkgConfig(const std::string &dep_name,
 }
 } // namespace
 
-std::expected<FindRes, std::string> findSystem(ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc) {
+Result<FindRes> findSystem(ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc) {
     namespace yaml = catalyst::utils::yaml;
     auto dep_name = yaml::asString(yaml::child(dep, "name")).value_or("");
     catalyst::logger.debug("Resolving system dependency: {}", dep_name);
@@ -128,7 +129,7 @@ std::expected<FindRes, std::string> findSystem(ryml::ConstNodeRef dep, const cat
         lib_dirs.push_back("/usr/local/lib");
 #else
         lib_path += " " + catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", "/usr/lib"}});
-        lib_dirs.push_back("/usr/lib");
+        lib_dirs.emplace_back("/usr/lib");
 #endif
     }
 

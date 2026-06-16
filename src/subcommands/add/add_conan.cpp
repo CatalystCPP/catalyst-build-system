@@ -1,8 +1,10 @@
 #include <expected>
 #include <string>
+#include <vector>
 
 #include <catalyst/subcommands/add.hpp>
 
+#include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/load_profile_file.hpp"
 #include "catalyst/utils/yaml/profile_write_back.hpp"
@@ -11,7 +13,7 @@
 using catalyst::Result;
 
 namespace {
-Result<void> addToProfile(const std::string &profile, const catalyst::add::system::Parse &args) {
+Result<void> addToProfile(const std::string &profile, const catalyst::add::conan::Parse &args) {
     namespace yaml = catalyst::utils::yaml;
     auto res = yaml::loadProfileFile(profile);
     if (!res) {
@@ -38,27 +40,23 @@ Result<void> addToProfile(const std::string &profile, const catalyst::add::syste
     ryml::NodeRef new_dep = dependencies.append_child();
     new_dep |= ryml::MAP;
     new_dep["name"] = tree.to_arena(args.name);
-    new_dep["source"] = "system";
-    if (!args.lib_path.empty())
-        new_dep["lib"] = tree.to_arena(args.lib_path);
-    if (!args.inc_path.empty())
-        new_dep["include"] = tree.to_arena(args.inc_path);
+    new_dep["source"] = "conan";
+    new_dep["version"] = tree.to_arena(args.version);
 
     return yaml::profileWriteBack(profile_file);
 }
 } // namespace
 
-namespace catalyst::add::system {
-std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app) {
-    CLI::App *add_system = app.add_subcommand("system", "add a system dependency");
+namespace catalyst::add::conan {
+std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &add) {
+    CLI::App *add_conan = add.add_subcommand("conan", "add a conan dependency");
     auto ret = std::make_unique<Parse>();
 
-    add_system->add_option("-n,--name", ret->name)->required();
-    add_system->add_option("-l,--lib", ret->lib_path);
-    add_system->add_option("-i,--inc", ret->inc_path);
-    add_system->add_option("-p,--profiles", ret->profiles);
+    add_conan->add_option("-n,--name", ret->name)->required();
+    add_conan->add_option("-v,--version", ret->version)->required();
+    add_conan->add_option("-p,--profiles", ret->profiles)->default_val(std::vector<std::string>{"common"});
 
-    return {add_system, std::move(ret)};
+    return {add_conan, std::move(ret)};
 }
 
 Result<void> action(const Parse &parse_args) {
@@ -69,4 +67,4 @@ Result<void> action(const Parse &parse_args) {
     return {};
 }
 
-}; // namespace catalyst::add::system
+} // namespace catalyst::add::conan

@@ -5,6 +5,8 @@
 
 #include <catalyst/utils/yaml/load_profile_file.hpp>
 
+#include "catalyst/utils/result.hpp"
+
 namespace catalyst::utils::yaml {
-std::expected<void, std::string> profileWriteBack(const ProfileFile &profile_file);
+Result<void> profileWriteBack(const ProfileFile &profile_file);
 }

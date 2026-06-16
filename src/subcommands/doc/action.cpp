@@ -3,9 +3,10 @@
 
 #include "catalyst/subcommands/doc.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 
-auto catalyst::doc::action(const Parse &parse_args) -> std::expected<void, std::string> {
+auto catalyst::doc::action(const Parse &parse_args) -> Result<void> {
     catalyst::logger.debug("Doc subcommand invoked.");
 
     catalyst::utils::yaml::Configuration config;

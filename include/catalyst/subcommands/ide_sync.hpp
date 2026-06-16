@@ -5,6 +5,7 @@
 #include <CLI11.hpp>
 
 #include "catalyst/subcommands/init.hpp"
+#include "catalyst/utils/result.hpp"
 
 namespace catalyst::ide_sync {
 struct Parse {
@@ -15,5 +16,5 @@ struct Parse {
     bool force_emit_ide;
 };
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);
-std::expected<void, std::string> action(const Parse &);
+Result<void> action(const Parse &);
 } // namespace catalyst::ide_sync

@@ -4,12 +4,15 @@
 #include <catalyst/subcommands/add.hpp>
 
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/load_profile_file.hpp"
 #include "catalyst/utils/yaml/profile_write_back.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
+using catalyst::Result;
+
 namespace {
-std::expected<void, std::string> addToProfile(const std::string &profile, const catalyst::add::git::Parse &args) {
+Result<void> addToProfile(const std::string &profile, const catalyst::add::git::Parse &args) {
     namespace yaml = catalyst::utils::yaml;
     auto res = yaml::loadProfileFile(profile);
     if (!res) {
@@ -82,7 +85,7 @@ std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &add) {
     return {add_git, std::move(ret)};
 }
 
-std::expected<void, std::string> action(const Parse &parse_args) {
+Result<void> action(const Parse &parse_args) {
     for (const auto &profile_name : parse_args.profiles) {
         if (auto res = addToProfile(profile_name, parse_args); !res)
             return std::unexpected(res.error());

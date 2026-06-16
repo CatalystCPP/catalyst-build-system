@@ -13,6 +13,7 @@
 #include "catalyst/subcommands/profile_ls.hpp"
 #include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/os/os_defs.hpp"
+#include "catalyst/utils/result.hpp"
 
 namespace {
 std::string concatArgv(int argc, char **argv) {
@@ -63,6 +64,7 @@ void setupCli(catalyst::CliContext &ctx) {
     tie(ctx.add_system_subc, ctx.add_system_res) = catalyst::add::system::parse(*ctx.add_subc);
     tie(ctx.add_local_subc, ctx.add_local_res) = catalyst::add::local::parse(*ctx.add_subc);
     tie(ctx.add_vcpkg_subc, ctx.add_vcpkg_res) = catalyst::add::vcpkg::parse(*ctx.add_subc);
+    tie(ctx.add_conan_subc, ctx.add_conan_res) = catalyst::add::conan::parse(*ctx.add_subc);
 
     ctx.app.add_flag("-v,--version", ctx.show_version, "current version");
     ctx.app.add_flag("-V,--verbose", catalyst::logger.getVerboseLogging(), "verbose stdout logging output");
@@ -116,7 +118,7 @@ template <typename ParseRes_T> int dispatchFN(const char *subc_name, const Parse
 
     catalyst::logger.debug("Executing {} subcommand", subc_name);
     try {
-        if (std::expected<void, std::string> res = fn(parse_res); !res) {
+        if (Result<void> res = fn(parse_res); !res) {
             catalyst::logger.error("{}", res.error());
             return 1;
         }
@@ -194,6 +196,8 @@ int dispatch(const catalyst::CliContext &ctx) {
             return dispatchFN("add local", *ctx.add_local_res, catalyst::add::local::action);
         if (*ctx.add_vcpkg_subc)
             return dispatchFN("add vcpkg", *ctx.add_vcpkg_res, catalyst::add::vcpkg::action);
+        if (*ctx.add_conan_subc)
+            return dispatchFN("add conan", *ctx.add_conan_res, catalyst::add::conan::action);
         return 1;
     }
     if (*ctx.build_subc) {
@@ -280,7 +284,7 @@ int dispatch(const catalyst::CliContext &ctx) {
 }
 
 namespace {
-std::expected<void, std::string> dispatchHookImpl(auto &&args) {
+Result<void> dispatchHookImpl(auto &&args) {
     catalyst::CliContext ctx;
     ctx.workspace = catalyst::Workspace::findRoot();
     auto [exit_code, should_return] = catalyst::parseCli(args, ctx);
@@ -315,11 +319,11 @@ std::expected<void, std::string> dispatchHookImpl(auto &&args) {
 }
 } // namespace
 
-std::expected<void, std::string> dispatchHook(std::string_view args) {
+Result<void> dispatchHook(std::string_view args) {
     return dispatchHookImpl(args);
 }
 
-std::expected<void, std::string> dispatchHook(std::span<const std::string> args) {
+Result<void> dispatchHook(std::span<const std::string> args) {
     return dispatchHookImpl(args);
 }
 

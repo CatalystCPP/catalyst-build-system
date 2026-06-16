@@ -3,13 +3,14 @@
 #include <string>
 
 #include "catalyst/subcommands/generate.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
 using std::string;
 
 auto catalyst::generate::findDep(const std::string &build_dir,
                                  ryml::ConstNodeRef dep,
-                                 const catalyst::toolchain::ToolchainDef &tc) -> std::expected<FindRes, std::string> {
+                                 const catalyst::toolchain::ToolchainDef &tc) -> Result<FindRes> {
     namespace yaml = catalyst::utils::yaml;
     auto source_type = yaml::asString(yaml::child(dep, "source"));
     if (!source_type)

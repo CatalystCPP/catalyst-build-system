@@ -1,0 +1,29 @@
+toolchain:
+  name: "catalyst default"
+  extensions:
+    object: ".o"
+    executable: ""
+    static_lib: ".a"
+    shared_lib: ".so"
+    static_lib_prefix: "lib"
+    shared_lib_prefix: "lib"
+  flags:
+    include_dir: "-I{path}"
+    lib_dir: "-L{path}"
+    lib: "-l{name}"
+    define: "-D{name}={value}"
+    define_empty: "-D{name}"
+  compiler:
+    c:
+      executable: "clang"
+      command: "{cc} {cflags} -MMD -MF {object}.d -c {source} -o {object} {includes} {defines}"
+    cxx:
+      executable: "clang++"
+      command: "{cxx} {cxxflags} -MMD -MF {object}.d -c {source} -o {object} {includes} {defines}"
+  linker:
+    executable: "clang++"
+    executable_command: "{linker} {objects} -o {output} {ldflags} {lib_dirs} {libs}"
+    shared_lib_command: "{linker} -shared {objects} -o {output} {ldflags} {lib_dirs} {libs}"
+  archiver:
+    executable: "ar"
+    command: "{archiver} rcs {output} {objects}"

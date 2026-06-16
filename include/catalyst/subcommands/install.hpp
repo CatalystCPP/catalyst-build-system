@@ -4,6 +4,8 @@
 
 #include <CLI11.hpp>
 
+#include "catalyst/utils/result.hpp"
+
 namespace catalyst::install {
 struct Parse {
     std::filesystem::path source_path;
@@ -12,5 +14,5 @@ struct Parse {
 };
 
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);
-std::expected<void, std::string> action(const Parse &);
+Result<void> action(const Parse &);
 } // namespace catalyst::install

@@ -7,13 +7,14 @@
 #include "catalyst/subcommands/init.hpp"
 #include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/os/os_defs.hpp"
+#include "catalyst/utils/result.hpp"
 
 namespace catalyst::init {
 
 namespace fs = std::filesystem;
 
 namespace {
-std::expected<std::ofstream, std::string> createFile(const fs::path &file_path, bool force) {
+Result<std::ofstream> createFile(const fs::path &file_path, bool force) {
     if (fs::exists(file_path) && !force) {
         const std::string filename{file_path.filename().string()};
         catalyst::logger.warn("{} already exists.\nUse --force-ide to overwrite.", filename);
@@ -27,9 +28,9 @@ std::expected<std::ofstream, std::string> createFile(const fs::path &file_path, 
 }
 } // namespace
 
-std::expected<void, std::string> invokeIDEConfigEmitters(const Parse &parse_args) {
+Result<void> invokeIDEConfigEmitters(const Parse &parse_args) {
     for (const Parse::IdeType &ide : parse_args.ides) {
-        std::function<std::expected<void, std::string>(const Parse &)> emit_fn;
+        std::function<Result<void>(const Parse &)> emit_fn;
         switch (ide) {
             case Parse::IdeType::vsc:
                 emit_fn = emitIDEConfig<Parse::IdeType::vsc>;
@@ -47,7 +48,7 @@ std::expected<void, std::string> invokeIDEConfigEmitters(const Parse &parse_args
     return {};
 }
 
-template <> std::expected<void, std::string> emitIDEConfig<Parse::IdeType::vsc>(const Parse &parse_args) {
+template <> Result<void> emitIDEConfig<Parse::IdeType::vsc>(const Parse &parse_args) {
     catalyst::logger.info("Generating VS Code IDE configuration");
 
     catalyst::utils::os::OSInfo os_info{};
@@ -193,7 +194,7 @@ template <> std::expected<void, std::string> emitIDEConfig<Parse::IdeType::vsc>(
     return {};
 }
 
-template <> std::expected<void, std::string> emitIDEConfig<Parse::IdeType::clion>(const Parse &parse_args) {
+template <> Result<void> emitIDEConfig<Parse::IdeType::clion>(const Parse &parse_args) {
     catalyst::logger.info("Generating CLion IDE configuration");
 
     catalyst::utils::os::OSInfo os_info{};

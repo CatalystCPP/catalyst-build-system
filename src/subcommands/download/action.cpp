@@ -10,6 +10,7 @@
 #include "catalyst/subcommands/download.hpp"
 #include "catalyst/subcommands/install.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 
 namespace fs = std::filesystem;
 
@@ -32,7 +33,7 @@ std::string randomString(size_t length) {
 }
 } // namespace
 
-std::expected<void, std::string> action(const Parse &args) {
+Result<void> action(const Parse &args) {
     catalyst::logger.debug("Download subcommand invoked.");
 
     constexpr size_t TEMP_DIR_NAME_LEN = 8UZ;
@@ -70,7 +71,7 @@ std::expected<void, std::string> action(const Parse &args) {
         .package = "",
         .profiles = args.profiles,
         .enabled_features = args.enabled_features,
-        .backend = "",
+        .backend = args.backend,
         .workspace = std::nullopt,
     };
 

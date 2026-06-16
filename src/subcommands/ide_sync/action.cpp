@@ -5,9 +5,10 @@
 #include "catalyst/subcommands/ide_sync.hpp"
 #include "catalyst/subcommands/init.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 
-auto catalyst::ide_sync::action(const Parse &parse_args) -> std::expected<void, std::string> {
+auto catalyst::ide_sync::action(const Parse &parse_args) -> Result<void> {
     catalyst::logger.debug("IDE sync subcommand invoked.");
 
     const std::filesystem::path root_dir = std::filesystem::current_path();

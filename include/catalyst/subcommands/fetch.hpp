@@ -7,6 +7,7 @@
 #include <CLI11.hpp>
 #include <ryml/ryml.hpp>
 
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 #include "catalyst/workspace.hpp"
 
@@ -17,8 +18,8 @@ struct Parse {
 };
 
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);
-std::expected<void, std::string> action(const Parse &);
-std::expected<void, std::string> fetchConanDeps(
+Result<void> action(const Parse &);
+Result<void> fetchConanDeps(
     const std::vector<ryml::ConstNodeRef> &conan_deps, ///< util because conan needs to be fed the compiler and flags
     const std::string &build_dir,
     const utils::yaml::Configuration &config,

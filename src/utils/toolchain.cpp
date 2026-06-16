@@ -2,6 +2,7 @@
 
 #include <format>
 
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::toolchain {
@@ -31,7 +32,7 @@ std::string expand_template(std::string_view tmpl, const std::unordered_map<std:
     return result;
 }
 
-std::expected<ToolchainDef, std::string> parse_toolchain(const std::filesystem::path &path) {
+Result<ToolchainDef> parse_toolchain(const std::filesystem::path &path) {
     namespace yaml = catalyst::utils::yaml;
     ToolchainDef tc;
 
@@ -71,13 +72,16 @@ std::expected<ToolchainDef, std::string> parse_toolchain(const std::filesystem::
     ryml::ConstNodeRef comp = yaml::child(node, "compiler");
     ryml::ConstNodeRef comp_c = yaml::child(comp, "c");
     set(comp_c, "executable", tc.compiler.c.executable);
+    set(comp_c, "flags", tc.compiler.c.flags);
     set(comp_c, "command", tc.compiler.c.command);
     ryml::ConstNodeRef comp_cxx = yaml::child(comp, "cxx");
     set(comp_cxx, "executable", tc.compiler.cxx.executable);
+    set(comp_cxx, "flags", tc.compiler.cxx.flags);
     set(comp_cxx, "command", tc.compiler.cxx.command);
 
     ryml::ConstNodeRef link = yaml::child(node, "linker");
     set(link, "executable", tc.linker.executable);
+    set(link, "flags", tc.linker.flags);
     set(link, "executable_command", tc.linker.executable_command);
     set(link, "shared_lib_command", tc.linker.shared_lib_command);
 
