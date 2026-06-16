@@ -69,6 +69,37 @@ toolchain:
     REQUIRE(tc.compiler.cxx.command == "cl.exe /c {source}");
     // Check that defaults were kept for unspecified fields
     REQUIRE(tc.extensions.static_lib == ".a");
+    // Flags default to empty when unspecified
+    REQUIRE(tc.compiler.c.flags.empty());
+    REQUIRE(tc.compiler.cxx.flags.empty());
+    REQUIRE(tc.linker.flags.empty());
+
+    std::filesystem::remove(temp_yaml);
+}
+
+TEST_CASE("YAML Parsing reads compiler and linker flags", "[toolchain]") {
+    std::filesystem::path temp_yaml = std::filesystem::temp_directory_path() / "test_toolchain_flags.yaml";
+    std::ofstream out(temp_yaml);
+    out << R"(
+toolchain:
+  name: "with-flags"
+  compiler:
+    c:
+      flags: "-std=c17 -Wall"
+    cxx:
+      flags: "-std=c++23 -Wall -Wextra"
+  linker:
+    flags: "-static -fuse-ld=mold"
+)";
+    out.close();
+
+    auto tc_res = parse_toolchain(temp_yaml);
+    REQUIRE(tc_res.has_value());
+    auto tc = tc_res.value();
+
+    REQUIRE(tc.compiler.c.flags == "-std=c17 -Wall");
+    REQUIRE(tc.compiler.cxx.flags == "-std=c++23 -Wall -Wextra");
+    REQUIRE(tc.linker.flags == "-static -fuse-ld=mold");
 
     std::filesystem::remove(temp_yaml);
 }

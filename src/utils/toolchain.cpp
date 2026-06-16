@@ -72,13 +72,16 @@ Result<ToolchainDef> parse_toolchain(const std::filesystem::path &path) {
     ryml::ConstNodeRef comp = yaml::child(node, "compiler");
     ryml::ConstNodeRef comp_c = yaml::child(comp, "c");
     set(comp_c, "executable", tc.compiler.c.executable);
+    set(comp_c, "flags", tc.compiler.c.flags);
     set(comp_c, "command", tc.compiler.c.command);
     ryml::ConstNodeRef comp_cxx = yaml::child(comp, "cxx");
     set(comp_cxx, "executable", tc.compiler.cxx.executable);
+    set(comp_cxx, "flags", tc.compiler.cxx.flags);
     set(comp_cxx, "command", tc.compiler.cxx.command);
 
     ryml::ConstNodeRef link = yaml::child(node, "linker");
     set(link, "executable", tc.linker.executable);
+    set(link, "flags", tc.linker.flags);
     set(link, "executable_command", tc.linker.executable_command);
     set(link, "shared_lib_command", tc.linker.shared_lib_command);
 

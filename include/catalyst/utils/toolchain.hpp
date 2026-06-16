@@ -32,19 +32,23 @@ struct ToolchainDef {
 
     struct CompilerDef {
         std::string executable;
+        std::string flags; // base compiler flags, interpolated as {cflags}/{cxxflags}
         std::string command;
     };
 
     struct Compiler {
         CompilerDef c = {.executable = "cc",
+                         .flags = {},
                          .command = "{cc} {cflags} -MMD -MF {object}.d -c {source} -o {object} {includes} {defines}"};
         CompilerDef cxx = {.executable = "c++",
+                           .flags = {},
                            .command =
                                "{cxx} {cxxflags} -MMD -MF {object}.d -c {source} -o {object} {includes} {defines}"};
     } compiler;
 
     struct Linker {
         std::string executable = "c++";
+        std::string flags; // base linker flags, interpolated as {ldflags}
         std::string executable_command = "{linker} {objects} -o {output} {ldflags} {lib_dirs} {libs}";
         std::string shared_lib_command = "{linker} -shared {objects} -o {output} {ldflags} {lib_dirs} {libs}";
     } linker;

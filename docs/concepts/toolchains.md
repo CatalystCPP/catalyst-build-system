@@ -45,9 +45,16 @@ Defines the metadata and command templates Catalyst will use during generation.
 | `name` | String | `gcc` | Toolchain identifier. |
 | `extensions` | Object | - | Output file extensions and library prefixes. |
 | `flags` | Object | - | Templates for include paths, library paths, library names, and preprocessor defines. |
-| `compiler` | Object | - | C and C++ compiler executables and command templates. |
-| `linker` | Object | - | Executable and shared library linker templates. |
+| `compiler` | Object | - | C and C++ compiler executables, base flags, and command templates. |
+| `linker` | Object | - | Executable and shared library linker executable, base flags, and templates. |
 | `archiver` | Object | - | Static library archive template. |
+
+> **Note**: `compiler.c.flags`, `compiler.cxx.flags`, and `linker.flags` define the base
+> compiler/linker flags for the target. These are the recommended home for build flags.
+> Any flags set via [`manifest.tooling`](configuration.md#manifesttooling) (`CCFLAGS`,
+> `CXXFLAGS`, `LDFLAGS`) are appended on top of the toolchain's base flags and win on
+> conflicts. `manifest.tooling` is slated for deprecation in favour of toolchain-defined
+> flags.
 
 ### `toolchain.extensions`
 
@@ -84,6 +91,7 @@ Defines the metadata and command templates Catalyst will use during generation.
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `executable` | String | `cc` | C compiler executable. |
+| `flags` | String | `""` | Base C compiler flags, interpolated as `{cflags}`. |
 | `command` | String | `{cc} {cflags} -MMD -MF {object}.d -c {source} -o {object} {includes} {defines}` | Command template for compiling C sources. |
 
 ### `toolchain.compiler.cxx`
@@ -91,6 +99,7 @@ Defines the metadata and command templates Catalyst will use during generation.
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `executable` | String | `c++` | C++ compiler executable. |
+| `flags` | String | `""` | Base C++ compiler flags, interpolated as `{cxxflags}`. |
 | `command` | String | `{cxx} {cxxflags} -MMD -MF {object}.d -c {source} -o {object} {includes} {defines}` | Command template for compiling C++ sources. |
 
 > **Note**: Compiler command templates interpolate `{cc}` or `{cxx}`, plus
@@ -101,6 +110,7 @@ Defines the metadata and command templates Catalyst will use during generation.
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `executable` | String | `c++` | Linker executable. |
+| `flags` | String | `""` | Base linker flags, interpolated as `{ldflags}`. |
 | `executable_command` | String | `{linker} {objects} -o {output} {ldflags} {lib_dirs} {libs}` | Command template for building executables. |
 | `shared_lib_command` | String | `{linker} -shared {objects} -o {output} {ldflags} {lib_dirs} {libs}` | Command template for building shared libraries. |
 

@@ -66,6 +66,12 @@ Defines the project's identity, build settings, and directory structure.
 > [toolchain](toolchains.md). When omitted, the toolchain's compilers are used (the
 > default `gcc` toolchain resolves to `cc`/`c++`).
 
+> **Deprecation**: `manifest.tooling` is slated for removal in 1.7.0. Prefer defining
+> compiler and linker settings in a [toolchain](toolchains.md) file. `CCFLAGS`,
+> `CXXFLAGS`, and `LDFLAGS` map to `compiler.c.flags`, `compiler.cxx.flags`, and
+> `linker.flags` respectively; when both are set, `manifest.tooling` flags are
+> appended on top of the toolchain's base flags.
+
 ### `manifest.dirs`
 
 | Field | Description | Default |
