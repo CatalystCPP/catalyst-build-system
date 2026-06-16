@@ -8,6 +8,7 @@ common:
     version: 1.6.0-dev
     description: Catalyst is a Declarative C++ Build System
     provides: catalyst
+    toolchain: tc_catalyst.yaml
     tooling:
       CC: clang
       CXX: clang++
