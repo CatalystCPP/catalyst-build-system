@@ -6,12 +6,12 @@
 #include <string>
 #include <vector>
 
-#include "catalyst/utils/result.hpp"
 #include "catalyst/hooks.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/subcommands/run.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 
 namespace fs = std::filesystem;

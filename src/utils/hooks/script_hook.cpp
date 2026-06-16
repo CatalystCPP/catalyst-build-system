@@ -1,9 +1,9 @@
 #include <string_view>
 
-#include "catalyst/utils/result.hpp"
 #include "catalyst/hooks.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::hooks {

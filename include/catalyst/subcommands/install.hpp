@@ -1,9 +1,10 @@
 #pragma once
 #include <expected>
-#include "catalyst/utils/result.hpp"
 #include <utility>
 
 #include <CLI11.hpp>
+
+#include "catalyst/utils/result.hpp"
 
 namespace catalyst::install {
 struct Parse {

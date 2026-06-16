@@ -9,13 +9,13 @@
 #include <tuple>
 #include <vector>
 
-#include "catalyst/utils/result.hpp"
 #include "catalyst/hooks.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/build.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/subcommands/test.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 
 namespace fs = std::filesystem;
@@ -180,8 +180,8 @@ Result<void> action(const Parse &args) {
     exec_args.insert(exec_args.end(), args.params.begin(), args.params.end());
 
     if (!args.rebuild) {
-         catalyst::logger.debug("Rebuild not requested, checking for staleness.");
-         warnIfStale(exe_path, profile_comp, profiles);
+        catalyst::logger.debug("Rebuild not requested, checking for staleness.");
+        warnIfStale(exe_path, profile_comp, profiles);
     } else {
         catalyst::logger.debug("Rebuild requested, skipping staleness check.");
         auto res = catalyst::build::action({
@@ -194,7 +194,8 @@ Result<void> action(const Parse &args) {
             .profiles = profiles,
             .enabled_features = {},
             .backend = "",
-            .workspace = std::nullopt, // Prevent build from recursing into workspace members, we'll handle that in test logic
+            .workspace =
+                std::nullopt, // Prevent build from recursing into workspace members, we'll handle that in test logic
         });
     }
 

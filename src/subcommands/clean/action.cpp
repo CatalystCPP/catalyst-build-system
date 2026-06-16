@@ -6,11 +6,11 @@
 #include <catalyst/hooks.hpp>
 #include <catalyst/subcommands/clean.hpp>
 
-#include "catalyst/utils/result.hpp"
 #include "catalyst/dir_guard.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 
 namespace catalyst::clean {

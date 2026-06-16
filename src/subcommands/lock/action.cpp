@@ -7,10 +7,10 @@
 #include <unordered_map>
 #include <vector>
 
-#include "catalyst/utils/result.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/lock.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 

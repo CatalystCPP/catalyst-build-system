@@ -1,10 +1,11 @@
 #pragma once
 #include <expected>
-#include "catalyst/utils/result.hpp"
 #include <string>
 #include <vector>
 
 #include <CLI11.hpp>
+
+#include "catalyst/utils/result.hpp"
 
 namespace catalyst::run {
 struct Parse {

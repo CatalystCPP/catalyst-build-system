@@ -1,8 +1,8 @@
-#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/toolchain.hpp"
 
 #include <format>
 
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::toolchain {

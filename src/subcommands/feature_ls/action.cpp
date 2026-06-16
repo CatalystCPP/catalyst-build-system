@@ -6,9 +6,9 @@
 #include <string>
 #include <vector>
 
-#include "catalyst/utils/result.hpp"
 #include "catalyst/subcommands/feature_ls.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 

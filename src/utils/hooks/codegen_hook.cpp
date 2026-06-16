@@ -2,10 +2,10 @@
 #include <span>
 #include <string_view>
 
-#include "catalyst/utils/result.hpp"
 #include "catalyst/hooks.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::hooks {
@@ -13,9 +13,9 @@ namespace catalyst::hooks {
 namespace {
 
 Result<std::string> substituteCmdArgs(std::string cmd,
-                                                          std::span<const std::string> inputs,
-                                                          std::span<const std::string> outputs,
-                                                          std::string_view hook_name);
+                                      std::span<const std::string> inputs,
+                                      std::span<const std::string> outputs,
+                                      std::string_view hook_name);
 
 // Collects a scalar-or-sequence node ("input"/"output") into a string list.
 std::vector<std::string> collectPathList(ryml::ConstNodeRef node) {
@@ -96,9 +96,9 @@ Result<void> executeCodegenHook(ryml::ConstNodeRef codegen_node, std::string_vie
 
 namespace {
 Result<std::string> substituteCmdArgs(std::string cmd,
-                                                          std::span<const std::string> inputs,
-                                                          std::span<const std::string> outputs,
-                                                          std::string_view hook_name) {
+                                      std::span<const std::string> inputs,
+                                      std::span<const std::string> outputs,
+                                      std::string_view hook_name) {
     // Substitute $IN/$OUT variables, indices, and slices in cmd.
     constexpr auto quote_if_needed = [](std::string_view path) -> std::string {
         if (path.empty())

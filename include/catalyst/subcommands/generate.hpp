@@ -33,8 +33,8 @@ std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);
 Result<void> action(const Parse &);
 
 Result<std::string> libPath(const utils::yaml::Configuration &profile_comp,
-                                                const std::vector<std::string> &profiles,
-                                                const catalyst::toolchain::ToolchainDef &tc);
+                            const std::vector<std::string> &profiles,
+                            const catalyst::toolchain::ToolchainDef &tc);
 Result<FindRes>
 findDep(const std::string &build_dir, ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
 Result<FindRes> findLocal(ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
@@ -45,8 +45,8 @@ findGit(const std::string &build_dir, ryml::ConstNodeRef dep, const catalyst::to
 Result<FindRes>
 findConan(const std::string &build_dir, ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
 
-Result<std::unordered_set<std::filesystem::path>>
-buildSourceSet(const std::vector<std::string> &source_dirs, const std::vector<std::string> &profiles);
+Result<std::unordered_set<std::filesystem::path>> buildSourceSet(const std::vector<std::string> &source_dirs,
+                                                                 const std::vector<std::string> &profiles);
 
 namespace buildwriters {
 
@@ -85,16 +85,15 @@ public:
 
     virtual Result<void> addVariable(std::string_view name, std::string_view value) = 0;
     virtual Result<void> addRule(std::string_view name,
-                                                     std::string_view command,
-                                                     std::string_view description,
-                                                     std::string_view depfile = "",
-                                                     std::string_view deps = "") = 0;
+                                 std::string_view command,
+                                 std::string_view description,
+                                 std::string_view depfile = "",
+                                 std::string_view deps = "") = 0;
     virtual Result<void> addBuild(const std::vector<std::string> &outputs,
-                                                      std::string_view rule,
-                                                      const std::vector<std::string> &inputs,
-                                                      const std::vector<std::string> &implicit_deps = {}
-                                                      // e.g., headers for validation
-                                                      ) = 0;
+                                  std::string_view rule,
+                                  const std::vector<std::string> &inputs,
+                                  const std::vector<std::string> &implicit_deps = {} // e.g., headers for validation
+                                  ) = 0;
 
     virtual void addComment(std::string_view comment) = 0;
     virtual void addDefault(std::string_view target) = 0;
@@ -153,24 +152,22 @@ public:
     DerivedWriter(DerivedWriter &&) = delete;
     DerivedWriter &operator=(DerivedWriter &&) = delete;
 
-    Result<void> addVariable([[maybe_unused]] std::string_view name,
-                                                 [[maybe_unused]] std::string_view value) override {
+    Result<void> addVariable([[maybe_unused]] std::string_view name, [[maybe_unused]] std::string_view value) override {
         throw std::logic_error("Unimplemented base template method");
     }
 
     Result<void> addRule([[maybe_unused]] std::string_view name,
-                                             [[maybe_unused]] std::string_view command,
-                                             [[maybe_unused]] std::string_view description,
-                                             [[maybe_unused]] std::string_view depfile = "",
-                                             [[maybe_unused]] std::string_view deps = "") override {
+                         [[maybe_unused]] std::string_view command,
+                         [[maybe_unused]] std::string_view description,
+                         [[maybe_unused]] std::string_view depfile = "",
+                         [[maybe_unused]] std::string_view deps = "") override {
         throw std::logic_error("Unimplemented base template method");
     }
 
-    Result<void>
-    addBuild([[maybe_unused]] const std::vector<std::string> &outputs,
-             [[maybe_unused]] std::string_view rule,
-             [[maybe_unused]] const std::vector<std::string> &inputs,
-             [[maybe_unused]] const std::vector<std::string> &implicit_deps = {}) override {
+    Result<void> addBuild([[maybe_unused]] const std::vector<std::string> &outputs,
+                          [[maybe_unused]] std::string_view rule,
+                          [[maybe_unused]] const std::vector<std::string> &inputs,
+                          [[maybe_unused]] const std::vector<std::string> &implicit_deps = {}) override {
         throw std::logic_error("Unimplemented base template method");
     }
 

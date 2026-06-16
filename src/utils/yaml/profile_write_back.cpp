@@ -5,8 +5,8 @@
 
 #include <catalyst/utils/yaml/profile_write_back.hpp>
 
-#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::utils::yaml {

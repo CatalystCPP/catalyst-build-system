@@ -7,26 +7,26 @@
 #include <string>
 #include <unordered_map>
 
-#include "catalyst/utils/result.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::generate {
 namespace fs = std::filesystem;
 
 namespace {
-void append_pkg_config_libs(FindRes &result,
-                            const std::string &lib_dirs_output,
-                            const std::string &libs_output,
-                            const catalyst::toolchain::ToolchainDef &tc) {
+void appendPkgConfigLibs(FindRes &result,
+                         const std::string &lib_dirs_output,
+                         const std::string &libs_output,
+                         const catalyst::toolchain::ToolchainDef &tc) {
     std::stringstream lib_dir_stream(lib_dirs_output);
     std::stringstream libs_stream(libs_output);
     std::string token;
 
     while (lib_dir_stream >> token) {
-        if (token.rfind("-L", 0) == 0) {
+        if (token.starts_with("-L")) {
             std::string path = token.substr(2);
             result.lib_path += " " + catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", path}});
             result.lib_dirs.push_back(path);
@@ -36,7 +36,7 @@ void append_pkg_config_libs(FindRes &result,
     }
 
     while (libs_stream >> token) {
-        if (token.rfind("-l", 0) == 0) {
+        if (token.starts_with("-l")) {
             result.libs += " " + catalyst::toolchain::expand_template(tc.flags.lib, {{"name", token.substr(2)}});
         } else {
             result.libs += " " + token;
@@ -80,30 +80,30 @@ Result<FindRes> findVcpkg(ryml::ConstNodeRef dep, const catalyst::toolchain::Too
         }
         env["PKG_CONFIG_PATH"] = pkg_config_dir.string();
 
-        auto res_L = processExecStdout({"pkg-config", "--libs-only-L", dep_name}, std::nullopt, env);
-        auto res_l =
+        auto link_dirs_res = processExecStdout({"pkg-config", "--libs-only-L", dep_name}, std::nullopt, env);
+        auto link_libs_res =
             processExecStdout({"pkg-config", "--libs-only-l", "--libs-only-other", dep_name}, std::nullopt, env);
 
-        if (res_L && res_l) {
-            std::string L_val = *res_L;
-            std::string l_val = *res_l;
+        if (link_dirs_res && link_libs_res) {
+            std::string link_dirs = *link_dirs_res;
+            std::string link_libs = *link_libs_res;
 
-            if (auto last = L_val.find_last_not_of(" \t\n"); last != std::string::npos)
-                L_val.erase(last + 1);
-            if (auto last = l_val.find_last_not_of(" \t\n"); last != std::string::npos)
-                l_val.erase(last + 1);
+            if (auto last = link_dirs.find_last_not_of(" \t\n"); last != std::string::npos)
+                link_dirs.erase(last + 1);
+            if (auto last = link_libs.find_last_not_of(" \t\n"); last != std::string::npos)
+                link_libs.erase(last + 1);
 
-            catalyst::logger.debug("Resolved via pkg-config: L='{}' l='{}'", L_val, l_val);
+            catalyst::logger.debug("Resolved via pkg-config: L='{}' l='{}'", link_dirs, link_libs);
             FindRes result{.lib_path = "", .inc_path = "", .libs = "", .lib_dirs = {}};
-            append_pkg_config_libs(result, L_val, l_val, tc);
+            appendPkgConfigLibs(result, link_dirs, link_libs, tc);
             return result;
-        } else {
-            catalyst::logger.warn("pkg-config failed for {}, falling back.", dep_name);
         }
+        catalyst::logger.warn("pkg-config failed for {}, falling back.", dep_name);
     }
     catalyst::logger.debug("Did not find pkg-config file for {}: {}", dep_name, pc_file.string());
 
-    std::string library_path, libs;
+    std::string library_path;
+    std::string libs;
     std::vector<std::string> lib_dirs;
 
     if (linkage == "static" || linkage == "shared") {
@@ -148,12 +148,12 @@ Result<FindRes> findVcpkg(ryml::ConstNodeRef dep, const catalyst::toolchain::Too
                         // Convert the file name into the toolchain's configured library token.
                         std::string stem = file_path.stem().string();
                         if (!tc.extensions.static_lib_prefix.empty() &&
-                            stem.rfind(tc.extensions.static_lib_prefix, 0) == 0) {
+                            stem.starts_with(tc.extensions.static_lib_prefix)) {
                             stem = stem.substr(tc.extensions.static_lib_prefix.size());
                         } else if (!tc.extensions.shared_lib_prefix.empty() &&
-                                   stem.rfind(tc.extensions.shared_lib_prefix, 0) == 0) {
+                                   stem.starts_with(tc.extensions.shared_lib_prefix)) {
                             stem = stem.substr(tc.extensions.shared_lib_prefix.size());
-                        } else if (stem.rfind("lib", 0) == 0) {
+                        } else if (stem.starts_with("lib")) {
                             stem = stem.substr(3);
                         }
                         libs += " " + catalyst::toolchain::expand_template(tc.flags.lib, {{"name", stem}});

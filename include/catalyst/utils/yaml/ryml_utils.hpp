@@ -1,7 +1,6 @@
 #pragma once
 
 #include <expected>
-#include "catalyst/utils/result.hpp"
 #include <filesystem>
 #include <optional>
 #include <string>
@@ -10,6 +9,8 @@
 
 #include <ryml/ryml.hpp>
 #include <ryml/ryml_std.hpp> // std::string interop for emit/serialize
+
+#include "catalyst/utils/result.hpp"
 
 namespace catalyst::utils::yaml {
 

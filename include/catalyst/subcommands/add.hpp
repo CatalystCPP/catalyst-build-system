@@ -22,7 +22,7 @@ struct Parse {
     std::string version;
     std::vector<std::string> profiles{{"common"}};
 };
-std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);
+std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &add);
 Result<void> action(const Parse &);
 } // namespace conan
 

@@ -2,10 +2,10 @@
 #include <format>
 #include <string>
 
-#include "catalyst/utils/result.hpp"
 #include "catalyst/dir_guard.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 

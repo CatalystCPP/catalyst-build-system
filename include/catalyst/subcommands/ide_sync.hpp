@@ -4,8 +4,8 @@
 
 #include <CLI11.hpp>
 
-#include "catalyst/utils/result.hpp"
 #include "catalyst/subcommands/init.hpp"
+#include "catalyst/utils/result.hpp"
 
 namespace catalyst::ide_sync {
 struct Parse {

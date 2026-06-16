@@ -13,11 +13,11 @@
 #include <unordered_set>
 #include <vector>
 
-#include "catalyst/utils/result.hpp"
 #include "catalyst/hooks.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/fetch.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::fetch {
@@ -54,9 +54,9 @@ std::string getCompilerVersion(const std::string &compiler_exe) {
 }
 
 Result<void> fetchConanDeps(const std::vector<ryml::ConstNodeRef> &conan_deps,
-                                                const std::string &build_dir,
-                                                const utils::yaml::Configuration &config,
-                                                const std::vector<std::string> &profiles) {
+                            const std::string &build_dir,
+                            const utils::yaml::Configuration &config,
+                            const std::vector<std::string> &profiles) {
     namespace yaml = utils::yaml;
     catalyst::logger.debug("Writing conanfile.txt in {}", build_dir);
     fs::path build_path(build_dir);
@@ -306,9 +306,9 @@ struct LockedDep {
 };
 
 Result<void> fetchDependency(ryml::ConstNodeRef dep,
-                                                 const std::string &build_dir,
-                                                 const std::unordered_map<std::string, LockedDep> &lockfile_deps,
-                                                 const Parse &parse_args) {
+                             const std::string &build_dir,
+                             const std::unordered_map<std::string, LockedDep> &lockfile_deps,
+                             const Parse &parse_args) {
     namespace yaml = utils::yaml;
     auto name = yaml::asString(yaml::child(dep, "name")).value_or("");
     auto source = yaml::asString(yaml::child(dep, "source")).value_or("");

@@ -2,8 +2,8 @@
 #include <format>
 #include <string>
 
-#include "catalyst/utils/result.hpp"
 #include "catalyst/subcommands/generate.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
 using std::string;

@@ -7,12 +7,12 @@
 
 #include <catalyst/hooks.hpp>
 
-#include "catalyst/utils/result.hpp"
 #include "catalyst/dir_guard.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/install.hpp"
 #include "catalyst/subcommands/pack.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 
 namespace catalyst::pack {

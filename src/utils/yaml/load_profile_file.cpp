@@ -6,8 +6,8 @@
 
 #include <catalyst/utils/yaml/load_profile_file.hpp>
 
-#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::utils::yaml {
@@ -69,8 +69,7 @@ auto loadFromCombined(const std::string &profile, const fs::path &combined_path,
     return ProfileFile{.tree = std::move(tree), .profile_id = profile_id, .path = combined_path};
 }
 
-auto loadFromIsolate(const std::string &profile, const fs::path &profile_path)
-    -> Result<ProfileFile> {
+auto loadFromIsolate(const std::string &profile, const fs::path &profile_path) -> Result<ProfileFile> {
     if (!fs::exists(profile_path))
         return std::unexpected(std::format("Profile file: {} for {} not found", profile_path.string(), profile));
 

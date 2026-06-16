@@ -10,11 +10,11 @@
 #include <unordered_set>
 #include <vector>
 
-#include "catalyst/utils/result.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/fmt.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::fmt {
@@ -124,19 +124,18 @@ Result<void> action(const Parse &parse_args) {
     futures.reserve(files_to_format.size());
 
     for (const auto &file : files_to_format) {
-        futures.push_back(
-            std::async(std::launch::async, [formatter, file_str = file.string()]() -> Result<void> {
-                auto process_res = catalyst::processExec({formatter, "-i", file_str});
-                if (!process_res) {
-                    return std::unexpected(process_res.error());
-                }
-                int exit_code = process_res.value().get();
-                if (exit_code != 0) {
-                    return std::unexpected(
-                        std::format("Error running {} on {}. Exit code: {}", formatter, file_str, exit_code));
-                }
-                return {};
-            }));
+        futures.push_back(std::async(std::launch::async, [formatter, file_str = file.string()]() -> Result<void> {
+            auto process_res = catalyst::processExec({formatter, "-i", file_str});
+            if (!process_res) {
+                return std::unexpected(process_res.error());
+            }
+            int exit_code = process_res.value().get();
+            if (exit_code != 0) {
+                return std::unexpected(
+                    std::format("Error running {} on {}. Exit code: {}", formatter, file_str, exit_code));
+            }
+            return {};
+        }));
     }
 
     bool any_failed = false;

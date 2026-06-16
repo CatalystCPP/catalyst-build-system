@@ -2,10 +2,10 @@
 #include <filesystem>
 #include <string>
 
-#include "catalyst/utils/result.hpp"
 #include "catalyst/subcommands/ide_sync.hpp"
 #include "catalyst/subcommands/init.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 
 auto catalyst::ide_sync::action(const Parse &parse_args) -> Result<void> {

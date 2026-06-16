@@ -37,4 +37,3 @@ struct OSInfo {
 bool isCommandInstalled(const std::string &command);
 
 }; // namespace catalyst::utils::os
-

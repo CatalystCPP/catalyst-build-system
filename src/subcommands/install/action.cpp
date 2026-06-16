@@ -3,10 +3,10 @@
 #include <string>
 #include <vector>
 
-#include "catalyst/utils/result.hpp"
 #include "catalyst/dir_guard.hpp"
 #include "catalyst/subcommands/install.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 
 namespace catalyst::install {
@@ -89,9 +89,8 @@ Result<void> action(const Parse &parse_args) {
             std::format("Unexpected value for manifest.type: {}. Expected: STATICLIB, SHAREDLIB, or BINARY.", type));
     }
 
-    auto copy_artifact = [&](const fs::path &source,
-                             const fs::path &dest_dir,
-                             const std::string &filename) -> Result<void> {
+    auto copy_artifact =
+        [&](const fs::path &source, const fs::path &dest_dir, const std::string &filename) -> Result<void> {
         fs::path dest = dest_dir / filename;
         if (fs::exists(source)) {
             catalyst::logger.info("Installing artifact: {} -> {}", source.string(), dest.string());

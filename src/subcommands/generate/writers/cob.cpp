@@ -5,8 +5,8 @@
 #include <string_view>
 #include <vector>
 
-#include "catalyst/utils/result.hpp"
 #include "catalyst/subcommands/generate.hpp"
+#include "catalyst/utils/result.hpp"
 
 namespace {
 std::string escape(std::string_view str) {
@@ -25,19 +25,17 @@ std::string escape(std::string_view str) {
 
 namespace catalyst::generate::buildwriters {
 
-template <>
-Result<void> DerivedWriter<TargetType::COB>::addVariable(std::string_view name,
-                                                                             std::string_view value) {
+template <> Result<void> DerivedWriter<TargetType::COB>::addVariable(std::string_view name, std::string_view value) {
     std::println(stream, "DEF|{}|{}", name, escape(value));
     return {};
 }
 
 template <>
 Result<void> DerivedWriter<TargetType::COB>::addRule([[maybe_unused]] std::string_view name,
-                                                                         [[maybe_unused]] std::string_view command,
-                                                                         [[maybe_unused]] std::string_view description,
-                                                                         [[maybe_unused]] std::string_view depfile,
-                                                                         [[maybe_unused]] std::string_view deps) {
+                                                     [[maybe_unused]] std::string_view command,
+                                                     [[maybe_unused]] std::string_view description,
+                                                     [[maybe_unused]] std::string_view depfile,
+                                                     [[maybe_unused]] std::string_view deps) {
     // COB has built-in rules mapped to specific keys (cc, cxx, etc.).
     // We do not need to define them in the manifest, but we rely on the
     // generator to pass the correct standard rule names in add_build.
@@ -45,11 +43,10 @@ Result<void> DerivedWriter<TargetType::COB>::addRule([[maybe_unused]] std::strin
 }
 
 template <>
-Result<void>
-DerivedWriter<TargetType::COB>::addBuild(const std::vector<std::string> &outputs,
-                                         std::string_view rule,
-                                         const std::vector<std::string> &inputs,
-                                         [[maybe_unused]] const std::vector<std::string> &implicit_deps) {
+Result<void> DerivedWriter<TargetType::COB>::addBuild(const std::vector<std::string> &outputs,
+                                                      std::string_view rule,
+                                                      const std::vector<std::string> &inputs,
+                                                      [[maybe_unused]] const std::vector<std::string> &implicit_deps) {
     if (outputs.empty()) {
         return std::unexpected("COB writer requires at least one output.");
     }

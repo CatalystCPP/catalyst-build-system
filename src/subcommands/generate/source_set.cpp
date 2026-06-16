@@ -8,9 +8,9 @@
 #include <unordered_set>
 #include <vector>
 
-#include "catalyst/utils/result.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace fs = std::filesystem;
@@ -51,8 +51,7 @@ std::optional<std::unordered_set<std::string>> createIgnorePatterns(const fs::pa
     return ignore_patterns;
 }
 
-Result<std::unordered_set<fs::path>> buildSourceSet(const fs::path &dir,
-                                                                        const std::vector<std::string> &profiles) {
+Result<std::unordered_set<fs::path>> buildSourceSet(const fs::path &dir, const std::vector<std::string> &profiles) {
     using catalyst::LogLevel, catalyst::logger;
 
     logger.debug("Processing source directory: {}", dir.string());
@@ -107,7 +106,7 @@ Result<std::unordered_set<fs::path>> buildSourceSet(const fs::path &dir,
 
 namespace catalyst::generate {
 Result<std::unordered_set<fs::path>> buildSourceSet(const std::vector<std::string> &source_dirs,
-                                                                        const std::vector<std::string> &profiles) {
+                                                    const std::vector<std::string> &profiles) {
     catalyst::logger.debug("Building source set.");
     namespace sv = std::views;
     auto paths = source_dirs | sv::transform([](const std::string &str) { return fs::path{str}; }) |

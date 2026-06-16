@@ -10,11 +10,11 @@
 #include <unordered_set>
 #include <vector>
 
-#include "catalyst/utils/result.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/subcommands/tidy.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 
 namespace catalyst::tidy {
 Result<void> action(const Parse &parse_args) {

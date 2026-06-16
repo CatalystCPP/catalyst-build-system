@@ -1,4 +1,3 @@
-#include "catalyst/utils/result.hpp"
 #include "catalyst/dispatch.hpp"
 
 #include <algorithm>
@@ -14,6 +13,7 @@
 #include "catalyst/subcommands/profile_ls.hpp"
 #include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/os/os_defs.hpp"
+#include "catalyst/utils/result.hpp"
 
 namespace {
 std::string concatArgv(int argc, char **argv) {

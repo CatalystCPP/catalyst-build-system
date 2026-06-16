@@ -4,10 +4,10 @@
 #include <fstream>
 #include <string>
 
-#include "catalyst/utils/result.hpp"
 #include "catalyst/subcommands/init.hpp"
 #include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/os/os_defs.hpp"
+#include "catalyst/utils/result.hpp"
 
 namespace catalyst::init {
 

@@ -1,9 +1,9 @@
 #include <expected>
 #include <string>
 
-#include "catalyst/utils/result.hpp"
 #include "catalyst/subcommands/doc.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 
 namespace catalyst::doc {
 

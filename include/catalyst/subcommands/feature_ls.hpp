@@ -1,11 +1,12 @@
 #pragma once
 
 #include <expected>
-#include "catalyst/utils/result.hpp"
 #include <memory>
 #include <string>
 
 #include <CLI11.hpp>
+
+#include "catalyst/utils/result.hpp"
 
 namespace catalyst::feature_ls {
 struct Parse {

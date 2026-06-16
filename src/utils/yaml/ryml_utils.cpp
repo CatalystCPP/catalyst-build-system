@@ -1,4 +1,3 @@
-#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
 #include <algorithm>
@@ -10,6 +9,8 @@
 #include <sstream>
 
 #include <c4/charconv.hpp>
+
+#include "catalyst/utils/result.hpp"
 
 namespace catalyst::utils::yaml {
 

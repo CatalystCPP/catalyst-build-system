@@ -6,10 +6,10 @@
 #include <unordered_map>
 #include <vector>
 
-#include "catalyst/utils/result.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::generate {
@@ -33,11 +33,12 @@ findConan(const std::string &build_dir, ryml::ConstNodeRef dep, const catalyst::
     }
     env["PKG_CONFIG_PATH"] = conan_dir.string();
 
-    auto res_cflags = processExecStdout({"pkg-config", "--cflags", dep_name}, std::nullopt, env);
-    auto res_L = processExecStdout({"pkg-config", "--libs-only-L", dep_name}, std::nullopt, env);
-    auto res_l = processExecStdout({"pkg-config", "--libs-only-l", "--libs-only-other", dep_name}, std::nullopt, env);
+    auto cflags_res = processExecStdout({"pkg-config", "--cflags", dep_name}, std::nullopt, env);
+    auto link_dirs_res = processExecStdout({"pkg-config", "--libs-only-L", dep_name}, std::nullopt, env);
+    auto link_libs_res =
+        processExecStdout({"pkg-config", "--libs-only-l", "--libs-only-other", dep_name}, std::nullopt, env);
 
-    if (!(res_cflags && res_L && res_l)) {
+    if (!(cflags_res && link_dirs_res && link_libs_res)) {
         return std::unexpected(std::format("pkg-config failed to resolve Conan package '{}'.", dep_name));
     }
 
@@ -50,16 +51,16 @@ findConan(const std::string &build_dir, ryml::ConstNodeRef dep, const catalyst::
         }
     };
 
-    append_tokens(*res_cflags, [&](const std::string &token) {
-        if (token.rfind("-I", 0) == 0) {
+    append_tokens(*cflags_res, [&](const std::string &token) {
+        if (token.starts_with("-I")) {
             result.inc_path +=
                 " " + catalyst::toolchain::expand_template(tc.flags.include_dir, {{"path", token.substr(2)}});
         } else {
             result.inc_path += " " + token;
         }
     });
-    append_tokens(*res_L, [&](const std::string &token) {
-        if (token.rfind("-L", 0) == 0) {
+    append_tokens(*link_dirs_res, [&](const std::string &token) {
+        if (token.starts_with("-L")) {
             std::string path = token.substr(2);
             result.lib_path += " " + catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", path}});
             result.lib_dirs.push_back(path);
@@ -67,8 +68,8 @@ findConan(const std::string &build_dir, ryml::ConstNodeRef dep, const catalyst::
             result.lib_path += " " + token;
         }
     });
-    append_tokens(*res_l, [&](const std::string &token) {
-        if (token.rfind("-l", 0) == 0) {
+    append_tokens(*link_libs_res, [&](const std::string &token) {
+        if (token.starts_with("-l")) {
             result.libs += " " + catalyst::toolchain::expand_template(tc.flags.lib, {{"name", token.substr(2)}});
         } else {
             result.libs += " " + token;

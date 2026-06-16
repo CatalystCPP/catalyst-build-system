@@ -8,13 +8,27 @@ static std::string escapeJsonString(const std::string &input) {
     out.reserve(input.size());
     for (char c : input) {
         switch (c) {
-            case '"':  out += "\\\""; break;
-            case '\\': out += "\\\\"; break;
-            case '\b': out += "\\b"; break;
-            case '\f': out += "\\f"; break;
-            case '\n': out += "\\n"; break;
-            case '\r': out += "\\r"; break;
-            case '\t': out += "\\t"; break;
+            case '"':
+                out += "\\\"";
+                break;
+            case '\\':
+                out += "\\\\";
+                break;
+            case '\b':
+                out += "\\b";
+                break;
+            case '\f':
+                out += "\\f";
+                break;
+            case '\n':
+                out += "\\n";
+                break;
+            case '\r':
+                out += "\\r";
+                break;
+            case '\t':
+                out += "\\t";
+                break;
             default:
                 if (static_cast<unsigned char>(c) < 0x20) {
                     out += std::format("\\u{:04x}", static_cast<int>(c));
@@ -87,11 +101,14 @@ LogT::LogT()
     log_file << generateJsonLogEvent(now, LogLevel::DEBUG, "begin session") << "\n";
 #else
 #if FF_catalyst__log_machine_info
-    log_file << std::format(R"({{"event":"begin_session","timestamp":"{:%Y-%m-%d %H:%M:%S}","hostname":"{}","pid":{}}})",
-                            now, this->hostname, this->pid) << "\n";
+    log_file << std::format(
+                    R"({{"event":"begin_session","timestamp":"{:%Y-%m-%d %H:%M:%S}","hostname":"{}","pid":{}}})",
+                    now,
+                    this->hostname,
+                    this->pid)
+             << "\n";
 #else
-    log_file << std::format(R"({{"event":"begin_session","timestamp":"{:%Y-%m-%d %H:%M:%S}"}})",
-                            now) << "\n";
+    log_file << std::format(R"({{"event":"begin_session","timestamp":"{:%Y-%m-%d %H:%M:%S}"}})", now) << "\n";
 #endif
 #endif
 }
@@ -104,10 +121,12 @@ LogT::~LogT() {
     // Destructor assumes single thread or end of life
 #if FF_catalyst__log_machine_info
     log_file << std::format(R"({{"event":"end_session","timestamp":"{:%Y-%m-%d %H:%M:%S}","hostname":"{}","pid":{}}})",
-                            now, this->hostname, this->pid) << "\n";
+                            now,
+                            this->hostname,
+                            this->pid)
+             << "\n";
 #else
-    log_file << std::format(R"({{"event":"end_session","timestamp":"{:%Y-%m-%d %H:%M:%S}"}})",
-                            now) << "\n";
+    log_file << std::format(R"({{"event":"end_session","timestamp":"{:%Y-%m-%d %H:%M:%S}"}})", now) << "\n";
 #endif
     if (log_file.is_open()) {
         log_file.close();
@@ -170,10 +189,16 @@ std::string LogT::generateJsonLogEvent(const std::chrono::system_clock::time_poi
                                        const std::string &message) const {
 #if FF_catalyst__log_machine_info
     return std::format(R"({{"timestamp":"{:%Y-%m-%d %H:%M:%S}","level":"{}","message":"{}","hostname":"{}","pid":{}}})",
-                       now, toString(level), escapeJsonString(message), this->hostname, this->pid);
+                       now,
+                       toString(level),
+                       escapeJsonString(message),
+                       this->hostname,
+                       this->pid);
 #else
     return std::format(R"({{"timestamp":"{:%Y-%m-%d %H:%M:%S}","level":"{}","message":"{}"}})",
-                       now, toString(level), escapeJsonString(message));
+                       now,
+                       toString(level),
+                       escapeJsonString(message));
 #endif
 }
 

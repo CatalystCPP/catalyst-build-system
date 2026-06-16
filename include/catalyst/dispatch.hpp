@@ -6,7 +6,6 @@
 
 #include <CLI11.hpp>
 
-#include "catalyst/utils/result.hpp"
 #include "catalyst/globals.hpp"
 #include "catalyst/subcommands/add.hpp"
 #include "catalyst/subcommands/bench.hpp"
@@ -27,6 +26,7 @@
 #include "catalyst/subcommands/run.hpp"
 #include "catalyst/subcommands/test.hpp"
 #include "catalyst/subcommands/tidy.hpp"
+#include "catalyst/utils/result.hpp"
 #include "catalyst/workspace.hpp"
 
 namespace catalyst {

@@ -3,8 +3,8 @@
 #include <string>
 #include <string_view>
 
-#include "catalyst/utils/result.hpp"
 #include "catalyst/subcommands/generate.hpp"
+#include "catalyst/utils/result.hpp"
 
 namespace {
 std::string escape(std::string_view str) {
@@ -37,9 +37,7 @@ std::string escape(std::string_view str) {
 } // namespace
 
 namespace catalyst::generate::buildwriters {
-template <>
-Result<void> DerivedWriter<TargetType::Ninja>::addVariable(std::string_view name,
-                                                                               std::string_view value) {
+template <> Result<void> DerivedWriter<TargetType::Ninja>::addVariable(std::string_view name, std::string_view value) {
     static auto escape_quotes = [](std::string_view str) -> std::string {
         std::string result;
         constexpr double ESCAPE_TUNING_FACTOR = 1.25;
@@ -63,10 +61,10 @@ Result<void> DerivedWriter<TargetType::Ninja>::addVariable(std::string_view name
 
 template <>
 Result<void> DerivedWriter<TargetType::Ninja>::addRule(std::string_view name,
-                                                                           std::string_view command,
-                                                                           std::string_view description,
-                                                                           std::string_view depfile,
-                                                                           std::string_view deps) {
+                                                       std::string_view command,
+                                                       std::string_view description,
+                                                       std::string_view depfile,
+                                                       std::string_view deps) {
     std::println(stream, "rule {}\n  command = {} ", name, command);
     if (!description.empty()) {
         std::println(stream, "  description = {}", description);
@@ -82,11 +80,10 @@ Result<void> DerivedWriter<TargetType::Ninja>::addRule(std::string_view name,
 }
 
 template <>
-Result<void>
-DerivedWriter<TargetType::Ninja>::addBuild(const std::vector<std::string> &outputs,
-                                           std::string_view rule,
-                                           const std::vector<std::string> &inputs,
-                                           const std::vector<std::string> &implicit_deps) {
+Result<void> DerivedWriter<TargetType::Ninja>::addBuild(const std::vector<std::string> &outputs,
+                                                        std::string_view rule,
+                                                        const std::vector<std::string> &inputs,
+                                                        const std::vector<std::string> &implicit_deps) {
     std::print(stream, "build");
     for (const auto &out : outputs)
         std::print(stream, " {}", escape(out));
