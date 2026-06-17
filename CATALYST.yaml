@@ -10,9 +10,6 @@ common:
     provides: catalyst
     toolchain: tc_catalyst.yaml
     tooling:
-      CCFLAGS: --std=c++23 -Wall -Wextra -Wpedantic
-      CXXFLAGS: --std=c++23 -Wall -Wextra -Wpedantic
-      LDFLAGS: -static
       FMT: clang-format
       doc:
         engine: doxygen
@@ -52,7 +49,6 @@ common:
 ccache:
   manifest:
     tooling:
-      LDFLAGS: -fuse-ld=mold # put it here since this is the "fast build" profile
       CC_LAUNCHER: ccache
       CXX_LAUNCHER: ccache
 test:
@@ -75,43 +71,10 @@ test:
       version: latest
 debug:
   manifest:
-    tooling:
-      CCFLAGS: -std=c23 -O0 -ggdb -Wall -Wextra -Wpedantic -Wshadow -DDEBUG
-      CXXFLAGS: -std=c++23 -O0 -ggdb -Wall -Wextra -Wpedantic -Wshadow -DDEBUG
-      LDFLAGS: -fuse-ld=mold -flto=thin -Wl,--as-needed -Wl,--no-undefined -Wl,--hash-style=gnu -Wl,--build-id=fast
+    # Debug compiler/linker flags now live in a dedicated toolchain file.
+    toolchain: tc_catalyst_debug.yaml
 release:
-  manifest:
-    tooling:
-      CCFLAGS: null
-      CXXFLAGS: null
-      LDFLAGS: null
   hooks:
     post-build:
       - catalyst: pack -q -p common release -a
       - script: "scripts/generate_cli_docs.sh"
-
-linux_x86_64:
-  manifest:
-    tooling:
-      CC: x86_64-linux-gnu-gcc
-      CXX: x86_64-linux-gnu-g++
-linux_aarch64:
-  manifest:
-    tooling:
-      CC: aarch64-linux-gnu-gcc
-      CXX: aarch64-linux-gnu-g++
-windows_x86_64:
-  manifest:
-    tooling:
-      CC: x86_64-w64-mingw32-gcc
-      CXX: x86_64-w64-mingw32-g++
-macos_x86_64:
-  manifest:
-    tooling:
-      CC: x86_64-apple-darwin-clang
-      CXX: x86_64-apple-darwin-clang++
-macos_arm64:
-  manifest:
-    tooling:
-      CC: aarch64-apple-darwin-clang
-      CXX: aarch64-apple-darwin-clang++

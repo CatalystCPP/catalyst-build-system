@@ -1,4 +1,5 @@
 #include <filesystem>
+#include <format>
 #include <fstream>
 
 #include <catch2/catch_session.hpp>
@@ -190,18 +191,31 @@ TEST_CASE("fetchConanDeps generates conanfile.txt and executes conan install", "
 
     fs::path temp_root = fs::temp_directory_path() / "catalyst_test_conan_fetch_root";
     fs::create_directories(temp_root);
+    fs::path tc_path = temp_root / "tc_test.yaml";
     {
         std::ofstream out(temp_root / "CATALYST.yaml");
-        out << R"(
+        // Absolute toolchain path so parse_toolchain resolves it regardless of CWD.
+        out << std::format(R"(
 common:
   manifest:
     name: "test_conan"
+    toolchain: "{}"
     dirs:
       source: ["src"]
       include: []
       build: "build"
-    tooling:
-      CXX: "mock_clang++"
+)",
+                           tc_path.string());
+    }
+    {
+        // Conan compiler detection reads the toolchain's C++ compiler executable.
+        std::ofstream out(tc_path);
+        out << R"(
+toolchain:
+  name: "test"
+  compiler:
+    cxx:
+      executable: "mock_clang++"
 )";
     }
 

@@ -49,12 +49,10 @@ Defines the metadata and command templates Catalyst will use during generation.
 | `linker` | Object | - | Executable and shared library linker executable, base flags, and templates. |
 | `archiver` | Object | - | Static library archive template. |
 
-> **Note**: `compiler.c.flags`, `compiler.cxx.flags`, and `linker.flags` define the base
-> compiler/linker flags for the target. These are the recommended home for build flags.
-> Any flags set via [`manifest.tooling`](configuration.md#manifesttooling) (`CCFLAGS`,
-> `CXXFLAGS`, `LDFLAGS`) are appended on top of the toolchain's base flags and win on
-> conflicts. `manifest.tooling` is slated for deprecation in favour of toolchain-defined
-> flags.
+> **Note**: `compiler.c.flags`, `compiler.cxx.flags`, and `linker.flags` define the
+> compiler/linker flags for the target — this is the only home for build flags. The
+> `manifest.tooling` flag overrides (`CCFLAGS`/`CXXFLAGS`/`LDFLAGS`) were removed in 1.7.0;
+> set `compiler.c.flags`, `compiler.cxx.flags`, and `linker.flags` here instead.
 
 ### `toolchain.extensions`
 

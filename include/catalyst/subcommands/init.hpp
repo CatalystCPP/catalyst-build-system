@@ -20,13 +20,6 @@ struct Parse {
     std::string description{"Your description goes here."};
     std::string provides;
     struct {
-        std::string cc;
-        std::string cxx;
-        std::string ccflags;
-        std::string cxxflags;
-        std::string ldflags;
-    } tooling;
-    struct {
         std::vector<std::string> include{{"include"}};
         std::vector<std::string> source{{"src"}};
         std::string build{"build"};

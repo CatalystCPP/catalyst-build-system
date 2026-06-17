@@ -23,7 +23,6 @@ auto catalyst::ide_sync::action(const Parse &parse_args) -> Result<void> {
         .name = *name,
         .path = root_dir,
         .provides = "",
-        .tooling = {},
         .dirs =
             {
                 .include = config.getStringVector("manifest.dirs.include").value_or(std::vector<std::string>{}),

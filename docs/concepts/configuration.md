@@ -44,7 +44,7 @@ Defines the project's identity, build settings, and directory structure.
 | `license_file` | String | "" | Path to the license file. Used by the `pack` subcommand. |
 | `readme_file` | String | "" | Path to the readme file. Used by the `pack` subcommand. |
 | `provides` | String | - | Output artifact name pattern (e.g., `*.so`). |
-| `tooling` | Object | - | Compiler executable and flag overrides. |
+| `tooling` | Object | - | Formatter/linter, compiler launchers, and doc settings. |
 | `toolchain` | Path | - | Toolchain overrides. |
 | `dirs` | Object | - | Source and build directory configuration. |
 
@@ -54,23 +54,22 @@ Defines the project's identity, build settings, and directory structure.
 
 | Field | Description | Default |
 |---|---|---|
-| `CC` | C Compiler | toolchain's C compiler (`cc`) |
-| `CXX` | C++ Compiler | toolchain's C++ compiler (`c++`) |
-| `CC_LAUNCHER` | C Compiler Launcher (e.g., ccache) | "" |
-| `CXX_LAUNCHER`| C++ Compiler Launcher (e.g., ccache) | "" |
-| `CCFLAGS` | C Compiler Flags | "" |
-| `CXXFLAGS` | C++ Compiler Flags | "" |
-| `LDFLAGS` | Linker Flags | "" |
+| `FMT` | Formatter invoked by `catalyst fmt`. | `clang-format` |
+| `LINTER` | Linter invoked by `catalyst tidy`. | `clang-tidy` |
+| `CC_LAUNCHER` | C compiler launcher (e.g., ccache), prepended to the toolchain's C compiler. | "" |
+| `CXX_LAUNCHER`| C++ compiler launcher (e.g., ccache), prepended to the toolchain's C++ compiler. | "" |
 
-> **Note**: `CC` and `CXX` override the compiler executables defined by the active
-> [toolchain](toolchains.md). When omitted, the toolchain's compilers are used (the
-> default `gcc` toolchain resolves to `cc`/`c++`).
+> **Note**: `FMT` and `LINTER` name the executables used by the `fmt` and `tidy`
+> subcommands; they do not affect builds. The launchers prepend to the toolchain's
+> compiler executables (e.g. `ccache clang++`). `manifest.tooling.doc` (`engine`,
+> `config`, `out_dir`) configures the `doc` subcommand.
 
-> **Deprecation**: `manifest.tooling` is slated for removal in 1.7.0. Prefer defining
-> compiler and linker settings in a [toolchain](toolchains.md) file. `CCFLAGS`,
-> `CXXFLAGS`, and `LDFLAGS` map to `compiler.c.flags`, `compiler.cxx.flags`, and
-> `linker.flags` respectively; when both are set, `manifest.tooling` flags are
-> appended on top of the toolchain's base flags.
+> **Removed in 1.7.0**: `CC`, `CXX`, `CCFLAGS`, `CXXFLAGS`, and `LDFLAGS` were removed
+> from `manifest.tooling`. Define compilers, compiler flags, and linker flags in a
+> [toolchain](toolchains.md) file instead: `CC`/`CXX` map to
+> `compiler.c.executable`/`compiler.cxx.executable`, `CCFLAGS`/`CXXFLAGS` map to
+> `compiler.c.flags`/`compiler.cxx.flags`, and `LDFLAGS` maps to `linker.flags`.
+> Setting any of these keys is now an error.
 
 ### `manifest.dirs`
 

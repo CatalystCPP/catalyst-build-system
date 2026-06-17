@@ -72,13 +72,10 @@
             "tooling": {
               "type": "object",
               "properties": {
-                "CC": { "type": "string" },
-                "CXX": { "type": "string" },
+                "FMT": { "type": "string" },
+                "LINTER": { "type": "string" },
                 "CC_LAUNCHER": { "type": "string" },
-                "CXX_LAUNCHER": { "type": "string" },
-                "CCFLAGS": { "type": "string" },
-                "CXXFLAGS": { "type": "string" },
-                "LDFLAGS": { "type": "string" }
+                "CXX_LAUNCHER": { "type": "string" }
               }
             },
             "dirs": {

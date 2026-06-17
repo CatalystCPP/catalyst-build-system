@@ -18,6 +18,7 @@
 #include "catalyst/subcommands/fetch.hpp"
 #include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/result.hpp"
+#include "catalyst/utils/toolchain.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::fetch {
@@ -103,10 +104,16 @@ Result<void> fetchConanDeps(const std::vector<ryml::ConstNodeRef> &conan_deps,
     conan_cmd.push_back("-s");
     conan_cmd.push_back("build_type=" + build_type);
 
-    // 2. Determine compiler
-    auto cxx_opt = config.getString("manifest.tooling.CXX");
-    if (cxx_opt && !cxx_opt->empty()) {
-        std::string cxx = *cxx_opt;
+    // 2. Determine compiler from the active toolchain's C++ compiler.
+    catalyst::toolchain::ToolchainDef tc;
+    if (auto tc_path = config.getString("manifest.toolchain")) {
+        auto parsed = catalyst::toolchain::parse_toolchain(*tc_path);
+        if (!parsed) {
+            return std::unexpected(std::format("Failed to load toolchain {}: {}", *tc_path, parsed.error()));
+        }
+        tc = std::move(*parsed);
+    }
+    if (const std::string &cxx = tc.compiler.cxx.executable; !cxx.empty()) {
         std::string compiler = "";
         if (cxx.find("clang++") != std::string::npos || cxx.find("clang") != std::string::npos) {
             compiler = "clang";

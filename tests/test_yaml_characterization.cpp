@@ -55,8 +55,8 @@ constexpr const char *kCompositionYaml = R"(common:
     version: 1.2.3
     provides: charproj
     tooling:
-      CXX: g++
-      CXXFLAGS: -O2
+      FMT: g++
+      CC_LAUNCHER: distcc
     dirs:
       include: [include]
       source: [src]
@@ -80,7 +80,7 @@ debug:
     min_ver: 0.5.0
   manifest:
     tooling:
-      CXXFLAGS: -O0 -g
+      CC_LAUNCHER: ccache
     dirs:
       source: [tests]
       build: build/debug
@@ -126,8 +126,6 @@ TEST_CASE("Profile composition: defaults applied under a minimal profile", "[yam
     CHECK(config.getString("manifest.type") == "BINARY");
     CHECK(config.getString("manifest.version") == "0.0.1");
     CHECK(config.getString("manifest.provides") == "");
-    CHECK(config.getString("manifest.tooling.CC") == "clang");
-    CHECK(config.getString("manifest.tooling.CXX") == "clang++");
     CHECK(config.getString("manifest.tooling.FMT") == "clang-format");
     CHECK(config.getString("manifest.tooling.LINTER") == "clang-tidy");
     CHECK(config.getString("manifest.tooling.doc.engine") == "doxygen");
@@ -146,10 +144,10 @@ TEST_CASE("Profile composition: scalar override, sequence append, dependency app
     Configuration config({"common", "debug"}, dir.path);
 
     // Later profile overrides scalars
-    CHECK(config.getString("manifest.tooling.CXXFLAGS") == "-O0 -g");
+    CHECK(config.getString("manifest.tooling.CC_LAUNCHER") == "ccache");
     CHECK(config.getString("manifest.dirs.build") == "build/debug");
     // Untouched scalars survive
-    CHECK(config.getString("manifest.tooling.CXX") == "g++");
+    CHECK(config.getString("manifest.tooling.FMT") == "g++");
     CHECK(config.getString("manifest.name") == "charproj");
 
     // Sequences append across profiles (defaults start empty)
@@ -281,7 +279,7 @@ TEST_CASE("Configuration getters: type mismatches yield nullopt", "[yaml][charac
     CHECK(config.getString("manifest.no_such_key") == std::nullopt);
     CHECK(config.getString("no.such.path") == std::nullopt);
     CHECK_FALSE(config.has("manifest.no_such_key"));
-    CHECK(config.has("manifest.tooling.CXX"));
+    CHECK(config.has("manifest.tooling.FMT"));
 }
 
 TEST_CASE("Configuration::getBuildDir multiplexes the profile list", "[yaml][characterization]") {
@@ -301,7 +299,7 @@ TEST_CASE("Configuration::getBuildDir multiplexes the profile list", "[yaml][cha
 TEST_CASE("ProfileFile: combined load aliases the profile node into the document", "[yaml][characterization]") {
     TempDir dir{"catalyst_char_wb_combined"};
     writeFile(dir.path / "CATALYST.yaml",
-              "common:\n  manifest:\n    name: writeback\ndebug:\n  manifest:\n    tooling:\n      CXXFLAGS: -g\n");
+              "common:\n  manifest:\n    name: writeback\ndebug:\n  manifest:\n    tooling:\n      CC_LAUNCHER: ccache\n");
 
     auto loaded = loadProfileFile("debug", dir.path);
     REQUIRE(loaded.has_value());
@@ -316,7 +314,7 @@ TEST_CASE("ProfileFile: combined load aliases the profile node into the document
     // Reload with yaml-cpp: the written file must stay valid for other parsers
     YAML::Node reloaded = YAML::LoadFile((dir.path / "CATALYST.yaml").string());
     CHECK(reloaded["debug"]["manifest"]["version"].as<std::string>() == "9.9.9");
-    CHECK(reloaded["debug"]["manifest"]["tooling"]["CXXFLAGS"].as<std::string>() == "-g");
+    CHECK(reloaded["debug"]["manifest"]["tooling"]["CC_LAUNCHER"].as<std::string>() == "ccache");
     // Sibling profiles survive the round trip
     CHECK(reloaded["common"]["manifest"]["name"].as<std::string>() == "writeback");
 }
