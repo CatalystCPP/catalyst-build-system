@@ -43,6 +43,7 @@ Defines the metadata and command templates Catalyst will use during generation.
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `name` | String | `gcc` | Toolchain identifier. |
+| `extends` | String | - | Optional path to a base toolchain file to inherit settings from. |
 | `extensions` | Object | - | Output file extensions and library prefixes. |
 | `flags` | Object | - | Templates for include paths, library paths, library names, and preprocessor defines. |
 | `compiler` | Object | - | C and C++ compiler executables, base flags, and command templates. |
@@ -164,3 +165,47 @@ toolchain:
 Fields omitted from a toolchain file retain their built-in defaults, so custom
 toolchains only need to override the pieces that differ from the default
 `gcc` behavior.
+
+---
+
+## Toolchain Inheritance (`extends`)
+
+To avoid duplicating toolchain configuration across different variants
+(like debug and release, or different sanitizers), a toolchain file can declare a
+base it inherits from using the `extends` key under `toolchain`.
+
+```yaml
+toolchain:
+  extends: tc_base.yaml
+  name: "catalyst debug"
+  compiler:
+    cxx:
+      flags: "-std=c++23 -O0 -ggdb -DDEBUG"
+```
+
+### Precedence & Merging
+
+A toolchain configuration is resolved by folding from the base of the inheritance chain toward the leaf:
+
+1. Start from the built-in default `gcc`-style defaults.
+2. If `extends` is specified, resolve the base toolchain recursively first.
+3. Apply the current file's own keys on top, overriding per leaf scalar.
+
+Precedence order (lowest to highest):
+
+Every unspecified key inherits from its parent base toolchain.
+
+For flags (e.g. `compiler.c.flags`, `compiler.cxx.flags`, `linker.flags`), the flag strings
+are replaced wholesale, not appended.
+
+### Path Resolution
+
+The `extends` path is resolved relative to the directory of the file that declares it, not the current
+working directory. This allows a set of toolchain files to remain relative to each other even if
+the build runs from a different directory. Absolute paths are used verbatim.
+
+### Validation
+
+- Cycle Detection: If a cycle is detected (e.g. `a.yaml` extends `b.yaml` which extends `a.yaml`, or a file extends itself), it is reported as an error.
+- Missing Base: If the base file cannot be opened, it fails with an error indicating both the target file path and the referring file path.
+- Depth Limit: There is a hard cap limit of 32 parent toolchain files in the inheritance chain to prevent pathological chains.

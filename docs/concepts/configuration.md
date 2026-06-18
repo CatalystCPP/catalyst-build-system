@@ -69,7 +69,8 @@ Defines the project's identity, build settings, and directory structure.
 > [toolchain](toolchains.md) file instead: `CC`/`CXX` map to
 > `compiler.c.executable`/`compiler.cxx.executable`, `CCFLAGS`/`CXXFLAGS` map to
 > `compiler.c.flags`/`compiler.cxx.flags`, and `LDFLAGS` maps to `linker.flags`.
-> Setting any of these keys is now an error.
+> Setting any of these keys is now an error. To share flags or share a base toolchain
+> configuration across profiles, you can use [Toolchain Inheritance](toolchains.md#toolchain-inheritance).
 
 ### `manifest.dirs`
 
