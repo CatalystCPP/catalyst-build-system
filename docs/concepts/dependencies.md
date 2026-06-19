@@ -33,6 +33,8 @@ Uses `vcpkg` to satisfy the dependency.
 | `source` | Yes | Must be `vcpkg`. |
 | `version` | No | Package version (informative only; vcpkg classic mode resolves versions based on VCPKG_ROOT's registry). |
 | `triplet` | No | vcpkg triplet (e.g., `x64-linux`). |
+| `linkage` | No | `static` or `shared` (default `shared`). Controls which library artifacts are scanned. |
+| `transitive` | No | Automatically resolve and link the package's transitive vcpkg dependencies (default `true`). |
 | `using` | No | List of features to enable. |
 
 ```yaml
@@ -40,6 +42,27 @@ Uses `vcpkg` to satisfy the dependency.
   source: vcpkg
   version: 3.11.2
 ```
+
+#### Transitive dependencies
+
+vcpkg packages each dependency as its own port, so a single library can rely on
+several others installed alongside it (for example, `ryml` depends on `c4core`).
+By default Catalyst discovers and links these automatically by reading vcpkg's
+installed-package database (`$VCPKG_ROOT/installed/vcpkg/status`), so you only
+need to declare the packages you use directly:
+
+```yaml
+# c4core is linked automatically as a transitive dependency of ryml.
+- name: ryml
+  source: vcpkg
+  triplet: x64-linux
+```
+
+Build-time helper ports (such as `vcpkg-cmake`) are skipped because they ship no
+link or include artifacts, and packages are emitted in a valid static-link order
+(a package always precedes the packages it depends on). Set `transitive: false`
+on a dependency to opt out and link only that package — useful if you prefer to
+pin every transitive package explicitly.
 
 ### 3. `local`
 Builds a dependency found on the local filesystem.
