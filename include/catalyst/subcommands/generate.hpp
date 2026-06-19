@@ -1,9 +1,11 @@
 #pragma once
 #include <expected>
+#include <functional>
 #include <ostream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -40,6 +42,34 @@ findDep(const std::string &build_dir, ryml::ConstNodeRef dep, const catalyst::to
 Result<FindRes> findLocal(ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
 Result<FindRes> findSystem(ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
 Result<FindRes> findVcpkg(ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
+
+/// Parsed view of vcpkg's installed-package database
+/// ($VCPKG_ROOT/installed/vcpkg/status), which is in Debian-control format.
+struct VcpkgStatusDb {
+    /// Maps an installed package to its direct dependency names. The key is
+    /// "<name>\x1f<triplet>"; build it with vcpkgStatusKey(). Dependencies from
+    /// a package's base stanza and all its installed feature stanzas are unioned.
+    std::unordered_map<std::string, std::vector<std::string>> depends;
+};
+
+/// Key into VcpkgStatusDb::depends for a (package, triplet) pair.
+std::string vcpkgStatusKey(std::string_view name, std::string_view triplet);
+
+/// Parses the contents of a vcpkg `status` file. Only stanzas marked
+/// "install ok installed" are recorded; dependency tokens are normalized
+/// (feature/platform qualifiers like `pkg[feat]` or `pkg (windows)` stripped).
+VcpkgStatusDb parseVcpkgStatus(std::string_view status_content);
+
+/// Returns the transitive vcpkg dependencies of @p root_name (excluding
+/// @p root_name itself) for @p triplet, in a valid static-link order
+/// (a package always precedes the packages it depends on). @p is_real_port
+/// gates both emission and recursion, so build-time helper ports that produce
+/// no link/include artifacts are pruned. Diamonds and cycles are deduped.
+std::vector<std::string>
+vcpkgTransitiveClosure(const VcpkgStatusDb &db,
+                       const std::string &root_name,
+                       const std::string &triplet,
+                       const std::function<bool(const std::string &name, const std::string &triplet)> &is_real_port);
 Result<FindRes>
 findGit(const std::string &build_dir, ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
 Result<FindRes>
