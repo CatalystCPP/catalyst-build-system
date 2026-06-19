@@ -134,6 +134,7 @@ _catalyst_add() {
                 'local:add a local dependency'
                 'system:add a system dependency'
                 'vcpkg:add a vcpkg dependency'
+                'conan:add a conan dependency'
             )
             _describe -t commands 'add subcommand' add_subcommands
             ;;
@@ -151,27 +152,34 @@ _catalyst_add() {
                 local)
                     _arguments \
                         '(-h --help)'{-h,--help}'[Print this help message and exit]' \
+                        '(-n --name)'{-n,--name}'[name]:name:' \
                         '*'{-f,--features}'[features]:features:_catalyst_features' \
                         '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles' \
-                        '1:name:' \
-                        '2:path:_directories'
+                        '1:path:_directories'
                     ;;
                 system)
                     _arguments \
                         '(-h --help)'{-h,--help}'[Print this help message and exit]' \
+                        '(-n --name)'{-n,--name}'[name]:name:' \
                         '(-l --lib)'{-l,--lib}'[lib]:lib:' \
                         '(-i --inc)'{-i,--inc}'[inc]:inc:' \
-                        '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles' \
-                        '1:name:'
+                        '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles'
                     ;;
                 vcpkg)
                     _arguments \
                         '(-h --help)'{-h,--help}'[Print this help message and exit]' \
+                        '(-n --name)'{-n,--name}'[name]:name:' \
                         '(-t --triplet)'{-t,--triplet}'[triplet]:triplet:' \
                         '(-v --version)'{-v,--version}'[version]:version:' \
                         '*'{-f,--features}'[features]:features:_catalyst_features' \
-                        '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles' \
-                        '1:name:'
+                        '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles'
+                    ;;
+                conan)
+                    _arguments \
+                        '(-h --help)'{-h,--help}'[Print this help message and exit]' \
+                        '(-n --name)'{-n,--name}'[name]:name:' \
+                        '(-v --version)'{-v,--version}'[version]:version:' \
+                        '*'{-p,--profiles}'[profiles]:*:profiles:_catalyst_profiles'
                     ;;
             esac
             ;;
@@ -201,7 +209,8 @@ _catalyst_build() {
 _catalyst_clean() {
     _arguments \
         '(-h --help)'{-h,--help}'[Print this help message and exit]' \
-        '*'{-p,--profile}'[profile]:*:profile:_catalyst_profiles'
+        '*'{-p,--profile}'[profile]:*:profile:_catalyst_profiles' \
+        '(-i --intermediates)'{-i,--intermediates}'[Clean intermediate files only.]'
 }
 
 _catalyst_doc() {
@@ -217,6 +226,7 @@ _catalyst_download() {
         '(-h --help)'{-h,--help}'[Print this help message and exit]' \
         '*'{-p,--profiles}'[the profiles to compose in the build artifact]:*:profiles:_catalyst_profiles' \
         '*'{-f,--features}'[the features to enable in the build]:features:_catalyst_features' \
+        '(-b --backend)'{-b,--backend}'[Backend to use for generation (ninja, gmake, cob).]:backend:(ninja gmake cob)' \
         '(-t --target)'{-t,--target}'[the path to install to]:target:_directories' \
         '1:remote:' \
         '2:branch:'
@@ -270,11 +280,6 @@ _catalyst_init() {
         '(-v --version)'{-v,--version}'[the project version]:version:' \
         '(-d --description)'{-d,--description}'[a description for the project]:description:' \
         '--provides[Artifact provided by this project.]:provides:' \
-        '--cc[the c compiler to use]:c_compiler:_command_names -e' \
-        '--cxx[the cxx compiler to use]:cxx_compiler:_command_names -e' \
-        '--ccflags[c compiler flags]:c_compiler_flags:' \
-        '--cxxflags[cxx compiler flags]:cxx_compiler_flags:' \
-        '--ldflags[linker flags]:linker_flags:' \
         '*--include-dirs[include directories]:include_dirs:_directories' \
         '*--source-dirs[source directories]:source_dirs:_directories' \
         '--build-dir[build directory]:build_dir:_directories' \
@@ -304,7 +309,8 @@ _catalyst_pack() {
         '(-s --source)'{-s,--source}'[the source path to pack]:source:_directories' \
         '(-t --target)'{-t,--target}'[the output directory for the package]:target:_directories' \
         '*'{-G,--generators}'[CPack generators to use]:generators:(7Z APK DEB DMG EXTERNAL FREEBSD NSIS RPM STGZ TGZ TXZ WIX ZIP)' \
-        '(-a --all)'{-a,--all}'[Run all available CPack generators]'
+        '(-a --all)'{-a,--all}'[Run all available CPack generators]' \
+        '(-q --silent)'{-q,--silent}'[Suppress CPack output]'
 }
 
 _catalyst_profile_ls() {
@@ -324,6 +330,7 @@ _catalyst_test() {
     _arguments \
         '(-h --help)'{-h,--help}'[Print this help message and exit]' \
         '*'{-P,--params}'[Params to pass to the test executable.]:params:' \
+        '(-r --rebuild)'{-r,--rebuild}'[Rebuild before testing.]' \
         '*:test:'
 }
 
@@ -334,4 +341,151 @@ _catalyst_tidy() {
         '--fix[Automatically fix lint warnings]'
 }
 
-_catalyst "$@"
+_catalyst "$@"#compdef catalyst
+if ! type _init_completion &>/dev/null; then
+    autoload -U +X compinit && compinit
+    autoload -U +X bashcompinit && bashcompinit
+fi
+
+_catalyst() {
+    local cur prev words cword
+    if declare -F _init_completion >/dev/null 2>&1; then
+        _init_completion || return
+    else
+        COMPREPLY=()
+        _get_comp_words_by_ref -n =: cur prev words cword
+    fi
+
+    local cmd="catalyst"
+    local i=1
+    while [ $i -lt $cword ]; do
+        local word="${words[i]}"
+        case "${cmd}" in
+            "catalyst")
+                case "${word}" in
+                    add) cmd="catalyst_add" ;;
+                    build) cmd="catalyst_build" ;;
+                    clean) cmd="catalyst_clean" ;;
+                    download) cmd="catalyst_download" ;;
+                    fetch) cmd="catalyst_fetch" ;;
+                    fmt) cmd="catalyst_fmt" ;;
+                    generate) cmd="catalyst_generate" ;;
+                    ide-sync) cmd="catalyst_ide_sync" ;;
+                    init) cmd="catalyst_init" ;;
+                    install) cmd="catalyst_install" ;;
+                    lock) cmd="catalyst_lock" ;;
+                    run) cmd="catalyst_run" ;;
+                    test) cmd="catalyst_test" ;;
+                    bench) cmd="catalyst_bench" ;;
+                    tidy) cmd="catalyst_tidy" ;;
+                    pack) cmd="catalyst_pack" ;;
+                    doc) cmd="catalyst_doc" ;;
+                    profile-ls) cmd="catalyst_profile_ls" ;;
+                    feature-ls) cmd="catalyst_feature_ls" ;;
+                    completion) cmd="catalyst_completion" ;;
+                esac
+                ;;
+            "catalyst_add")
+                case "${word}" in
+                    git) cmd="catalyst_add_git" ;;
+                    system) cmd="catalyst_add_system" ;;
+                    local) cmd="catalyst_add_local" ;;
+                    vcpkg) cmd="catalyst_add_vcpkg" ;;
+                    conan) cmd="catalyst_add_conan" ;;
+                esac
+                ;;
+        esac
+        i=$((i+1))
+    done
+
+    case "${cmd}" in
+        "catalyst")
+            if [[ "$cur" == -* ]]; then
+                COMPREPLY=( $(compgen -W "--help -h --version -v --verbose -V" -- "$cur") )
+            else
+                COMPREPLY=( $(compgen -W "add build clean download fetch fmt generate ide-sync init install lock run test bench tidy pack doc profile-ls feature-ls completion help" -- "$cur") )
+            fi
+            ;;
+        "catalyst_add")
+            if [[ "$cur" == -* ]]; then
+                COMPREPLY=( $(compgen -W "--help -h" -- "$cur") )
+            else
+                COMPREPLY=( $(compgen -W "git system local vcpkg conan" -- "$cur") )
+            fi
+            ;;
+        "catalyst_add_git")
+            COMPREPLY=( $(compgen -W "--help -h --name -n --version -v --features -f --profiles -p" -- "$cur") )
+            ;;
+        "catalyst_add_system")
+            COMPREPLY=( $(compgen -W "--help -h --name -n --lib -l --inc -i --profiles -p" -- "$cur") )
+            ;;
+        "catalyst_add_local")
+            COMPREPLY=( $(compgen -W "--help -h --name -n --profiles -p --features -f" -- "$cur") )
+            ;;
+        "catalyst_add_vcpkg")
+            COMPREPLY=( $(compgen -W "--help -h --name -n --triplet -t --version -v --profiles -p --features -f" -- "$cur") )
+            ;;
+        "catalyst_add_conan")
+            COMPREPLY=( $(compgen -W "--help -h --name -n --version -v --profiles -p" -- "$cur") )
+            ;;
+        "catalyst_build")
+            COMPREPLY=( $(compgen -W "--help -h --regen -r --force-rebuild -b --force-refetch --workspace --all --watch -w --package -P --profiles -p --features -f --backend" -- "$cur") )
+            ;;
+        "catalyst_clean")
+            COMPREPLY=( $(compgen -W "--help -h --profile -p --intermediates -i" -- "$cur") )
+            ;;
+        "catalyst_download")
+            COMPREPLY=( $(compgen -W "--help -h --profiles -p --features -f --backend -b --target -t" -- "$cur") )
+            ;;
+        "catalyst_fetch")
+            COMPREPLY=( $(compgen -W "--help -h --profiles -p" -- "$cur") )
+            ;;
+        "catalyst_fmt")
+            COMPREPLY=( $(compgen -W "--help -h" -- "$cur") )
+            ;;
+        "catalyst_generate")
+            COMPREPLY=( $(compgen -W "--help -h --profiles -p --features -f --backend -b" -- "$cur") )
+            ;;
+        "catalyst_ide_sync")
+            COMPREPLY=( $(compgen -W "--help -h --profiles -p --ides --force-ide -f" -- "$cur") )
+            ;;
+        "catalyst_init")
+            COMPREPLY=( $(compgen -W "--help -h --name -n --path --type -t --version -v --description -d --provides --include-dirs --source-dirs --build-dir --ides --profile -p --force-ide -f" -- "$cur") )
+            ;;
+        "catalyst_install")
+            COMPREPLY=( $(compgen -W "--help -h --profiles -p --source -s --target -t" -- "$cur") )
+            ;;
+        "catalyst_lock")
+            COMPREPLY=( $(compgen -W "--help -h --profiles -p" -- "$cur") )
+            ;;
+        "catalyst_run")
+            COMPREPLY=( $(compgen -W "--help -h --profile -p --params -P" -- "$cur") )
+            ;;
+        "catalyst_test")
+            COMPREPLY=( $(compgen -W "--help -h --params -P --rebuild -r" -- "$cur") )
+            ;;
+        "catalyst_bench")
+            COMPREPLY=( $(compgen -W "--help -h --params -P" -- "$cur") )
+            ;;
+        "catalyst_tidy")
+            COMPREPLY=( $(compgen -W "--help -h --profiles -p --fix" -- "$cur") )
+            ;;
+        "catalyst_pack")
+            COMPREPLY=( $(compgen -W "--help -h --profiles -p --source -s --target -t --generators -G --all -a --silent -q" -- "$cur") )
+            ;;
+        "catalyst_doc")
+            COMPREPLY=( $(compgen -W "--help -h --engine -e --open --clean" -- "$cur") )
+            ;;
+        "catalyst_profile_ls")
+            COMPREPLY=( $(compgen -W "--help -h" -- "$cur") )
+            ;;
+        "catalyst_feature_ls")
+            COMPREPLY=( $(compgen -W "--help -h --inverse" -- "$cur") )
+            ;;
+        "catalyst_completion")
+            COMPREPLY=( $(compgen -W "--help -h" -- "$cur") )
+            ;;
+    esac
+}
+
+complete -F _catalyst catalyst

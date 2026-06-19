@@ -64,7 +64,7 @@ _catalyst() {
 
     case "$subcommand" in
         add)
-            local add_subcommands="git local system vcpkg"
+            local add_subcommands="git local system vcpkg conan"
             if [[ $cword -eq 2 ]]; then
                 COMPREPLY=($(compgen -W "$add_subcommands -h --help" -- "$cur"))
                 return
@@ -78,17 +78,22 @@ _catalyst() {
                     ;;
                 local)
                     if [[ "$cur" == -* ]]; then
-                        COMPREPLY=($(compgen -W "-h --help -p --profiles -f --features" -- "$cur"))
+                        COMPREPLY=($(compgen -W "-h --help -n --name -p --profiles -f --features" -- "$cur"))
                     fi
                     ;;
                 system)
                     if [[ "$cur" == -* ]]; then
-                        COMPREPLY=($(compgen -W "-h --help -l --lib -i --inc -p --profiles" -- "$cur"))
+                        COMPREPLY=($(compgen -W "-h --help -n --name -l --lib -i --inc -p --profiles" -- "$cur"))
                     fi
                     ;;
                 vcpkg)
                     if [[ "$cur" == -* ]]; then
-                        COMPREPLY=($(compgen -W "-h --help -t --triplet -v --version -p --profiles -f --features" -- "$cur"))
+                        COMPREPLY=($(compgen -W "-h --help -n --name -t --triplet -v --version -p --profiles -f --features" -- "$cur"))
+                    fi
+                    ;;
+                conan)
+                    if [[ "$cur" == -* ]]; then
+                        COMPREPLY=($(compgen -W "-h --help -n --name -v --version -p --profiles" -- "$cur"))
                     fi
                     ;;
             esac
@@ -105,7 +110,7 @@ _catalyst() {
             ;;
         clean)
             if [[ "$cur" == -* ]]; then
-                COMPREPLY=($(compgen -W "-h --help -p --profile" -- "$cur"))
+                COMPREPLY=($(compgen -W "-h --help -p --profile -i --intermediates" -- "$cur"))
             fi
             ;;
         doc)
@@ -115,7 +120,7 @@ _catalyst() {
             ;;
         download)
             if [[ "$cur" == -* ]]; then
-                COMPREPLY=($(compgen -W "-h --help -p --profiles -f --features -t --target" -- "$cur"))
+                COMPREPLY=($(compgen -W "-h --help -p --profiles -f --features -b --backend -t --target" -- "$cur"))
             fi
             ;;
         feature-ls)
@@ -158,7 +163,7 @@ _catalyst() {
                     ;;
             esac
             if [[ "$cur" == -* ]]; then
-                COMPREPLY=($(compgen -W "-h --help -n --name --path -t --type -v --version -d --description --provides --cc --cxx --ccflags --cxxflags --ldflags --include-dirs --source-dirs --build-dir --ides -p --profile -f --force-ide" -- "$cur"))
+                COMPREPLY=($(compgen -W "-h --help -n --name --path -t --type -v --version -d --description --provides --include-dirs --source-dirs --build-dir --ides -p --profile -f --force-ide" -- "$cur"))
             fi
             ;;
         install)
@@ -185,7 +190,7 @@ _catalyst() {
                     ;;
             esac
             if [[ "$cur" == -* ]]; then
-                COMPREPLY=($(compgen -W "-h --help -p --profiles -s --source -t --target -G --generators -a --all" -- "$cur"))
+                COMPREPLY=($(compgen -W "-h --help -p --profiles -s --source -t --target -G --generators -a --all -q --silent" -- "$cur"))
             fi
             ;;
         profile-ls)
@@ -200,13 +205,155 @@ _catalyst() {
             ;;
         test)
             if [[ "$cur" == -* ]]; then
-                COMPREPLY=($(compgen -W "-h --help -P --params" -- "$cur"))
+                COMPREPLY=($(compgen -W "-h --help -P --params -r --rebuild" -- "$cur"))
             fi
             ;;
         tidy)
             if [[ "$cur" == -* ]]; then
                 COMPREPLY=($(compgen -W "-h --help -p --profiles --fix" -- "$cur"))
             fi
+            ;;
+    esac
+}
+
+complete -F _catalyst catalyst
+_catalyst() {
+    local cur prev words cword
+    if declare -F _init_completion >/dev/null 2>&1; then
+        _init_completion || return
+    else
+        COMPREPLY=()
+        _get_comp_words_by_ref -n =: cur prev words cword
+    fi
+
+    local cmd="catalyst"
+    local i=1
+    while [ $i -lt $cword ]; do
+        local word="${words[i]}"
+        case "${cmd}" in
+            "catalyst")
+                case "${word}" in
+                    add) cmd="catalyst_add" ;;
+                    build) cmd="catalyst_build" ;;
+                    clean) cmd="catalyst_clean" ;;
+                    download) cmd="catalyst_download" ;;
+                    fetch) cmd="catalyst_fetch" ;;
+                    fmt) cmd="catalyst_fmt" ;;
+                    generate) cmd="catalyst_generate" ;;
+                    ide-sync) cmd="catalyst_ide_sync" ;;
+                    init) cmd="catalyst_init" ;;
+                    install) cmd="catalyst_install" ;;
+                    lock) cmd="catalyst_lock" ;;
+                    run) cmd="catalyst_run" ;;
+                    test) cmd="catalyst_test" ;;
+                    bench) cmd="catalyst_bench" ;;
+                    tidy) cmd="catalyst_tidy" ;;
+                    pack) cmd="catalyst_pack" ;;
+                    doc) cmd="catalyst_doc" ;;
+                    profile-ls) cmd="catalyst_profile_ls" ;;
+                    feature-ls) cmd="catalyst_feature_ls" ;;
+                    completion) cmd="catalyst_completion" ;;
+                esac
+                ;;
+            "catalyst_add")
+                case "${word}" in
+                    git) cmd="catalyst_add_git" ;;
+                    system) cmd="catalyst_add_system" ;;
+                    local) cmd="catalyst_add_local" ;;
+                    vcpkg) cmd="catalyst_add_vcpkg" ;;
+                    conan) cmd="catalyst_add_conan" ;;
+                esac
+                ;;
+        esac
+        i=$((i+1))
+    done
+
+    case "${cmd}" in
+        "catalyst")
+            if [[ "$cur" == -* ]]; then
+                COMPREPLY=( $(compgen -W "--help -h --version -v --verbose -V" -- "$cur") )
+            else
+                COMPREPLY=( $(compgen -W "add build clean download fetch fmt generate ide-sync init install lock run test bench tidy pack doc profile-ls feature-ls completion help" -- "$cur") )
+            fi
+            ;;
+        "catalyst_add")
+            if [[ "$cur" == -* ]]; then
+                COMPREPLY=( $(compgen -W "--help -h" -- "$cur") )
+            else
+                COMPREPLY=( $(compgen -W "git system local vcpkg conan" -- "$cur") )
+            fi
+            ;;
+        "catalyst_add_git")
+            COMPREPLY=( $(compgen -W "--help -h --name -n --version -v --features -f --profiles -p" -- "$cur") )
+            ;;
+        "catalyst_add_system")
+            COMPREPLY=( $(compgen -W "--help -h --name -n --lib -l --inc -i --profiles -p" -- "$cur") )
+            ;;
+        "catalyst_add_local")
+            COMPREPLY=( $(compgen -W "--help -h --name -n --profiles -p --features -f" -- "$cur") )
+            ;;
+        "catalyst_add_vcpkg")
+            COMPREPLY=( $(compgen -W "--help -h --name -n --triplet -t --version -v --profiles -p --features -f" -- "$cur") )
+            ;;
+        "catalyst_add_conan")
+            COMPREPLY=( $(compgen -W "--help -h --name -n --version -v --profiles -p" -- "$cur") )
+            ;;
+        "catalyst_build")
+            COMPREPLY=( $(compgen -W "--help -h --regen -r --force-rebuild -b --force-refetch --workspace --all --watch -w --package -P --profiles -p --features -f --backend" -- "$cur") )
+            ;;
+        "catalyst_clean")
+            COMPREPLY=( $(compgen -W "--help -h --profile -p --intermediates -i" -- "$cur") )
+            ;;
+        "catalyst_download")
+            COMPREPLY=( $(compgen -W "--help -h --profiles -p --features -f --backend -b --target -t" -- "$cur") )
+            ;;
+        "catalyst_fetch")
+            COMPREPLY=( $(compgen -W "--help -h --profiles -p" -- "$cur") )
+            ;;
+        "catalyst_fmt")
+            COMPREPLY=( $(compgen -W "--help -h" -- "$cur") )
+            ;;
+        "catalyst_generate")
+            COMPREPLY=( $(compgen -W "--help -h --profiles -p --features -f --backend -b" -- "$cur") )
+            ;;
+        "catalyst_ide_sync")
+            COMPREPLY=( $(compgen -W "--help -h --profiles -p --ides --force-ide -f" -- "$cur") )
+            ;;
+        "catalyst_init")
+            COMPREPLY=( $(compgen -W "--help -h --name -n --path --type -t --version -v --description -d --provides --include-dirs --source-dirs --build-dir --ides --profile -p --force-ide -f" -- "$cur") )
+            ;;
+        "catalyst_install")
+            COMPREPLY=( $(compgen -W "--help -h --profiles -p --source -s --target -t" -- "$cur") )
+            ;;
+        "catalyst_lock")
+            COMPREPLY=( $(compgen -W "--help -h --profiles -p" -- "$cur") )
+            ;;
+        "catalyst_run")
+            COMPREPLY=( $(compgen -W "--help -h --profile -p --params -P" -- "$cur") )
+            ;;
+        "catalyst_test")
+            COMPREPLY=( $(compgen -W "--help -h --params -P --rebuild -r" -- "$cur") )
+            ;;
+        "catalyst_bench")
+            COMPREPLY=( $(compgen -W "--help -h --params -P" -- "$cur") )
+            ;;
+        "catalyst_tidy")
+            COMPREPLY=( $(compgen -W "--help -h --profiles -p --fix" -- "$cur") )
+            ;;
+        "catalyst_pack")
+            COMPREPLY=( $(compgen -W "--help -h --profiles -p --source -s --target -t --generators -G --all -a --silent -q" -- "$cur") )
+            ;;
+        "catalyst_doc")
+            COMPREPLY=( $(compgen -W "--help -h --engine -e --open --clean" -- "$cur") )
+            ;;
+        "catalyst_profile_ls")
+            COMPREPLY=( $(compgen -W "--help -h" -- "$cur") )
+            ;;
+        "catalyst_feature_ls")
+            COMPREPLY=( $(compgen -W "--help -h --inverse" -- "$cur") )
+            ;;
+        "catalyst_completion")
+            COMPREPLY=( $(compgen -W "--help -h" -- "$cur") )
             ;;
     esac
 }

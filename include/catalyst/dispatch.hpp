@@ -21,6 +21,7 @@
 #include "catalyst/subcommands/init.hpp"
 #include "catalyst/subcommands/install.hpp"
 #include "catalyst/subcommands/lock.hpp"
+#include "catalyst/subcommands/completion.hpp"
 #include "catalyst/subcommands/pack.hpp"
 #include "catalyst/subcommands/profile_ls.hpp"
 #include "catalyst/subcommands/run.hpp"
@@ -92,6 +93,9 @@ struct CliContext {
 
     CLI::App *feature_ls_subc{nullptr};
     std::unique_ptr<catalyst::feature_ls::Parse> feature_ls_res{nullptr};
+
+    CLI::App *completion_subc{nullptr};
+    std::unique_ptr<catalyst::completion::Parse> completion_res{nullptr};
 
     CLI::App *add_git_subc{nullptr};
     std::unique_ptr<catalyst::add::git::Parse> add_git_res{nullptr};
