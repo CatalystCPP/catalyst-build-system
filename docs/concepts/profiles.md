@@ -20,16 +20,14 @@ manifest:
 **`catalyst_debug.yaml` (debug)**
 ```yaml
 manifest:
-  tooling:
-    CXXFLAGS: "-g -O0 -DDEBUG"
+  # Compiler/linker flags live in a toolchain file (see Toolchains).
+  toolchain: tc_debug.yaml
 ```
 
 **`catalyst_release.yaml` (release)**
 ```yaml
 manifest:
-  tooling:
-    CXXFLAGS: "-O3 -DNDEBUG"
-    LDFLAGS: "-s"
+  toolchain: tc_release.yaml
 ```
 
 ## Composition
@@ -77,13 +75,11 @@ common:
 
 debug:
   manifest:
-    tooling:
-      CXXFLAGS: "-g -O0 -DDEBUG"
+    toolchain: tc_debug.yaml
 
 release:
   manifest:
-    tooling:
-      CXXFLAGS: "-O3 -DNDEBUG"
+    toolchain: tc_release.yaml
 
 test:
   manifest:

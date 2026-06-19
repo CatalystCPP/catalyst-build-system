@@ -1,6 +1,8 @@
 #include "catalyst/utils/toolchain.hpp"
 
+#include <algorithm>
 #include <format>
+#include <vector>
 
 #include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
@@ -32,18 +34,68 @@ std::string expand_template(std::string_view tmpl, const std::unordered_map<std:
     return result;
 }
 
-Result<ToolchainDef> parse_toolchain(const std::filesystem::path &path) {
+Result<void>
+parse_toolchain_impl(const std::filesystem::path &path, ToolchainDef &tc, std::vector<std::filesystem::path> &visited) {
     namespace yaml = catalyst::utils::yaml;
-    ToolchainDef tc;
 
-    auto tree = yaml::loadFile(path);
+    std::filesystem::path canonical_path;
+    try {
+        canonical_path = std::filesystem::canonical(path);
+    } catch (...) {
+        canonical_path = std::filesystem::absolute(path);
+    }
+
+    // Cycle detection
+    auto it = std::find(visited.begin(), visited.end(), canonical_path);
+    if (it != visited.end()) {
+        std::string cycle_str;
+        for (const auto &p : visited) {
+            cycle_str += p.string() + " -> ";
+        }
+        cycle_str += canonical_path.string();
+        return std::unexpected(std::format("Toolchain inheritance cycle detected: {}", cycle_str));
+    }
+
+    if (visited.size() >= 32) {
+        return std::unexpected("Toolchain inheritance depth limit exceeded");
+    }
+
+    auto tree = yaml::loadFile(canonical_path);
     if (!tree) {
-        return std::unexpected(std::format("YAML parsing error in {}: {}", path.string(), tree.error()));
+        if (!visited.empty()) {
+            return std::unexpected(std::format("Failed to open base toolchain '{}' referenced by '{}': {}",
+                                               canonical_path.string(),
+                                               visited.back().string(),
+                                               tree.error()));
+        }
+        return std::unexpected(std::format("YAML parsing error in {}: {}", canonical_path.string(), tree.error()));
     }
 
     ryml::ConstNodeRef node = yaml::child(tree->crootref(), "toolchain");
     if (!node.readable()) {
-        return std::unexpected(std::format("Toolchain file {} missing 'toolchain' root node.", path.string()));
+        return std::unexpected(
+            std::format("Toolchain file {} missing 'toolchain' root node.", canonical_path.string()));
+    }
+
+    visited.push_back(canonical_path);
+
+    ryml::ConstNodeRef extends_node = yaml::child(node, "extends");
+    if (extends_node.readable()) {
+        auto val = yaml::asString(extends_node);
+        if (!val) {
+            visited.pop_back();
+            return std::unexpected(
+                std::format("toolchain.extends must be a string path in '{}'", canonical_path.string()));
+        }
+        std::filesystem::path extends_path = *val;
+        std::filesystem::path base_path =
+            extends_path.is_absolute() ? extends_path : canonical_path.parent_path() / extends_path;
+
+        auto res = parse_toolchain_impl(base_path, tc, visited);
+        if (!res) {
+            visited.pop_back();
+            return std::unexpected(res.error());
+        }
     }
 
     // Assigns the scalar child `key` of `parent` to `target`, if present.
@@ -89,6 +141,17 @@ Result<ToolchainDef> parse_toolchain(const std::filesystem::path &path) {
     set(arch, "executable", tc.archiver.executable);
     set(arch, "command", tc.archiver.command);
 
+    visited.pop_back();
+    return {};
+}
+
+Result<ToolchainDef> parse_toolchain(const std::filesystem::path &path) {
+    ToolchainDef tc;
+    std::vector<std::filesystem::path> visited;
+    auto res = parse_toolchain_impl(path, tc, visited);
+    if (!res) {
+        return std::unexpected(res.error());
+    }
     return tc;
 }
 

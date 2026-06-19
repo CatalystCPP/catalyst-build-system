@@ -72,13 +72,10 @@
             "tooling": {
               "type": "object",
               "properties": {
-                "CC": { "type": "string" },
-                "CXX": { "type": "string" },
+                "FMT": { "type": "string" },
+                "LINTER": { "type": "string" },
                 "CC_LAUNCHER": { "type": "string" },
-                "CXX_LAUNCHER": { "type": "string" },
-                "CCFLAGS": { "type": "string" },
-                "CXXFLAGS": { "type": "string" },
-                "LDFLAGS": { "type": "string" }
+                "CXX_LAUNCHER": { "type": "string" }
               }
             },
             "dirs": {
@@ -127,6 +124,12 @@
                   "name": { "type": "string" },
                   "version": { "type": "string" },
                   "triplet": { "type": "string" },
+                  "linkage": { "type": "string", "enum": ["static", "shared"] },
+                  "transitive": {
+                    "type": "boolean",
+                    "description": "Automatically resolve and link this package's transitive vcpkg dependencies (default true). Set to false to link only this package.",
+                    "default": true
+                  },
                   "using": {
                     "type": "array",
                     "items": { "type": "string" }

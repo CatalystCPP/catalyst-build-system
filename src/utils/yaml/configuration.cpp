@@ -1,6 +1,7 @@
 #include "catalyst/utils/yaml/configuration.hpp"
 
 #include <algorithm>
+#include <array>
 #include <filesystem>
 #include <format>
 #include <functional>
@@ -9,6 +10,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "catalyst/utils/log/log.hpp"
@@ -43,13 +45,8 @@ manifest:
   version: 0.0.1
   provides: ''
   tooling:
-    CC: clang
-    CXX: clang++
     FMT: clang-format
     LINTER: clang-tidy
-    CCFLAGS: ''
-    CXXFLAGS: ''
-    LDFLAGS: ''
     doc:
       engine: doxygen
       config: Doxyfile
@@ -181,9 +178,30 @@ void validateProfileKeys(ryml::ConstNodeRef profile, const std::string &profile_
                 "readme_file"},
                "manifest");
     ryml::ConstNodeRef tooling = child(manifest, "tooling");
-    check_keys(tooling,
-               {"CC", "CXX", "CC_LAUNCHER", "CXX_LAUNCHER", "FMT", "LINTER", "CCFLAGS", "CXXFLAGS", "LDFLAGS", "doc"},
-               "manifest.tooling");
+    // manifest.tooling.{CC,CXX,CCFLAGS,CXXFLAGS,LDFLAGS} were removed in 1.7.0 in
+    // favour of toolchain files. Point upgraders at the replacement instead of the
+    // generic "invalid key" error.
+    static constexpr std::array REMOVED_TOOLING = {
+        std::pair{"CC", "toolchain compiler.c.executable"},
+        std::pair{"CXX", "toolchain compiler.cxx.executable"},
+        std::pair{"CCFLAGS", "toolchain compiler.c.flags"},
+        std::pair{"CXXFLAGS", "toolchain compiler.cxx.flags"},
+        std::pair{"LDFLAGS", "toolchain linker.flags"},
+    };
+    if (tooling.readable() && tooling.is_map()) {
+        for (const auto &[key, replacement] : REMOVED_TOOLING) {
+            if (child(tooling, key).readable()) {
+                throw std::runtime_error(
+                    std::format("manifest.tooling.{} was removed in 1.7.0 (profile '{}'). Define it via a "
+                                "toolchain file ({}) instead. See "
+                                "https://catalystcpp.github.io/catalyst-build-system/concepts/toolchains/",
+                                key,
+                                profile_name,
+                                replacement));
+            }
+        }
+    }
+    check_keys(tooling, {"CC_LAUNCHER", "CXX_LAUNCHER", "FMT", "LINTER", "doc"}, "manifest.tooling");
     check_keys(child(tooling, "doc"), {"engine", "config", "out_dir"}, "manifest.tooling.doc");
     check_keys(child(manifest, "dirs"), {"include", "source", "build"}, "manifest.dirs");
 
@@ -355,8 +373,7 @@ void mergeHelper(ryml::Tree &composite, const std::string &new_profile_name, rym
             merge_scalar(dst, key, src, std::string("manifest.") + key);
 
         merge_section(dst, "tooling", src, [&](ryml::NodeRef tdst, ryml::ConstNodeRef tsrc) {
-            for (const auto &key :
-                 {"CC", "CXX", "CC_LAUNCHER", "CXX_LAUNCHER", "FMT", "LINTER", "CCFLAGS", "CXXFLAGS", "LDFLAGS"})
+            for (const auto &key : {"CC_LAUNCHER", "CXX_LAUNCHER", "FMT", "LINTER"})
                 merge_scalar(tdst, key, tsrc, std::string("manifest.tooling.") + key);
 
             merge_section(tdst, "doc", tsrc, [&](ryml::NodeRef docdst, ryml::ConstNodeRef docsrc) {

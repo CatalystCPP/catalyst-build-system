@@ -52,9 +52,8 @@ manifest:
   name: my-project
   type: BINARY
   version: 0.1.0
-  tooling:
-    CXX: clang++
-    CXXFLAGS: -std=c++20 -Wall -Wextra
+  # Compiler and compiler flags are defined in a toolchain file.
+  toolchain: tc_my-project.yaml
   dirs:
     include: [include]
     source: [src]

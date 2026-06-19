@@ -246,22 +246,13 @@ void writeVariables(const catalyst::utils::yaml::Configuration &config,
          {"value", "\"" + config.getString("manifest.version").value_or("0.0.0") + "\""}});
     std::string default_defines = build_sys_def + " " + proj_name_def + " " + proj_ver_def;
 
-    // Base flags come from the toolchain. manifest.tooling.*FLAGS still append on top
-    // (winning on conflicts) so projects can migrate gradually; manifest.tooling is
-    // slated for deprecation in favour of toolchain-defined flags.
-    auto with_manifest = [&config](std::string base, const std::string &key) {
-        if (auto manifest_flags = config.getString(key); manifest_flags && !manifest_flags->empty()) {
-            if (!base.empty())
-                base += " ";
-            base += *manifest_flags;
-        }
-        return base;
-    };
-
-    std::string cxxflags = with_manifest(tc.compiler.cxx.flags, "manifest.tooling.CXXFLAGS") + " " + default_defines;
-    std::string ccflags = with_manifest(tc.compiler.c.flags, "manifest.tooling.CCFLAGS") + " " + default_defines;
-    std::string ldflags = with_manifest(tc.linker.flags, "manifest.tooling.LDFLAGS") + " " +
-                          catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", "catalyst-libs"}});
+    // Compiler and linker flags come from the toolchain. The manifest.tooling flag
+    // overrides (CCFLAGS/CXXFLAGS/LDFLAGS) were removed in 1.7.0 in favour of
+    // toolchain-defined flags (compiler.{c,cxx}.flags and linker.flags).
+    std::string cxxflags = tc.compiler.cxx.flags + " " + default_defines;
+    std::string ccflags = tc.compiler.c.flags + " " + default_defines;
+    std::string ldflags =
+        tc.linker.flags + " " + catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", "catalyst-libs"}});
 
     if (const char *vcpkg_root = std::getenv("VCPKG_ROOT"); vcpkg_root != nullptr) {
 #if defined(_WIN32)
@@ -330,13 +321,13 @@ void writeVariables(const catalyst::utils::yaml::Configuration &config,
     }
 
     writer.addComment("Variables");
-    std::string cc_cmd = config.getString("manifest.tooling.CC").value_or(tc.compiler.c.executable);
+    std::string cc_cmd = tc.compiler.c.executable;
     if (auto cc_launcher = config.getString("manifest.tooling.CC_LAUNCHER")) {
         cc_cmd = std::format("{} {}", cc_launcher.value(), cc_cmd);
     }
     void(writer.addVariable("cc", cc_cmd));
 
-    std::string cxx_cmd = config.getString("manifest.tooling.CXX").value_or(tc.compiler.cxx.executable);
+    std::string cxx_cmd = tc.compiler.cxx.executable;
     if (auto cxx_launcher = config.getString("manifest.tooling.CXX_LAUNCHER")) {
         cxx_cmd = std::format("{} {}", cxx_launcher.value(), cxx_cmd);
     }

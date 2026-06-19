@@ -45,10 +45,12 @@ features:
 
 ## Custom Flags
 
-You can define arbitrary macros in the `tooling` section:
+You can define arbitrary macros via the compiler flags in your [toolchain](toolchains.md) file:
 
 ```yaml
-manifest:
-  tooling:
-    CXXFLAGS: "-DENABLE_EXPERIMENTAL"
+# tc_my-project.yaml
+toolchain:
+  compiler:
+    cxx:
+      flags: "-DENABLE_EXPERIMENTAL"
 ```

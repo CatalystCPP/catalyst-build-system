@@ -1,4 +1,5 @@
 #include <filesystem>
+#include <format>
 #include <fstream>
 
 #include <catch2/catch_session.hpp>
@@ -190,18 +191,31 @@ TEST_CASE("fetchConanDeps generates conanfile.txt and executes conan install", "
 
     fs::path temp_root = fs::temp_directory_path() / "catalyst_test_conan_fetch_root";
     fs::create_directories(temp_root);
+    fs::path tc_path = temp_root / "tc_test.yaml";
     {
         std::ofstream out(temp_root / "CATALYST.yaml");
-        out << R"(
+        // Absolute toolchain path so parse_toolchain resolves it regardless of CWD.
+        out << std::format(R"(
 common:
   manifest:
     name: "test_conan"
+    toolchain: "{}"
     dirs:
       source: ["src"]
       include: []
       build: "build"
-    tooling:
-      CXX: "mock_clang++"
+)",
+                           tc_path.string());
+    }
+    {
+        // Conan compiler detection reads the toolchain's C++ compiler executable.
+        std::ofstream out(tc_path);
+        out << R"(
+toolchain:
+  name: "test"
+  compiler:
+    cxx:
+      executable: "mock_clang++"
 )";
     }
 
@@ -276,6 +290,110 @@ common:
     catalyst::setProcessExecutor(std::make_shared<catalyst::ProcessExecutor>());
     fs::remove_all(temp_build);
     fs::remove_all(temp_root);
+}
+
+TEST_CASE("parseVcpkgStatus extracts installed dependencies", "[vcpkg]") {
+    using catalyst::generate::parseVcpkgStatus;
+    using catalyst::generate::vcpkgStatusKey;
+
+    // Mirrors the Debian-control layout of $VCPKG_ROOT/installed/vcpkg/status:
+    // a base stanza plus a feature stanza for ryml (whose deps are unioned), a
+    // not-installed stanza that must be ignored, and a leaf helper port.
+    std::string status = R"(Package: c4core
+Version: 0.2.6
+Depends: vcpkg-cmake, vcpkg-cmake-config
+Architecture: x64-linux
+Status: install ok installed
+
+Package: ryml
+Version: 0.9.0
+Depends: c4core, vcpkg-cmake, vcpkg-cmake-config
+Architecture: x64-linux
+Status: install ok installed
+
+Package: ryml
+Feature: extra
+Architecture: x64-linux
+Depends: zlib [core], openssl (!windows)
+Status: install ok installed
+
+Package: removed-pkg
+Version: 1.0.0
+Depends: should-be-ignored
+Architecture: x64-linux
+Status: purge ok not-installed
+
+Package: vcpkg-cmake
+Version: 2024-04-23
+Architecture: x64-linux
+Status: install ok installed
+)";
+
+    auto db = parseVcpkgStatus(status);
+
+    // Base + feature deps are unioned and de-duplicated, in encounter order.
+    // Qualifiers like `[core]` / `(!windows)` are stripped to bare names.
+    auto ryml_deps = db.depends.at(vcpkgStatusKey("ryml", "x64-linux"));
+    REQUIRE(ryml_deps == std::vector<std::string>{"c4core", "vcpkg-cmake", "vcpkg-cmake-config", "zlib", "openssl"});
+
+    REQUIRE(db.depends.at(vcpkgStatusKey("c4core", "x64-linux")) ==
+            std::vector<std::string>{"vcpkg-cmake", "vcpkg-cmake-config"});
+
+    // not-installed stanzas are skipped entirely.
+    REQUIRE_FALSE(db.depends.contains(vcpkgStatusKey("removed-pkg", "x64-linux")));
+}
+
+TEST_CASE("vcpkgTransitiveClosure resolves and orders dependencies", "[vcpkg]") {
+    using catalyst::generate::VcpkgStatusDb;
+    using catalyst::generate::vcpkgStatusKey;
+    using catalyst::generate::vcpkgTransitiveClosure;
+
+    const std::string triplet = "x64-linux";
+    auto all_real = [](const std::string &, const std::string &) { return true; };
+
+    SECTION("prunes build-time helper ports and excludes the root") {
+        VcpkgStatusDb db;
+        db.depends[vcpkgStatusKey("ryml", triplet)] = {"c4core", "vcpkg-cmake", "vcpkg-cmake-config"};
+        db.depends[vcpkgStatusKey("c4core", triplet)] = {"vcpkg-cmake", "vcpkg-cmake-config"};
+
+        // Helper ports have no link/include artifacts, so they are filtered out.
+        auto is_real = [](const std::string &name, const std::string &) { return !name.starts_with("vcpkg-"); };
+        auto closure = vcpkgTransitiveClosure(db, "ryml", triplet, is_real);
+
+        REQUIRE(closure == std::vector<std::string>{"c4core"});
+    }
+
+    SECTION("diamond dependencies are emitted once, dependency last") {
+        VcpkgStatusDb db;
+        db.depends[vcpkgStatusKey("A", triplet)] = {"B", "C"};
+        db.depends[vcpkgStatusKey("B", triplet)] = {"D"};
+        db.depends[vcpkgStatusKey("C", triplet)] = {"D"};
+
+        auto closure = vcpkgTransitiveClosure(db, "A", triplet, all_real);
+
+        REQUIRE(closure.size() == 3);
+        REQUIRE(std::ranges::find(closure, "B") != closure.end());
+        REQUIRE(std::ranges::find(closure, "C") != closure.end());
+        // D depends on nothing and is depended on by B and C, so it must link last.
+        REQUIRE(closure.back() == "D");
+        REQUIRE(std::ranges::find(closure, "A") == closure.end());
+    }
+
+    SECTION("cycles terminate without duplication") {
+        VcpkgStatusDb db;
+        db.depends[vcpkgStatusKey("A", triplet)] = {"B"};
+        db.depends[vcpkgStatusKey("B", triplet)] = {"A"};
+
+        auto closure = vcpkgTransitiveClosure(db, "A", triplet, all_real);
+
+        REQUIRE(closure == std::vector<std::string>{"B"});
+    }
+
+    SECTION("unknown root yields no transitive dependencies") {
+        VcpkgStatusDb db;
+        auto closure = vcpkgTransitiveClosure(db, "not-installed", triplet, all_real);
+        REQUIRE(closure.empty());
+    }
 }
 
 int main(int argc, char *argv[]) {

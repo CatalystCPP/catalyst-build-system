@@ -29,13 +29,6 @@ auto catalyst::init::parse(CLI::App &app) -> std::pair<CLI::App *, std::unique_p
         ->default_str("Your Description Goes Here.");
     init->add_option("--provides", ret->provides, "Artifact provided by this project.")->default_str("");
 
-    init->add_option("--cc", ret->tooling.cc, "the c compiler to use (defaults to the active toolchain's compiler)");
-    init->add_option(
-        "--cxx", ret->tooling.cxx, "the cxx compiler to use (defaults to the active toolchain's compiler)");
-    init->add_option("--ccflags", ret->tooling.ccflags, "c compiler flags")->default_str("");
-    init->add_option("--cxxflags", ret->tooling.cxxflags, "cxx compiler flags")->default_str("");
-    init->add_option("--ldflags", ret->tooling.ldflags, "linker flags")->default_str("");
-
     init->add_option("--include-dirs", ret->dirs.include, "include directories")
         ->default_val(std::vector<std::string>{"include"});
     init->add_option("--source-dirs", ret->dirs.source, "source directories")
