@@ -41,5 +41,4 @@ nav:
     - test: cli/test.md
     - tidy: cli/tidy.md
   - Contributing: CONTRIBUTING.md
-  - Roadmap: ROADMAP.md
   - License: LICENSE.md
