@@ -2,6 +2,7 @@ site_name: Catalyst Build System Documentation
 theme:
   name: material
   logo: assets/logo.svg
+  favicon: assets/logo.svg
   palette:
     - scheme: slate
       toggle:
@@ -11,6 +12,8 @@ theme:
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
+  features:
+    - content.code.copy
 
 nav:
   - Home: index.md
