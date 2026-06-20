@@ -167,8 +167,22 @@
               {
                 "type": "object",
                 "properties": {
-                  "default": { "type": "boolean" },
+                  "default": {
+                    "anyOf": [
+                      { "type": "boolean" },
+                      { "type": "integer" },
+                      { "type": "string" }
+                    ]
+                  },
                   "files": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": ["enum", "int", "string"]
+                  },
+                  "values": {
                     "type": "array",
                     "items": { "type": "string" }
                   }
