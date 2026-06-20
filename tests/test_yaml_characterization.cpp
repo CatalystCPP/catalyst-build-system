@@ -18,6 +18,7 @@
 #include "catalyst/utils/yaml/load_profile_file.hpp"
 #include "catalyst/utils/yaml/profile_write_back.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
+#include "catalyst/subcommands/generate.hpp"
 
 namespace fs = std::filesystem;
 using catalyst::utils::yaml::asString;
@@ -401,4 +402,113 @@ TEST_CASE("ProfileFile: malformed YAML reports a parse error", "[yaml][character
     auto loaded = loadProfileFile("common", dir.path);
     REQUIRE_FALSE(loaded.has_value());
     CHECK(loaded.error().find("Failed to parse YAML file") != std::string::npos);
+}
+
+TEST_CASE("resolveFeatureFlags parses and validates feature flags", "[features][generate]") {
+    TempDir dir{"catalyst_char_feature_resolve"};
+
+    constexpr const char *kFeatureTestYaml = R"(common:
+  manifest:
+    name: testproj
+    type: BINARY
+    version: 1.0.0
+    provides: testproj
+    dirs:
+      include: [include]
+      source: [src]
+      build: build
+  features:
+    simple_bool: true
+    obj_bool:
+      default: false
+      files: [src/opt.cpp]
+    log_level:
+      type: enum
+      values: [off, error, info, debug]
+      default: error
+    flush_threshold:
+      type: int
+      default: 1048576
+    build_id:
+      type: string
+      default: "dev-build"
+)";
+
+    writeFile(dir.path / "CATALYST.yaml", kFeatureTestYaml);
+
+    SECTION("resolves default values when no overrides are passed") {
+        Configuration config({"common"}, dir.path);
+        auto res = catalyst::generate::resolveFeatureFlags(config, {});
+        REQUIRE(res.has_value());
+        const auto &flags = *res;
+        REQUIRE(flags.size() == 5);
+
+        auto check_flag = [&](const std::string &name, const std::string &type, const std::string &val, bool is_enabled) {
+            auto it = std::find_if(flags.begin(), flags.end(), [&](const auto &f) { return f.name == name; });
+            REQUIRE(it != flags.end());
+            CHECK(it->type == type);
+            CHECK(it->resolved_val == val);
+            CHECK(it->is_enabled == is_enabled);
+        };
+
+        check_flag("simple_bool", "bool", "true", true);
+        check_flag("obj_bool", "bool", "false", false);
+        check_flag("log_level", "enum", "error", true);
+        check_flag("flush_threshold", "int", "1048576", true);
+        check_flag("build_id", "string", "dev-build", true);
+    }
+
+    SECTION("resolves with CLI overrides") {
+        Configuration config({"common"}, dir.path);
+        // Toggle bools, override enum and int and string
+        std::vector<std::string> cli = {
+            "no-simple_bool",
+            "obj_bool",
+            "log_level=debug",
+            "flush_threshold=2097152",
+            "build_id=production-v1"
+        };
+        auto res = catalyst::generate::resolveFeatureFlags(config, cli);
+        REQUIRE(res.has_value());
+        const auto &flags = *res;
+
+        auto check_flag = [&](const std::string &name, const std::string &val, bool is_enabled) {
+            auto it = std::find_if(flags.begin(), flags.end(), [&](const auto &f) { return f.name == name; });
+            REQUIRE(it != flags.end());
+            CHECK(it->resolved_val == val);
+            CHECK(it->is_enabled == is_enabled);
+        };
+
+        check_flag("simple_bool", "false", false);
+        check_flag("obj_bool", "true", true);
+        check_flag("log_level", "debug", true);
+        check_flag("flush_threshold", "2097152", true);
+        check_flag("build_id", "production-v1", true);
+    }
+
+    SECTION("validates enum values") {
+        Configuration config({"common"}, dir.path);
+        // Invalid enum override
+        auto res = catalyst::generate::resolveFeatureFlags(config, {"log_level=bogus"});
+        CHECK_FALSE(res.has_value());
+    }
+
+    SECTION("validates int values") {
+        Configuration config({"common"}, dir.path);
+        // Invalid int override
+        auto res = catalyst::generate::resolveFeatureFlags(config, {"flush_threshold=not_an_int"});
+        CHECK_FALSE(res.has_value());
+    }
+
+    SECTION("rejects enabling enum/int without a value") {
+        Configuration config({"common"}, dir.path);
+        auto res = catalyst::generate::resolveFeatureFlags(config, {"log_level"});
+        CHECK_FALSE(res.has_value());
+    }
+
+    SECTION("rejects disabling enum/int with no- prefix") {
+        Configuration config({"common"}, dir.path);
+        auto res = catalyst::generate::resolveFeatureFlags(config, {"no-flush_threshold"});
+        CHECK_FALSE(res.has_value());
+    }
 }
