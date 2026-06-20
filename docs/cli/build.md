@@ -29,6 +29,30 @@ OPTIONS:
 
 When running with `--workspace` or `--all`, Catalyst determines the correct build order based on the dependencies between workspace members. It ensures that dependencies are built before the packages that rely on them.
 
+### Feature flag overrides
+
+`-f`/`--features` overrides the default state of feature flags declared in the `features:` block of your manifest. See the [feature flags concept](../concepts/preprocessor.md) for how flags are declared and emitted. The option accepts three forms:
+
+| Form | Applies to | Effect |
+|---|---|---|
+| `-f <name>` | boolean flags | Enable the flag (define it as `1`). |
+| `-f no-<name>` | boolean flags | Disable the flag (define it as `0`). |
+| `-f <name>=<value>` | valued flags (`enum` / `int` / `string`) | Set the flag to `<value>`. |
+
+You can pass `-f` multiple times to override several flags in one build:
+
+```bash
+catalyst build -f no-logging -f log_level=debug -f flush_threshold=2097152
+```
+
+Overrides are validated at configure time:
+
+- An `enum` value must be one of the declared `values:`.
+- An `int` value must be a valid integer.
+- Bare `-f <name>` and `-f no-<name>` apply **only** to boolean flags. Using them on a valued flag is an error — a valued flag must be set with `<name>=<value>` (there is no "on"/"off" for a value).
+
+Changing a flag value is picked up automatically on the next build (the value is part of each affected step's command hash); you do **not** need `-r`/`--regen` unless the flag toggles a `files:` source set.
+
 ## Examples
 
 **Standard build:**
@@ -58,19 +82,24 @@ catalyst build --profiles debug
 catalyst build --force-rebuild
 ```
 
-**Enable features:**
+**Enable a boolean feature:**
 ```bash
 catalyst build --features logging
+```
+
+**Disable a boolean feature:**
+```bash
+catalyst build --features no-logging
+```
+
+**Set a valued feature (enum / int / string):**
+```bash
+catalyst build --features log_level=debug --features flush_threshold=2097152
 ```
 
 **Gmake backend:**
 ```bash
 catalyst build --backend gmake
-```
-
-**Disable features:**
-```bash
-catalyst build --features no-logging
 ```
 
 **Watch mode:**
