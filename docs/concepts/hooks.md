@@ -15,8 +15,6 @@ Catalyst supports four types of hooks:
 3. **`catalyst`**: Dispatches a Catalyst subcommand internally. This is preferred for invoking other Catalyst commands (like `test` after a `build`) because it avoids shelling out to a new process, shares the current configuration context, and enforces recursion protection (depth limit of 4).
 4. **`codegen`**: Executes a command for code generation with optional dependency tracking. When `input` and `output` fields are both specified, the command only runs if any output file is missing or any input file is newer than the oldest output file. This enables incremental builds by skipping generation when outputs are already up-to-date.
 
-The `catalyst` hook type supports both a short string form and a structured map form:
-
 **Example `catalyst.yaml`:**
 
 ```yaml
@@ -38,6 +36,9 @@ hooks:
 ### Catalyst Hooks
 
 The `catalyst` hook type dispatches a Catalyst subcommand internally without spawning a child process. This means the hook shares the current configuration context and workspace state with the parent invocation. Recursive invocation is protected by a maximum dispatch depth of 4, and direct recursion (e.g. a `pre-build` hook that triggers `build`) is always rejected.
+
+The `catalyst` hook type supports both a short string form and a structured map form.
+
 
 #### Short Form
 
@@ -75,8 +76,10 @@ hooks:
 | `global_args` | `list[string]` | No       | Arguments passed before the subcommand (e.g., `-V`).       |
 | `profiles`    | `list[string]` | No       | Shorthand for `-p <profile>` arguments.                    |
 
-> [!NOTE]
-> A `catalyst` hook does **not** inherit the parent invocation's global flags or profiles. Each hook invocation is independent.
+
+!!! note
+
+    A `catalyst` hook does **not** inherit the parent invocation's global flags or profiles. Each hook invocation is independent.
 
 ### Codegen Hooks
 
@@ -107,13 +110,16 @@ The `cmd` field supports variable substitution to reference declared inputs and 
 The same syntax applies identically to `$OUT`.
 
 **Slice Semantics:**
+
 Catalyst uses Python-like slice resolution:
+
 - Missing bounds default to the extremes (e.g., `$IN[1:]` means index 1 to the end).
 - Negative bounds count from the end of the list.
 - A negative step iterates backwards (e.g., `$IN[::-1]`).
 - Out-of-bounds slice indices are safely clamped, yielding fewer elements or an empty string without failing the build.
 
 **Errors & Escaping:**
+
 - An out-of-bounds strict index (e.g., `$IN[5]` when only two inputs exist) is treated as an error.
 - A step of zero (`$IN[::0]`) is treated as an error.
 - To prevent substitution and pass the literal string to the shell, prefix the variable with an extra `$` (e.g., `$$IN` becomes `$IN`).

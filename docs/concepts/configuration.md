@@ -9,11 +9,11 @@ in `catalyst_<profile>.yaml` files.
 A Catalyst profile configuration consists of several top-level sections:
 
 ```yaml
-meta:        # Catalyst-specific metadata
-manifest:    # Project identity and structure
-dependencies:# External packages
-features:    # Feature flags
-hooks:       # Lifecycle scripts
+meta:           # Catalyst-specific metadata
+manifest:       # Project identity and structure
+dependencies:   # External packages
+features:       # Feature flags
+hooks:          # Lifecycle scripts
 ```
 
 ---
@@ -48,7 +48,9 @@ Defines the project's identity, build settings, and directory structure.
 | `toolchain` | Path | - | Toolchain overrides. |
 | `dirs` | Object | - | Source and build directory configuration. |
 
-> **Note**: Fields like `author`, `maintainer`, `vendor`, `license_file`, and `readme_file` are currently only utilized by the `catalyst pack` subcommand to generate package metadata.
+
+!!! note
+    Fields like `author`, `maintainer`, `vendor`, `license_file`, and `readme_file` are currently only utilized by the `catalyst pack` subcommand to generate package metadata.
 
 ### `manifest.tooling`
 
@@ -59,18 +61,31 @@ Defines the project's identity, build settings, and directory structure.
 | `CC_LAUNCHER` | C compiler launcher (e.g., ccache), prepended to the toolchain's C compiler. | "" |
 | `CXX_LAUNCHER`| C++ compiler launcher (e.g., ccache), prepended to the toolchain's C++ compiler. | "" |
 
-> **Note**: `FMT` and `LINTER` name the executables used by the `fmt` and `tidy`
-> subcommands; they do not affect builds. The launchers prepend to the toolchain's
-> compiler executables (e.g. `ccache clang++`). `manifest.tooling.doc` (`engine`,
-> `config`, `out_dir`) configures the `doc` subcommand.
+!!! note
 
-> **Removed in 1.7.0**: `CC`, `CXX`, `CCFLAGS`, `CXXFLAGS`, and `LDFLAGS` were removed
-> from `manifest.tooling`. Define compilers, compiler flags, and linker flags in a
-> [toolchain](toolchains.md) file instead: `CC`/`CXX` map to
-> `compiler.c.executable`/`compiler.cxx.executable`, `CCFLAGS`/`CXXFLAGS` map to
-> `compiler.c.flags`/`compiler.cxx.flags`, and `LDFLAGS` maps to `linker.flags`.
-> Setting any of these keys is now an error. To share flags or share a base toolchain
-> configuration across profiles, you can use [Toolchain Inheritance](toolchains.md#toolchain-inheritance).
+    `FMT` and `LINTER` name the executables used by the `fmt` and `tidy`
+    subcommands; they do not affect builds. The launchers prepend to the toolchain's
+    compiler executables (e.g. `ccache clang++`). `manifest.tooling.doc` (`engine`,
+    `config`, `out_dir`) configures the `doc` subcommand.
+
+??? warning "Removed in 1.7.0"
+    `CC`, `CXX`, `CCFLAGS`, `CXXFLAGS`, and `LDFLAGS` were removed from `manifest.tooling`.
+
+    Define compilers, compiler flags, and linker flags in a
+    [toolchain](toolchains.md) file instead.
+
+    The replacements are as follows,
+
+    1. `CC` -> `compiler.c.executable`
+    2. `CXX` -> `compiler.cxx.executable`
+    3. `CCFLAGS` -> `compiler.c.flags`
+    4. `CXXFLAGS` -> `compiler.cxx.flags`
+    5. `LDFLAGS` -> `linker.flags`
+
+    Setting any of these keys is now an error.
+
+    To share flags or share a base toolchain
+    configuration across profiles, you can use [Toolchain Inheritance](toolchains.md#toolchain-inheritance).
 
 ### `manifest.dirs`
 
@@ -80,7 +95,9 @@ Defines the project's identity, build settings, and directory structure.
 | `source` | List of source directories | `[src]` |
 | `build` | Output directory | `build` |
 
-> **Note**: `dirs.source` is recursive. Use `.catalystignore` to exclude files.
+!!! note
+
+    `dirs.source` is recursive. Use a [`.catalystignore`](catalystignore.md) to exclude files.
 
 ### `manifest.toolchain`
 
@@ -104,19 +121,24 @@ dependencies:
 
 ## `features`
 
-Defines boolean feature flags that can be toggled via profiles or CLI.
-Enabling a feature defines a preprocessor macro.
-Features can optionally list source files that will be compiled if and only if the feature is enabled.
+Defines feature flags that can be toggled via profiles or CLI.
+Flags may be **boolean** (on/off) or **valued** (`enum`, `int`, or `string`); enabling or setting a
+flag defines a preprocessor macro. Boolean flags can optionally list source files that will be
+compiled if and only if the flag is enabled.
 
 ```yaml
 features:
   logging: true
-  work_estimates:
+  predictive_execution:
     default: true
-    files: ["src/work_estimate.cpp"]
+    files: ["src/predictive_execution.cpp"]
+  log_level:
+    type: enum
+    values: [off, error, info, debug]
+    default: error
 ```
 
-See [Preprocessor & Features](preprocessor.md) for details.
+See [Preprocessor & Features](preprocessor.md) for details, including valued flags and the emitted macros.
 
 ---
 

@@ -14,14 +14,22 @@ These macros are automatically defined by Catalyst during compilation.
 
 ## Feature Flags
 
-> [!NOTE]
-> Read the [build subcommand](../cli/build.md) docs for how to override feature flags from the command line (`-f`/`--features`).
+!!! tip
 
-Features defined in the `features:` block of your manifest map directly to preprocessor macros named `FF_<project>__<feature>`, where `<project>` is `manifest.name`. Every declared flag is **always defined** — a disabled boolean is emitted as `0`, not left undefined. This means a typo in `#if FF_my_app__loging` is a hard always-false rather than a silent one, and compiling with `-Wundef` will flag the misspelling.
+    Read the [build subcommand docs](../cli/build.md) for how to override feature flags from
+    the command line (`-f`/`--features`).
 
-### Boolean flags
+Features defined in the `features:` block of your manifest map directly to preprocessor macros named
+`FF_<project>__<feature>`, where `<project>` is `manifest.name`.
 
-The simplest flag is an on/off boolean. Write it as a bare value, or as a map with a `default:` and an optional list of source `files:` that are compiled **only** when the flag is enabled.
+Every declared flag is always defined: a disabled boolean is emitted as `0`, not left undefined.
+This means a typo in `#if FF_my_app__loging` is a hard always-false rather than a silent one,
+and compiling with `-Wundef` will flag the misspelling.
+
+### Boolean Flags
+
+The simplest flag is an on/off boolean. Write it as a bare value, or as a map with a `default:` and an optional
+list of source `files:` that are compiled only when the flag is enabled.
 
 ```yaml
 manifest:
@@ -45,12 +53,16 @@ features:
 #endif
 ```
 
-> [!NOTE]
-> Toggling a `files:` flag changes which sources are in the build graph, so it requires a regenerate (`catalyst build -r`). Toggling a flag that only changes a define does not — the value is part of each affected step's command hash and is picked up automatically.
+!!! tip
 
-### Valued flags (`enum` / `int` / `string`)
+    Toggling a `files:` flag changes which sources are in the build graph, so it requires a regenerate
+    (`catalyst build -r`). Toggling a flag that only changes a define does not require a regenerate; the value is
+    part of each affected step's command hash and is picked up automatically.
 
-Not every flag is naturally a boolean. A flag can carry a value by adding a `type:`. Valued flags require an explicit `default:`.
+### Valued Flags (`enum` / `int` / `string`)
+
+Not every flag is naturally a boolean. A flag can carry a value by adding a `type:`.
+Valued flags require an explicit `default:`.
 
 ```yaml
 manifest:
@@ -68,7 +80,8 @@ features:
     default: "dev-build"                 # runtime-only; cannot drive #if
 ```
 
-**`enum`** — the selected member is emitted as its **index** into `values:`. One named-constant macro is also emitted per member so comparisons read well:
+**`enum`** — the selected member is emitted as its **index** into `values:`. One named-constant macro is also
+emitted per member so comparisons read well:
 
 ```c
 #define FF_cob__log_level        1   // = error (the active value)
@@ -105,7 +118,9 @@ A bare `feature: true|false` remains valid and behaves as before — it is sugar
 
 ### Overriding from the CLI
 
-Defaults can be overridden per build with `-f`/`--features`. Booleans use `-f <name>` / `-f no-<name>`; valued flags use `-f <name>=<value>`:
+Defaults can be overridden per build with `-f`/`--features`.
+
+Booleans use `-f <name>` / `-f no-<name>`; valued flags use `-f <name>=<value>`:
 
 ```bash
 catalyst build -f no-logging -f log_level=debug -f flush_threshold=2097152
@@ -115,7 +130,7 @@ See the [build subcommand](../cli/build.md#feature-flag-overrides) for the full 
 
 ## Custom Flags
 
-You can define arbitrary macros via the compiler flags in your [toolchain](toolchains.md) file:
+You can always define arbitrary macros via the compiler flags in your [toolchain](toolchains.md) file:
 
 ```yaml
 # tc_my-project.yaml

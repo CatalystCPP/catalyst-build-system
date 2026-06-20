@@ -50,10 +50,12 @@ Defines the metadata and command templates Catalyst will use during generation.
 | `linker` | Object | - | Executable and shared library linker executable, base flags, and templates. |
 | `archiver` | Object | - | Static library archive template. |
 
-> **Note**: `compiler.c.flags`, `compiler.cxx.flags`, and `linker.flags` define the
-> compiler/linker flags for the target — this is the only home for build flags. The
-> `manifest.tooling` flag overrides (`CCFLAGS`/`CXXFLAGS`/`LDFLAGS`) were removed in 1.7.0;
-> set `compiler.c.flags`, `compiler.cxx.flags`, and `linker.flags` here instead.
+!!! note
+
+    `compiler.c.flags`, `compiler.cxx.flags`, and `linker.flags` define the
+    compiler/linker flags for the target — this is the only home for build flags. The
+    `manifest.tooling` flag overrides (`CCFLAGS`/`CXXFLAGS`/`LDFLAGS`) were removed in 1.7.0;
+    set `compiler.c.flags`, `compiler.cxx.flags`, and `linker.flags` here instead.
 
 ### `toolchain.extensions`
 
@@ -76,7 +78,9 @@ Defines the metadata and command templates Catalyst will use during generation.
 | `define` | String | `-D{name}={value}` | Template for a preprocessor define with a value. |
 | `define_empty` | String | `-D{name}` | Template for a value-less preprocessor define. |
 
-> **Note**: `flags` templates interpolate `{path}`, `{name}`, and `{value}` placeholders.
+!!! note
+
+    `flags` templates interpolate `{path}`, `{name}`, and `{value}` placeholders.
 
 ### `toolchain.compiler`
 
@@ -101,8 +105,10 @@ Defines the metadata and command templates Catalyst will use during generation.
 | `flags` | String | `""` | Base C++ compiler flags, interpolated as `{cxxflags}`. |
 | `command` | String | `{cxx} {cxxflags} -MMD -MF {object}.d -c {source} -o {object} {includes} {defines}` | Command template for compiling C++ sources. |
 
-> **Note**: Compiler command templates interpolate `{cc}` or `{cxx}`, plus
-> `{cflags}` or `{cxxflags}`, `{source}`, `{object}`, `{includes}`, and `{defines}`.
+!!! note
+
+    Compiler command templates interpolate `{cc}` or `{cxx}`, plus
+    `{cflags}` or `{cxxflags}`, `{source}`, `{object}`, `{includes}`, and `{defines}`.
 
 ### `toolchain.linker`
 
@@ -113,8 +119,10 @@ Defines the metadata and command templates Catalyst will use during generation.
 | `executable_command` | String | `{linker} {objects} -o {output} {ldflags} {lib_dirs} {libs}` | Command template for building executables. |
 | `shared_lib_command` | String | `{linker} -shared {objects} -o {output} {ldflags} {lib_dirs} {libs}` | Command template for building shared libraries. |
 
-> **Note**: Linker command templates interpolate `{linker}`, `{objects}`,
-> `{output}`, `{ldflags}`, `{lib_dirs}`, and `{libs}`.
+!!! note
+
+    Linker command templates interpolate `{linker}`, `{objects}`,
+    `{output}`, `{ldflags}`, `{lib_dirs}`, and `{libs}`.
 
 ### `toolchain.archiver`
 
@@ -123,8 +131,10 @@ Defines the metadata and command templates Catalyst will use during generation.
 | `executable` | String | `ar` | Archive tool executable. |
 | `command` | String | `{archiver} rcs {output} {objects}` | Command template for building static libraries. |
 
-> **Note**: Archiver command templates interpolate `{archiver}`, `{output}`,
-> and `{objects}`.
+!!! note
+
+    Archiver command templates interpolate `{archiver}`, `{output}`,
+    and `{objects}`.
 
 ---
 
