@@ -24,14 +24,10 @@ namespace {
 
 bool isEnabled(bool default_enabled,
                const std::string &feature,
-               const std::unordered_set<std::string> &enabled_features) =
-    delete ("Replaced by resolveFeatureFlags which handles all logic related to feature flag resolution, including CLI "
-            "overrides and validation.");
+               const std::unordered_set<std::string> &enabled_features) = delete;
 
 // A feature's default state: either `feature: <bool>` or `feature: {default: <bool>}`.
-bool featureDefault(ryml::ConstNodeRef feature_node) = delete (
-    "Replaced by resolveFeatureFlags which handles all logic related to feature flag resolution, including CLI "
-    "overrides and validation.");
+bool featureDefault(ryml::ConstNodeRef feature_node) = delete;
 
 void writeVariables(const catalyst::utils::yaml::Configuration &config,
                     catalyst::generate::buildwriters::BaseWriter &writer,
