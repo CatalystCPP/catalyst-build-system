@@ -46,7 +46,6 @@ the C++ ecosystem. It prioritizes declarative configuration, reproducibility, an
 
 ### Community & Contributing
 - [Contributing Guidelines](CONTRIBUTING.md)
-- [Roadmap](ROADMAP.md)
 
 ---
 

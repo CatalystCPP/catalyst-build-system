@@ -85,7 +85,7 @@ Defines the project's identity, build settings, and directory structure.
     Setting any of these keys is now an error.
 
     To share flags or share a base toolchain
-    configuration across profiles, you can use [Toolchain Inheritance](toolchains.md#toolchain-inheritance).
+    configuration across profiles, you can use [Toolchain Inheritance](toolchains.md#toolchain-inheritance-extends).
 
 ### `manifest.dirs`
 
