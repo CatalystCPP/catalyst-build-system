@@ -64,9 +64,12 @@ Result<FindRes> findLocal(ryml::ConstNodeRef dep, const catalyst::toolchain::Too
 
     // Add library
     std::string libs;
-    if (auto lib_name = profile.getString("manifest.name")) {
-        catalyst::logger.debug("Adding library: {}", *lib_name);
-        libs += " " + catalyst::toolchain::expand_template(tc.flags.lib, {{"name", *lib_name}});
+    std::string type = profile.getString("manifest.type").value_or("BINARY");
+    if (type != "INTERFACE") {
+        if (auto lib_name = profile.getString("manifest.name")) {
+            catalyst::logger.debug("Adding library: {}", *lib_name);
+            libs += " " + catalyst::toolchain::expand_template(tc.flags.lib, {{"name", *lib_name}});
+        }
     }
 
     return FindRes{.lib_path = library_path, .inc_path = include_path, .libs = libs, .lib_dirs = lib_dirs};

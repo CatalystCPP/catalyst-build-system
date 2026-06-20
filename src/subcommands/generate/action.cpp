@@ -196,9 +196,13 @@ void finalTarget(const utils::yaml::Configuration &config,
                  const auto &object_files,
                  catalyst::generate::buildwriters::BaseWriter &writer,
                  const catalyst::toolchain::ToolchainDef &tc) {
+    std::string type = config.getString("manifest.type").value_or("BINARY");
+    if (type == "INTERFACE") {
+        catalyst::logger.debug("Interface library target, skipping final target build edge.");
+        return;
+    }
     catalyst::logger.debug("Generating final target.");
     // Build edge for the final target
-    std::string type = config.getString("manifest.type").value_or("BINARY");
     std::string target_prefix;
     std::string target_suffix;
     std::string link_rule;
