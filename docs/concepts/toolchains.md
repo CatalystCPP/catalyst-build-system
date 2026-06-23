@@ -95,6 +95,8 @@ Defines the metadata and command templates Catalyst will use during generation.
 |---|---|---|---|
 | `executable` | String | `cc` | C compiler executable. |
 | `flags` | String | `""` | Base C compiler flags, interpolated as `{cflags}`. |
+| `flags_append` | String | `""` | Appends flags to the inherited C compiler flags. |
+| `flags_remove` | String | `""` | Removes matching flag tokens from the inherited C compiler flags. |
 | `command` | String | `{cc} {cflags} -MMD -MF {object}.d -c {source} -o {object} {includes} {defines}` | Command template for compiling C sources. |
 
 ### `toolchain.compiler.cxx`
@@ -103,6 +105,8 @@ Defines the metadata and command templates Catalyst will use during generation.
 |---|---|---|---|
 | `executable` | String | `c++` | C++ compiler executable. |
 | `flags` | String | `""` | Base C++ compiler flags, interpolated as `{cxxflags}`. |
+| `flags_append` | String | `""` | Appends flags to the inherited C++ compiler flags. |
+| `flags_remove` | String | `""` | Removes matching flag tokens from the inherited C++ compiler flags. |
 | `command` | String | `{cxx} {cxxflags} -MMD -MF {object}.d -c {source} -o {object} {includes} {defines}` | Command template for compiling C++ sources. |
 
 !!! note
@@ -116,6 +120,8 @@ Defines the metadata and command templates Catalyst will use during generation.
 |---|---|---|---|
 | `executable` | String | `c++` | Linker executable. |
 | `flags` | String | `""` | Base linker flags, interpolated as `{ldflags}`. |
+| `flags_append` | String | `""` | Appends flags to the inherited linker flags. |
+| `flags_remove` | String | `""` | Removes matching flag tokens from the inherited linker flags. |
 | `executable_command` | String | `{linker} {objects} -o {output} {ldflags} {lib_dirs} {libs}` | Command template for building executables. |
 | `shared_lib_command` | String | `{linker} -shared {objects} -o {output} {ldflags} {lib_dirs} {libs}` | Command template for building shared libraries. |
 
@@ -205,8 +211,17 @@ Precedence order (lowest to highest):
 
 Every unspecified key inherits from its parent base toolchain.
 
-For flags (e.g. `compiler.c.flags`, `compiler.cxx.flags`, `linker.flags`), the flag strings
-are replaced wholesale, not appended.
+For flag fields (e.g. `compiler.c.flags`, `compiler.cxx.flags`, `linker.flags`), you can control composition using:
+
+- `flags`: Replaces the inherited flag string entirely.
+- `flags_append`: Appends the provided flags to the inherited flags.
+- `flags_remove`: Filters out matching space-separated tokens from the inherited flags.
+
+!!! warning
+
+    You should generally pick one of the two composition paradigms per block: either wholesale replacement (`flags`) OR modification (`flags_remove` and `flags_append`).
+
+    If `flags` is specified, it completely replaces the inherited string, making `flags_remove` and `flags_append` in the exact same file largely redundant. (If multiple are used, the evaluation order is: `flags` overwrite, then `flags_remove`, then `flags_append`).
 
 ### Path Resolution
 
