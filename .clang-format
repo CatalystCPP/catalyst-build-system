@@ -23,3 +23,15 @@ IncludeCategories:
     Priority:        3
   - Regex:           '^("catalyst/.*"|<catalyst/.*>)'
     Priority:        4
+
+# --- Added for Operator Chaining ---
+# Forces a break before binary operators if the expression wraps.
+BreakBeforeBinaryOperators: NonAssignment
+
+# Aligns the operators vertically on subsequent lines.
+# Options: Align (aligns operators), Don'tAlign (indents normally)
+AlignOperands: Align
+
+# The indentation width for wrapped lines (like long math expressions).
+ConstructorInitializerIndentWidth: 4
+ContinuationIndentWidth: 4

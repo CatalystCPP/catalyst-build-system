@@ -199,7 +199,8 @@ FindRes resolveVcpkgPackage(const fs::path &vcpkg_root,
 
     bool lib_dir_exists = fs::exists(lib_path) && fs::is_directory(lib_path);
     if ((linkage == "static" || linkage == "shared") && !lib_dir_exists) {
-        catalyst::logger.warn("Could not find library directory for vcpkg package '{}' at: {}", name, lib_path.string());
+        catalyst::logger.warn(
+            "Could not find library directory for vcpkg package '{}' at: {}", name, lib_path.string());
         if (fabricate_if_missing) {
             libs += " " + catalyst::toolchain::expand_template(tc.flags.lib, {{"name", name}});
         }

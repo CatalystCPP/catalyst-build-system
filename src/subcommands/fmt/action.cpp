@@ -94,9 +94,9 @@ Result<void> action(const Parse &parse_args) {
                 if (is_ignored(entry.path(), ignore_regexes)) {
                     continue;
                 }
-                if (std::string extension = entry.path().extension(); extension == ".cpp" || extension == ".cxx" ||
-                                                                      extension == ".cc" || extension == ".c" ||
-                                                                      extension == ".cu" || extension == ".cupp") {
+                if (std::string extension = entry.path().extension(); extension == ".cpp" || extension == ".cxx"
+                                                                      || extension == ".cc" || extension == ".c"
+                                                                      || extension == ".cu" || extension == ".cupp") {
                     files_to_format.push_back(entry.path());
                 }
             }
@@ -110,9 +110,9 @@ Result<void> action(const Parse &parse_args) {
                 if (is_ignored(entry.path(), ignore_regexes)) {
                     continue;
                 }
-                if (std::string extension = entry.path().extension(); extension == ".hpp" || extension == ".hxx" ||
-                                                                      extension == ".hh" || extension == ".h" ||
-                                                                      extension == ".cuh") {
+                if (std::string extension = entry.path().extension(); extension == ".hpp" || extension == ".hxx"
+                                                                      || extension == ".hh" || extension == ".h"
+                                                                      || extension == ".cuh") {
                     files_to_format.push_back(entry.path());
                 }
             }

@@ -91,8 +91,8 @@ Result<std::unordered_set<fs::path>> buildSourceSet(const fs::path &dir, const s
             if (!ignored) {
                 const auto &path = entry.path();
                 const std::string extension = path.extension().string();
-                if (extension == ".cpp" || extension == ".cxx" || extension == ".cc" || extension == ".c" ||
-                    extension == ".cu" || extension == ".cupp") {
+                if (extension == ".cpp" || extension == ".cxx" || extension == ".cc" || extension == ".c"
+                    || extension == ".cu" || extension == ".cupp") {
                     logger.debug("Adding file to source set: {}", path.string());
                     source_set.insert(path);
                 }
@@ -112,8 +112,8 @@ Result<std::unordered_set<fs::path>> buildSourceSet(const std::vector<std::strin
     std::vector<std::string> common_prepended_profiles = {"common"};
     common_prepended_profiles.insert(common_prepended_profiles.end(), profiles.begin(), profiles.end());
     namespace sv = std::views;
-    auto paths = source_dirs | sv::transform([](const std::string &str) { return fs::path{str}; }) |
-                 std::ranges::to<std::vector>();
+    auto paths = source_dirs | sv::transform([](const std::string &str) { return fs::path{str}; })
+                 | std::ranges::to<std::vector>();
     std::unordered_set<fs::path> source_set;
 
     for (const auto &dir : paths) {

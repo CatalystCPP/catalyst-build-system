@@ -336,8 +336,8 @@ Status: install ok installed
     auto ryml_deps = db.depends.at(vcpkgStatusKey("ryml", "x64-linux"));
     REQUIRE(ryml_deps == std::vector<std::string>{"c4core", "vcpkg-cmake", "vcpkg-cmake-config", "zlib", "openssl"});
 
-    REQUIRE(db.depends.at(vcpkgStatusKey("c4core", "x64-linux")) ==
-            std::vector<std::string>{"vcpkg-cmake", "vcpkg-cmake-config"});
+    REQUIRE(db.depends.at(vcpkgStatusKey("c4core", "x64-linux"))
+            == std::vector<std::string>{"vcpkg-cmake", "vcpkg-cmake-config"});
 
     // not-installed stanzas are skipped entirely.
     REQUIRE_FALSE(db.depends.contains(vcpkgStatusKey("removed-pkg", "x64-linux")));

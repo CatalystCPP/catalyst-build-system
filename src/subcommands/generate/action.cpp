@@ -274,15 +274,17 @@ void writeVariables(const catalyst::utils::yaml::Configuration &config,
 #else
         const char *triplet = "x64-linux";
 #endif
-        cxxflags += " " + catalyst::toolchain::expand_template(
-                              tc.flags.include_dir,
-                              {{"path", (fs::path(vcpkg_root) / "installed" / triplet / "include").string()}});
-        ccflags += " " + catalyst::toolchain::expand_template(
-                             tc.flags.include_dir,
-                             {{"path", (fs::path(vcpkg_root) / "installed" / triplet / "include").string()}});
-        ldflags +=
-            " " + catalyst::toolchain::expand_template(
-                      tc.flags.lib_dir, {{"path", (fs::path(vcpkg_root) / "installed" / triplet / "lib").string()}});
+        cxxflags +=
+            " "
+            + catalyst::toolchain::expand_template(
+                tc.flags.include_dir, {{"path", (fs::path(vcpkg_root) / "installed" / triplet / "include").string()}});
+        ccflags +=
+            " "
+            + catalyst::toolchain::expand_template(
+                tc.flags.include_dir, {{"path", (fs::path(vcpkg_root) / "installed" / triplet / "include").string()}});
+        ldflags += " "
+                   + catalyst::toolchain::expand_template(
+                       tc.flags.lib_dir, {{"path", (fs::path(vcpkg_root) / "installed" / triplet / "lib").string()}});
     } else {
         logger.warn("VCPKG_ROOT environment variable is not defined.");
     }
@@ -291,43 +293,48 @@ void writeVariables(const catalyst::utils::yaml::Configuration &config,
     for (const auto &ff : features) {
         if (ff.type == "bool") {
             std::string flag =
-                " " + catalyst::toolchain::expand_template(tc.flags.define,
-                                                           {{"name", std::format("FF_{}__{}", proj_name, ff.name)},
-                                                            {"value", ff.resolved_val == "true" ? "1" : "0"}});
+                " "
+                + catalyst::toolchain::expand_template(tc.flags.define,
+                                                       {{"name", std::format("FF_{}__{}", proj_name, ff.name)},
+                                                        {"value", ff.resolved_val == "true" ? "1" : "0"}});
             cxxflags += flag;
             ccflags += flag;
         } else if (ff.type == "enum") {
             auto it = std::ranges::find(ff.enum_values, ff.resolved_val);
             size_t active_idx = std::distance(ff.enum_values.begin(), it); // count which enum value is active
             std::string flag =
-                " " + catalyst::toolchain::expand_template(tc.flags.define,
-                                                           {{"name", std::format("FF_{}__{}", proj_name, ff.name)},
-                                                            {"value", std::to_string(active_idx)}});
+                " "
+                + catalyst::toolchain::expand_template(
+                    tc.flags.define,
+                    {{"name", std::format("FF_{}__{}", proj_name, ff.name)}, {"value", std::to_string(active_idx)}});
             cxxflags += flag;
             ccflags += flag;
 
             for (size_t i = 0; i < ff.enum_values.size(); ++i) { // emit individual flags for each enum value, e.g.
                                                                  // FF_FOO__BAR__ENUMVAL0=0, FF_FOO__BAR__ENUMVAL1=1
                 std::string member_flag =
-                    " " + catalyst::toolchain::expand_template(
-                              tc.flags.define,
-                              {{"name", std::format("FF_{}__{}__{}", proj_name, ff.name, ff.enum_values[i])},
-                               {"value", std::to_string(i)}});
+                    " "
+                    + catalyst::toolchain::expand_template(
+                        tc.flags.define,
+                        {{"name", std::format("FF_{}__{}__{}", proj_name, ff.name, ff.enum_values[i])},
+                         {"value", std::to_string(i)}});
                 cxxflags += member_flag;
                 ccflags += member_flag;
             }
         } else if (ff.type == "int") { // simple integer value, just emit as-is.
             std::string flag =
-                " " + catalyst::toolchain::expand_template(
-                          tc.flags.define,
-                          {{"name", std::format("FF_{}__{}", proj_name, ff.name)}, {"value", ff.resolved_val}});
+                " "
+                + catalyst::toolchain::expand_template(
+                    tc.flags.define,
+                    {{"name", std::format("FF_{}__{}", proj_name, ff.name)}, {"value", ff.resolved_val}});
             cxxflags += flag;
             ccflags += flag;
         } else if (ff.type == "string") { // simple string value, emit as-is but wrapped in quotes.
             std::string flag =
-                " " + catalyst::toolchain::expand_template(tc.flags.define,
-                                                           {{"name", std::format("FF_{}__{}", proj_name, ff.name)},
-                                                            {"value", "\"" + ff.resolved_val + "\""}});
+                " "
+                + catalyst::toolchain::expand_template(
+                    tc.flags.define,
+                    {{"name", std::format("FF_{}__{}", proj_name, ff.name)}, {"value", "\"" + ff.resolved_val + "\""}});
             cxxflags += flag;
             ccflags += flag;
         }
@@ -335,10 +342,12 @@ void writeVariables(const catalyst::utils::yaml::Configuration &config,
 
     std::vector<std::string> inc_dirs = config.getStringVector("manifest.dirs.include").value();
     for (const auto &inc_dir : inc_dirs) {
-        cxxflags += " " + catalyst::toolchain::expand_template(tc.flags.include_dir,
-                                                               {{"path", fs::absolute(inc_dir).string()}});
-        ccflags += " " + catalyst::toolchain::expand_template(tc.flags.include_dir,
-                                                              {{"path", fs::absolute(inc_dir).string()}});
+        cxxflags +=
+            " "
+            + catalyst::toolchain::expand_template(tc.flags.include_dir, {{"path", fs::absolute(inc_dir).string()}});
+        ccflags +=
+            " "
+            + catalyst::toolchain::expand_template(tc.flags.include_dir, {{"path", fs::absolute(inc_dir).string()}});
     }
 
     std::string ldlibs;
@@ -504,8 +513,8 @@ Result<std::vector<FeatureFlag>> resolveFeatureFlags(const utils::yaml::Configur
 
                 // Validation: require default: for non-bool
                 if (!yaml::child(feature_node, "default").readable()) {
-                    return std::unexpected("Feature flag '" + ff.name + "' of type '" + t +
-                                           "' requires a 'default' value");
+                    return std::unexpected("Feature flag '" + ff.name + "' of type '" + t
+                                           + "' requires a 'default' value");
                 }
 
                 if (t == "enum") {
@@ -521,8 +530,8 @@ Result<std::vector<FeatureFlag>> resolveFeatureFlags(const utils::yaml::Configur
                     }
                     ff.default_val = yaml::asString(yaml::child(feature_node, "default")).value_or("");
                     if (std::ranges::find(ff.enum_values, ff.default_val) == ff.enum_values.end()) {
-                        return std::unexpected("Default value '" + ff.default_val +
-                                               "' is not in 'values' list for enum feature '" + ff.name + "'");
+                        return std::unexpected("Default value '" + ff.default_val
+                                               + "' is not in 'values' list for enum feature '" + ff.name + "'");
                     }
                 } else if (t == "int") {
                     std::string def_str = yaml::asString(yaml::child(feature_node, "default")).value_or("");
@@ -530,12 +539,12 @@ Result<std::vector<FeatureFlag>> resolveFeatureFlags(const utils::yaml::Configur
                         size_t pos = 0;
                         std::stoll(def_str, &pos);
                         if (pos != def_str.size()) {
-                            return std::unexpected("Default value '" + def_str + "' for integer feature '" + ff.name +
-                                                   "' is not a valid integer");
+                            return std::unexpected("Default value '" + def_str + "' for integer feature '" + ff.name
+                                                   + "' is not a valid integer");
                         }
                     } catch (...) {
-                        return std::unexpected("Default value '" + def_str + "' for integer feature '" + ff.name +
-                                               "' is not a valid integer");
+                        return std::unexpected("Default value '" + def_str + "' for integer feature '" + ff.name
+                                               + "' is not a valid integer");
                     }
                     ff.default_val = def_str;
                 } else if (t == "string") {
@@ -575,19 +584,19 @@ Result<std::vector<FeatureFlag>> resolveFeatureFlags(const utils::yaml::Configur
                 // If they passed bare name (which parsed as "true") or no-prefix (which parsed as "false")
                 // but this feature is non-bool:
                 if (cli_val == "true") {
-                    return std::unexpected("Feature '" + ff.name +
-                                           "' is a non-boolean flag and cannot be enabled without a value (use " +
-                                           ff.name + "=value).");
+                    return std::unexpected("Feature '" + ff.name
+                                           + "' is a non-boolean flag and cannot be enabled without a value (use "
+                                           + ff.name + "=value).");
                 }
                 if (cli_val == "false") {
-                    return std::unexpected("Feature '" + ff.name +
-                                           "' is a non-boolean flag and cannot be disabled with 'no-' prefix.");
+                    return std::unexpected("Feature '" + ff.name
+                                           + "' is a non-boolean flag and cannot be disabled with 'no-' prefix.");
                 }
 
                 if (ff.type == "enum") {
                     if (std::find(ff.enum_values.begin(), ff.enum_values.end(), cli_val) == ff.enum_values.end()) {
-                        return std::unexpected("Value '" + cli_val + "' is not a valid option for enum feature '" +
-                                               ff.name + "'");
+                        return std::unexpected("Value '" + cli_val + "' is not a valid option for enum feature '"
+                                               + ff.name + "'");
                     }
                     ff.resolved_val = cli_val;
                 } else if (ff.type == "int") {
@@ -595,12 +604,12 @@ Result<std::vector<FeatureFlag>> resolveFeatureFlags(const utils::yaml::Configur
                         size_t pos = 0;
                         std::stoll(cli_val, &pos);
                         if (pos != cli_val.size()) {
-                            return std::unexpected("Value '" + cli_val + "' is not a valid integer for feature '" +
-                                                   ff.name + "'");
+                            return std::unexpected("Value '" + cli_val + "' is not a valid integer for feature '"
+                                                   + ff.name + "'");
                         }
                     } catch (...) {
-                        return std::unexpected("Value '" + cli_val + "' is not a valid integer for feature '" +
-                                               ff.name + "'");
+                        return std::unexpected("Value '" + cli_val + "' is not a valid integer for feature '" + ff.name
+                                               + "'");
                     }
                     ff.resolved_val = cli_val;
                 } else if (ff.type == "string") {
@@ -615,8 +624,8 @@ Result<std::vector<FeatureFlag>> resolveFeatureFlags(const utils::yaml::Configur
         if (ff.type == "bool") {
             ff.is_enabled = (ff.resolved_val == "true");
         } else {
-            ff.is_enabled = (ff.resolved_val != "off" && ff.resolved_val != "false" && ff.resolved_val != "0" &&
-                             ff.resolved_val != "none" && !ff.resolved_val.empty());
+            ff.is_enabled = (ff.resolved_val != "off" && ff.resolved_val != "false" && ff.resolved_val != "0"
+                             && ff.resolved_val != "none" && !ff.resolved_val.empty());
         }
 
         resolved.push_back(std::move(ff));

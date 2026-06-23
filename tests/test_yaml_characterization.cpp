@@ -14,11 +14,11 @@
 #include <ryml/ryml.hpp>
 #include <yaml-cpp/yaml.h>
 
+#include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 #include "catalyst/utils/yaml/load_profile_file.hpp"
 #include "catalyst/utils/yaml/profile_write_back.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
-#include "catalyst/subcommands/generate.hpp"
 
 namespace fs = std::filesystem;
 using catalyst::utils::yaml::asString;
@@ -228,14 +228,14 @@ TEST_CASE("Profile composition: hooks append, scalars wrap, null removes", "[yam
 
     SECTION("single profile") {
         Configuration config({"common"}, dir.path);
-        CHECK(config.getStringVector("hooks.pre-build") ==
-              std::vector<std::string>{"echo common-pre-1", "echo common-pre-2"});
+        CHECK(config.getStringVector("hooks.pre-build")
+              == std::vector<std::string>{"echo common-pre-1", "echo common-pre-2"});
         CHECK(config.getStringVector("hooks.post-build") == std::vector<std::string>{"echo common-post"});
     }
     SECTION("second profile appends its scalar hook and removes via null") {
         Configuration config({"common", "debug"}, dir.path);
-        CHECK(config.getStringVector("hooks.pre-build") ==
-              std::vector<std::string>{"echo common-pre-1", "echo common-pre-2", "echo debug-pre"});
+        CHECK(config.getStringVector("hooks.pre-build")
+              == std::vector<std::string>{"echo common-pre-1", "echo common-pre-2", "echo debug-pre"});
         CHECK_FALSE(config.has("hooks.post-build"));
     }
 }
@@ -260,8 +260,8 @@ TEST_CASE("Profile composition: adjacent duplicate profiles are applied once", "
 
     Configuration config({"common", "common"}, dir.path);
     CHECK(config.getStringVector("manifest.dirs.source") == std::vector<std::string>{"src"});
-    CHECK(config.getStringVector("hooks.pre-build") ==
-          std::vector<std::string>{"echo common-pre-1", "echo common-pre-2"});
+    CHECK(config.getStringVector("hooks.pre-build")
+          == std::vector<std::string>{"echo common-pre-1", "echo common-pre-2"});
 }
 
 TEST_CASE("Configuration getters: type mismatches yield nullopt", "[yaml][characterization]") {
@@ -299,8 +299,9 @@ TEST_CASE("Configuration::getBuildDir multiplexes the profile list", "[yaml][cha
 
 TEST_CASE("ProfileFile: combined load aliases the profile node into the document", "[yaml][characterization]") {
     TempDir dir{"catalyst_char_wb_combined"};
-    writeFile(dir.path / "CATALYST.yaml",
-              "common:\n  manifest:\n    name: writeback\ndebug:\n  manifest:\n    tooling:\n      CC_LAUNCHER: ccache\n");
+    writeFile(
+        dir.path / "CATALYST.yaml",
+        "common:\n  manifest:\n    name: writeback\ndebug:\n  manifest:\n    tooling:\n      CC_LAUNCHER: ccache\n");
 
     auto loaded = loadProfileFile("debug", dir.path);
     REQUIRE(loaded.has_value());
@@ -443,13 +444,14 @@ TEST_CASE("resolveFeatureFlags parses and validates feature flags", "[features][
         const auto &flags = *res;
         REQUIRE(flags.size() == 5);
 
-        auto check_flag = [&](const std::string &name, const std::string &type, const std::string &val, bool is_enabled) {
-            auto it = std::find_if(flags.begin(), flags.end(), [&](const auto &f) { return f.name == name; });
-            REQUIRE(it != flags.end());
-            CHECK(it->type == type);
-            CHECK(it->resolved_val == val);
-            CHECK(it->is_enabled == is_enabled);
-        };
+        auto check_flag =
+            [&](const std::string &name, const std::string &type, const std::string &val, bool is_enabled) {
+                auto it = std::find_if(flags.begin(), flags.end(), [&](const auto &f) { return f.name == name; });
+                REQUIRE(it != flags.end());
+                CHECK(it->type == type);
+                CHECK(it->resolved_val == val);
+                CHECK(it->is_enabled == is_enabled);
+            };
 
         check_flag("simple_bool", "bool", "true", true);
         check_flag("obj_bool", "bool", "false", false);
@@ -462,12 +464,7 @@ TEST_CASE("resolveFeatureFlags parses and validates feature flags", "[features][
         Configuration config({"common"}, dir.path);
         // Toggle bools, override enum and int and string
         std::vector<std::string> cli = {
-            "no-simple_bool",
-            "obj_bool",
-            "log_level=debug",
-            "flush_threshold=2097152",
-            "build_id=production-v1"
-        };
+            "no-simple_bool", "obj_bool", "log_level=debug", "flush_threshold=2097152", "build_id=production-v1"};
         auto res = catalyst::generate::resolveFeatureFlags(config, cli);
         REQUIRE(res.has_value());
         const auto &flags = *res;

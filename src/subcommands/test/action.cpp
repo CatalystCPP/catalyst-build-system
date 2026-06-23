@@ -68,8 +68,8 @@ void warnIfStale(const fs::path &exe_path,
         }
         std::error_code walk_ec;
         for (const auto &entry : fs::recursive_directory_iterator(inc_dir, walk_ec)) {
-            if (entry.is_regular_file() &&
-                std::ranges::find(HEADER_EXTS, entry.path().extension().string()) != HEADER_EXTS.end()) {
+            if (entry.is_regular_file()
+                && std::ranges::find(HEADER_EXTS, entry.path().extension().string()) != HEADER_EXTS.end()) {
                 inputs.push_back(entry.path());
             }
         }

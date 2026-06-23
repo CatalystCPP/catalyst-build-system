@@ -87,8 +87,8 @@ Result<void> action(const Parse &parse_args) {
     } else if (type == "INTERFACE") {
         // noop
     } else {
-        return std::unexpected(
-            std::format("Unexpected value for manifest.type: {}. Expected: STATICLIB, SHAREDLIB, BINARY, or INTERFACE.", type));
+        return std::unexpected(std::format(
+            "Unexpected value for manifest.type: {}. Expected: STATICLIB, SHAREDLIB, BINARY, or INTERFACE.", type));
     }
 
     auto copy_artifact =

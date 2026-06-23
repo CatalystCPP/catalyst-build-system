@@ -102,10 +102,10 @@ LogT::LogT()
 #else
 #if FF_catalyst__log_machine_info
     log_file << std::format(
-                    R"({{"event":"begin_session","timestamp":"{:%Y-%m-%d %H:%M:%S}","hostname":"{}","pid":{}}})",
-                    now,
-                    this->hostname,
-                    this->pid)
+        R"({{"event":"begin_session","timestamp":"{:%Y-%m-%d %H:%M:%S}","hostname":"{}","pid":{}}})",
+        now,
+        this->hostname,
+        this->pid)
              << "\n";
 #else
     log_file << std::format(R"({{"event":"begin_session","timestamp":"{:%Y-%m-%d %H:%M:%S}"}})", now) << "\n";

@@ -39,10 +39,10 @@ namespace {
 
 std::vector<std::string> split_tokens(std::string_view str) {
     auto is_space = [](char c) { return c == ' ' || c == '\t' || c == '\r' || c == '\n'; };
-    return str | std::views::chunk_by([&](char a, char b) { return is_space(a) == is_space(b); }) |
-           std::views::filter([&](auto chunk) { return !is_space(chunk.front()); }) |
-           std::views::transform([](auto chunk) { return std::string(std::string_view(chunk)); }) |
-           std::ranges::to<std::vector<std::string>>();
+    return str | std::views::chunk_by([&](char a, char b) { return is_space(a) == is_space(b); })
+           | std::views::filter([&](auto chunk) { return !is_space(chunk.front()); })
+           | std::views::transform([](auto chunk) { return std::string(std::string_view(chunk)); })
+           | std::ranges::to<std::vector<std::string>>();
 }
 
 void modify_flags(ryml::ConstNodeRef parent, std::string &flags) {
@@ -58,9 +58,9 @@ void modify_flags(ryml::ConstNodeRef parent, std::string &flags) {
         using namespace std::string_view_literals;
         auto to_remove = split_tokens(*val);
         flags =
-            split_tokens(flags) |
-            std::views::filter([&to_remove](const std::string &t) { return !std::ranges::contains(to_remove, t); }) |
-            std::views::join_with(" "sv) | std::ranges::to<std::string>();
+            split_tokens(flags)
+            | std::views::filter([&to_remove](const std::string &t) { return !std::ranges::contains(to_remove, t); })
+            | std::views::join_with(" "sv) | std::ranges::to<std::string>();
     }
 
     // 3. Append (if 'flags_append' is specified)
