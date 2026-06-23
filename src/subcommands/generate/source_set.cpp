@@ -108,13 +108,16 @@ namespace catalyst::generate {
 Result<std::unordered_set<fs::path>> buildSourceSet(const std::vector<std::string> &source_dirs,
                                                     const std::vector<std::string> &profiles) {
     catalyst::logger.debug("Building source set.");
+    catalyst::logger.debug("prepended 'common' to source_set profiles");
+    std::vector<std::string> common_prepended_profiles = {"common"};
+    common_prepended_profiles.insert(common_prepended_profiles.end(), profiles.begin(), profiles.end());
     namespace sv = std::views;
     auto paths = source_dirs | sv::transform([](const std::string &str) { return fs::path{str}; }) |
                  std::ranges::to<std::vector>();
     std::unordered_set<fs::path> source_set;
 
     for (const auto &dir : paths) {
-        auto source_set_ex = ::buildSourceSet(dir, profiles);
+        auto source_set_ex = ::buildSourceSet(dir, common_prepended_profiles);
         if (!source_set_ex) {
             return std::unexpected(std::format(
                 "Failed to build source set for directory: {}. Error: {}", dir.string(), source_set_ex.error()));
