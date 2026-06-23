@@ -8,7 +8,7 @@ Catalyst source code.
 ## Overview
 
 Projects opt into a custom toolchain by setting `manifest.toolchain` in their
-configuration:
+profile configuration:
 
 ```yaml
 manifest:

@@ -1,4 +1,4 @@
-# `.catalystignore`
+# Catalyst Ignore
 
 The `.catalystignore` file allows you to exclude specific source files from the build based on the active [profiles](profiles.md). This is useful for excluding platform-specific code, tests, or benchmarks from certain build types.
 
