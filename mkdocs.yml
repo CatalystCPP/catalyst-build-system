@@ -17,8 +17,8 @@ theme:
 
 nav:
   - Home: index.md
-  - Getting Started: getting_started.md
   - Installation: installation.md
+  - Getting Started: getting_started.md
   - Concepts:
     - Overview: concepts/index.md
     - Configuration: concepts/configuration.md

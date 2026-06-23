@@ -7,7 +7,12 @@
 Based on your build backend, catalyst will want one of the following:
 
 - Catalyst Orchestrated Builder (`cob`) (preferred)
-    - Follow the [instructions](https://catalystcpp.github.io/catalyst-orchestrated-builder/installation).
+    - No installation required: Catalyst ships with an embedded `cob` binary that is
+    automatically extracted to `~/.catalyst/bin/`
+    (or `%USERPROFILE%\.catalyst\bin\` on Windows) the first time a
+    `cob`-backed build runs. If `$HOME`/`$USERPROFILE` are unavailable, installation
+    falls back to a temporary directory.
+    - To install `cob` yourself instead, see the [GitHub](https://github.com/CatalystCPP/catalyst-orchestrated-builder)
 - `ninja`
     - Available on most package managers
 - or `make`
@@ -16,7 +21,8 @@ Based on your build backend, catalyst will want one of the following:
 
 ### C++ Compiler
 
-Out of the box Catalyst works with any gnu-compatible compiler, namely `gcc`, `g++`, `clang`, and `clang++`.
+Out of the box Catalyst works with any gnu-compatible compiler, namely
+`gcc`, `g++`, `clang`, and `clang++`.
 
 Catalyst can be made to work with other compilers via [Toolchain Definitions](concepts/toolchains.md). A standard Windows
 toolchain definition is made available.
@@ -45,23 +51,17 @@ toolchain definition is made available.
 
 ## Installation
 
-After fetching all prerequisites, download and install the relevant package from the [latest GitHub release](https://github.com/CatalystCPP/catalyst-build-system/releases/latest). Currently, only `.deb` and `.rpm` packages are provided.
+After fetching all prerequisites, download and install the relevant package from
+the [latest GitHub release](https://github.com/CatalystCPP/catalyst-build-system/releases/latest).
 
-For example, to install:
+!!! tip
 
-**Debian/Ubuntu (`.deb`):**
-```bash
-sudo dpkg -i catalyst_1.1.0_amd64.deb
-```
+    - If an install fails, please open an issue with the error message
+    - If your preferred format is not available, please open an issue requesting that it be provided.
 
-**Fedora/RHEL (`.rpm`):**
-```bash
-sudo rpm -i catalyst-1.1.0-1.x86_64.rpm
-```
+!!! note
 
-- TIP: If an install fails, please open an issue with the error message
-- TIP: If your preferred format is not available, please open an issue requesting that it be provided.
-- NOTE: the package names might be different based on the version you are installing.
+    The package names might be different based on the version you are installing.
 
 ### Building from Source
 

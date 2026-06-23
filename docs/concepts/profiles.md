@@ -32,7 +32,8 @@ manifest:
 
 ## Composition
 
-Catalyst allows you to compose profiles by listing them. Settings are merged from left to right, with later profiles overriding earlier ones.
+Catalyst allows you to compose profiles by listing them. Settings are merged from left to right, with later profiles
+overriding earlier ones.
 
 ```bash
 catalyst build --profiles debug release
@@ -40,10 +41,10 @@ catalyst build --profiles debug release
 
 In this example:
 1.  Start with `common`.
-2.  Merge `debug` settings.
-3.  Merge `release` settings (overriding `debug` where conflicts occur).
+2.  Merge `debug` settings (overriding `common` where conflicts occur) yielding `common-debug`
+3.  Merge `release` settings, overriding where conflicts occur, and yielding `common-debug-release`.
 
-This allows for powerful combinations like `linux + debug + asan`.
+This allows for combinations like `linux + debug + asan`.
 
 ## Nulling Fields
 
@@ -62,9 +63,11 @@ meta: null  # Removes 'meta' section entirely
 
 ## Centralized Definition
 
-For projects defining multiple profiles, managing multiple `catalyst_*.yaml` files can become cumbersome. Catalyst supports a centralized `CATALYST.yaml` file where all profiles can be defined in a single place.
+For projects defining multiple profiles, managing multiple `catalyst_*.yaml` files can become cumbersome.
+Catalyst supports a centralized `CATALYST.yaml` file where all profiles can be defined in a single place.
 
-When `CATALYST.yaml` is present, Catalyst will prioritize loading profiles from it. If a profile is not found in `CATALYST.yaml`, it will fall back to looking for the corresponding `catalyst_<profile>.yaml` file.
+When `CATALYST.yaml` is present, Catalyst will prioritize loading profiles from it. If a profile is not found in
+`CATALYST.yaml`, it will fall back to looking for the corresponding `catalyst_<profile>.yaml` file.
 
 **Example `CATALYST.yaml`:**
 ```yaml

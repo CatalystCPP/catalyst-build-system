@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <format>
+#include <ranges>
 #include <vector>
 
 #include "catalyst/utils/result.hpp"
@@ -34,6 +35,45 @@ std::string expand_template(std::string_view tmpl, const std::unordered_map<std:
     return result;
 }
 
+namespace {
+
+std::vector<std::string> split_tokens(std::string_view str) {
+    auto is_space = [](char c) { return c == ' ' || c == '\t' || c == '\r' || c == '\n'; };
+    return str | std::views::chunk_by([&](char a, char b) { return is_space(a) == is_space(b); }) |
+           std::views::filter([&](auto chunk) { return !is_space(chunk.front()); }) |
+           std::views::transform([](auto chunk) { return std::string(std::string_view(chunk)); }) |
+           std::ranges::to<std::vector<std::string>>();
+}
+
+void modify_flags(ryml::ConstNodeRef parent, std::string &flags) {
+    namespace yaml = catalyst::utils::yaml;
+
+    // 1. Wholesale overwrite (if 'flags' is specified)
+    if (auto val = yaml::asString(yaml::child(parent, "flags"))) {
+        flags = std::move(*val);
+    }
+
+    // 2. Token-based removal (if 'flags_remove' is specified)
+    if (auto val = yaml::asString(yaml::child(parent, "flags_remove"))) {
+        using namespace std::string_view_literals;
+        auto to_remove = split_tokens(*val);
+        flags =
+            split_tokens(flags) |
+            std::views::filter([&to_remove](const std::string &t) { return !std::ranges::contains(to_remove, t); }) |
+            std::views::join_with(" "sv) | std::ranges::to<std::string>();
+    }
+
+    // 3. Append (if 'flags_append' is specified)
+    if (auto val = yaml::asString(yaml::child(parent, "flags_append"))) {
+        if (!flags.empty()) {
+            flags += " ";
+        }
+        flags += *val;
+    }
+}
+
+} // namespace
+
 Result<void>
 parse_toolchain_impl(const std::filesystem::path &path, ToolchainDef &tc, std::vector<std::filesystem::path> &visited) {
     namespace yaml = catalyst::utils::yaml;
@@ -46,8 +86,7 @@ parse_toolchain_impl(const std::filesystem::path &path, ToolchainDef &tc, std::v
     }
 
     // Cycle detection
-    auto it = std::find(visited.begin(), visited.end(), canonical_path);
-    if (it != visited.end()) {
+    if (std::ranges::contains(visited, canonical_path)) {
         std::string cycle_str;
         for (const auto &p : visited) {
             cycle_str += p.string() + " -> ";
@@ -56,7 +95,8 @@ parse_toolchain_impl(const std::filesystem::path &path, ToolchainDef &tc, std::v
         return std::unexpected(std::format("Toolchain inheritance cycle detected: {}", cycle_str));
     }
 
-    if (visited.size() >= 32) {
+    constexpr size_t TUNABLE_MAX_INHERITANCE_DEPTH = 32;
+    if (visited.size() >= TUNABLE_MAX_INHERITANCE_DEPTH) {
         return std::unexpected("Toolchain inheritance depth limit exceeded");
     }
 
@@ -124,16 +164,16 @@ parse_toolchain_impl(const std::filesystem::path &path, ToolchainDef &tc, std::v
     ryml::ConstNodeRef comp = yaml::child(node, "compiler");
     ryml::ConstNodeRef comp_c = yaml::child(comp, "c");
     set(comp_c, "executable", tc.compiler.c.executable);
-    set(comp_c, "flags", tc.compiler.c.flags);
+    modify_flags(comp_c, tc.compiler.c.flags);
     set(comp_c, "command", tc.compiler.c.command);
     ryml::ConstNodeRef comp_cxx = yaml::child(comp, "cxx");
     set(comp_cxx, "executable", tc.compiler.cxx.executable);
-    set(comp_cxx, "flags", tc.compiler.cxx.flags);
+    modify_flags(comp_cxx, tc.compiler.cxx.flags);
     set(comp_cxx, "command", tc.compiler.cxx.command);
 
     ryml::ConstNodeRef link = yaml::child(node, "linker");
     set(link, "executable", tc.linker.executable);
-    set(link, "flags", tc.linker.flags);
+    modify_flags(link, tc.linker.flags);
     set(link, "executable_command", tc.linker.executable_command);
     set(link, "shared_lib_command", tc.linker.shared_lib_command);
 
