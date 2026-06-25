@@ -17,7 +17,7 @@ constexpr const char *BLUE = "\033[34m";
 constexpr const char *PURPLE = "\033[35m";
 constexpr const char *RESET = "\033[0m";
 enum class LogLevel : std::uint8_t {
-    DEBUG, // hidden info (unless asked for opt in with -V)
+    DBG, // hidden info (unless asked for opt in with -V)
     INFO,  // user facing milestones
     WARN,  // warnings
     ERROR  // errors
@@ -46,7 +46,7 @@ public:
 
     template <typename... ArgsT_T> void debug(std::format_string<ArgsT_T...> fmt, ArgsT_T &&...args) const {
         std::string message = std::format(fmt, std::forward<ArgsT_T>(args)...);
-        logImpl(LogLevel::DEBUG, message);
+        logImpl(LogLevel::DBG, message);
     }
 
     template <typename... ArgsT_T> void info(std::format_string<ArgsT_T...> fmt, ArgsT_T &&...args) const {

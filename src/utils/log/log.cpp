@@ -52,7 +52,7 @@ namespace catalyst {
 
 const char *toString(LogLevel level) {
     switch (level) {
-        case LogLevel::DEBUG:
+        case LogLevel::DBG:
             return "DEBUG";
         case LogLevel::INFO:
             return "INFO";
@@ -98,7 +98,7 @@ LogT::LogT()
 {
     auto now = std::chrono::system_clock::now();
 #if FF_catalyst__uniform_logs
-    log_file << generateJsonLogEvent(now, LogLevel::DEBUG, "begin session") << "\n";
+    log_file << generateJsonLogEvent(now, LogLevel::DBG, "begin session") << "\n";
 #else
 #if FF_catalyst__log_machine_info
     log_file << std::format(
@@ -116,7 +116,7 @@ LogT::LogT()
 LogT::~LogT() {
     auto now = std::chrono::system_clock::now();
 #if FF_catalyst__uniform_logs
-    log_file << generateJsonLogEvent(now, LogLevel::DEBUG, "end session") << "\n";
+    log_file << generateJsonLogEvent(now, LogLevel::DBG, "end session") << "\n";
 #else
     // Destructor assumes single thread or end of life
 #if FF_catalyst__log_machine_info
@@ -160,10 +160,10 @@ void LogT::logImpl(LogLevel level, const std::string &message) const {
     auto now = std::chrono::system_clock::now();
     log_file << generateJsonLogEvent(now, level, message) << "\n";
 
-    if (verbose_logging || level != LogLevel::DEBUG) {
+    if (verbose_logging || level != LogLevel::DBG) {
         const char *color = RESET;
         switch (level) {
-            case LogLevel::DEBUG:
+            case LogLevel::DBG:
                 color = PURPLE;
                 break;
             case LogLevel::INFO:
