@@ -410,5 +410,42 @@ toolchain:
         REQUIRE(res->compiler.cxx.flags == "-std=c++23 -Wall -Wextra -O3 -g");
     }
 
+    SECTION("Flags as list") {
+        std::ofstream out_child(temp_dir / "child.yaml");
+        out_child << R"(
+toolchain:
+  extends: "base.yaml"
+  name: "child"
+  compiler:
+    cxx:
+      flags_remove: ["-O2", "-Wall"]
+      flags_append: ["-O3", "-g"]
+)";
+        out_child.close();
+
+        auto res = parse_toolchain(temp_dir / "child.yaml");
+        REQUIRE(res.has_value());
+        REQUIRE(res->compiler.cxx.flags == "-std=c++23 -Wextra -O3 -g");
+    }
+
+    SECTION("Wholesale overwrite flags as list") {
+        std::ofstream out_child(temp_dir / "child.yaml");
+        out_child << R"(
+toolchain:
+  extends: "base.yaml"
+  name: "child"
+  compiler:
+    cxx:
+      flags:
+        - "-O3"
+        - "-g"
+)";
+        out_child.close();
+
+        auto res = parse_toolchain(temp_dir / "child.yaml");
+        REQUIRE(res.has_value());
+        REQUIRE(res->compiler.cxx.flags == "-O3 -g");
+    }
+
     std::filesystem::remove_all(temp_dir);
 }

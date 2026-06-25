@@ -94,9 +94,9 @@ Defines the metadata and command templates Catalyst will use during generation.
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `executable` | String | `cc` | C compiler executable. |
-| `flags` | String | `""` | Base C compiler flags, interpolated as `{cflags}`. |
-| `flags_append` | String | `""` | Appends flags to the inherited C compiler flags. |
-| `flags_remove` | String | `""` | Removes matching flag tokens from the inherited C compiler flags. |
+| `flags` | String or List | `""` | Base C compiler flags, interpolated as `{cflags}`. |
+| `flags_append` | String or List | `""` | Appends flags to the inherited C compiler flags. |
+| `flags_remove` | String or List | `""` | Removes matching flag tokens from the inherited C compiler flags. |
 | `command` | String | `{cc} {cflags} -MMD -MF {object}.d -c {source} -o {object} {includes} {defines}` | Command template for compiling C sources. |
 
 ### `toolchain.compiler.cxx`
@@ -104,9 +104,9 @@ Defines the metadata and command templates Catalyst will use during generation.
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `executable` | String | `c++` | C++ compiler executable. |
-| `flags` | String | `""` | Base C++ compiler flags, interpolated as `{cxxflags}`. |
-| `flags_append` | String | `""` | Appends flags to the inherited C++ compiler flags. |
-| `flags_remove` | String | `""` | Removes matching flag tokens from the inherited C++ compiler flags. |
+| `flags` | String or List | `""` | Base C++ compiler flags, interpolated as `{cxxflags}`. |
+| `flags_append` | String or List | `""` | Appends flags to the inherited C++ compiler flags. |
+| `flags_remove` | String or List | `""` | Removes matching flag tokens from the inherited C++ compiler flags. |
 | `command` | String | `{cxx} {cxxflags} -MMD -MF {object}.d -c {source} -o {object} {includes} {defines}` | Command template for compiling C++ sources. |
 
 !!! note
@@ -119,9 +119,9 @@ Defines the metadata and command templates Catalyst will use during generation.
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `executable` | String | `c++` | Linker executable. |
-| `flags` | String | `""` | Base linker flags, interpolated as `{ldflags}`. |
-| `flags_append` | String | `""` | Appends flags to the inherited linker flags. |
-| `flags_remove` | String | `""` | Removes matching flag tokens from the inherited linker flags. |
+| `flags` | String or List | `""` | Base linker flags, interpolated as `{ldflags}`. |
+| `flags_append` | String or List | `""` | Appends flags to the inherited linker flags. |
+| `flags_remove` | String or List | `""` | Removes matching flag tokens from the inherited linker flags. |
 | `executable_command` | String | `{linker} {objects} -o {output} {ldflags} {lib_dirs} {libs}` | Command template for building executables. |
 | `shared_lib_command` | String | `{linker} -shared {objects} -o {output} {ldflags} {lib_dirs} {libs}` | Command template for building shared libraries. |
 
@@ -216,6 +216,10 @@ For flag fields (e.g. `compiler.c.flags`, `compiler.cxx.flags`, `linker.flags`),
 - `flags`: Replaces the inherited flag string entirely.
 - `flags_append`: Appends the provided flags to the inherited flags.
 - `flags_remove`: Filters out matching space-separated tokens from the inherited flags.
+
+!!! note
+
+    You can specify these as either a string or a list of strings. A list of strings is automatically space-separated.
 
 !!! warning
 

@@ -48,13 +48,27 @@ std::vector<std::string> split_tokens(std::string_view str) {
 void modify_flags(ryml::ConstNodeRef parent, std::string &flags) {
     namespace yaml = catalyst::utils::yaml;
 
+    // because flags can be specified as either a string or a sequence of strings, we need to handle both cases and
+    // return a joined string of flags. If the node is not readable, we return std::nullopt.
+    auto get_flags_string = [](ryml::ConstNodeRef parent_node, std::string_view key) -> std::optional<std::string> {
+        auto node = yaml::child(parent_node, key);
+        if (!node.readable()) {
+            return std::nullopt;
+        }
+        if (auto vec = yaml::asStringVector(node)) {
+            using namespace std::string_view_literals;
+            return *vec | std::views::join_with(" "sv) | std::ranges::to<std::string>();
+        }
+        return yaml::asString(node);
+    };
+
     // 1. Wholesale overwrite (if 'flags' is specified)
-    if (auto val = yaml::asString(yaml::child(parent, "flags"))) {
+    if (auto val = get_flags_string(parent, "flags")) {
         flags = std::move(*val);
     }
 
     // 2. Token-based removal (if 'flags_remove' is specified)
-    if (auto val = yaml::asString(yaml::child(parent, "flags_remove"))) {
+    if (auto val = get_flags_string(parent, "flags_remove")) {
         using namespace std::string_view_literals;
         auto to_remove = split_tokens(*val);
         flags =
@@ -64,8 +78,8 @@ void modify_flags(ryml::ConstNodeRef parent, std::string &flags) {
     }
 
     // 3. Append (if 'flags_append' is specified)
-    if (auto val = yaml::asString(yaml::child(parent, "flags_append"))) {
-        if (!flags.empty()) {
+    if (auto val = get_flags_string(parent, "flags_append")) {
+        if (!flags.empty() && !val->empty()) {
             flags += " ";
         }
         flags += *val;
