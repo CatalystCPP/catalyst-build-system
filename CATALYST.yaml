@@ -67,7 +67,6 @@ test:
       version: latest
 debug:
   manifest:
-    # Debug compiler/linker flags now live in a dedicated toolchain file.
     toolchain: tc_catalyst_debug.yaml
 release:
   hooks:

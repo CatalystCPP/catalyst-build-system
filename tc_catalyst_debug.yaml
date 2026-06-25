@@ -1,3 +1,5 @@
+# NOTE: we can't use extends here yet because 1.8.0 is still in development so it can't be used in CI
+
 toolchain:
   name: "catalyst debug"
   extensions:
