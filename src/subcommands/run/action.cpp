@@ -3,6 +3,7 @@
 #include <expected>
 #include <filesystem>
 #include <format>
+#include <print>
 #include <string>
 #include <vector>
 
@@ -32,10 +33,12 @@ std::string commandStr(const fs::path &executable, const std::vector<std::string
 Result<void> action(const Parse &args) {
     catalyst::logger.debug("Run subcommand invoked.");
     std::vector<std::string> profiles;
-    if (args.profile != "common") {
+    if (!std::ranges::contains(args.profiles, "common")) {
         profiles.emplace_back("common");
+        profiles.insert(profiles.end(), args.profiles.begin(), args.profiles.end());
+    } else {
+        profiles = args.profiles;
     }
-    profiles.push_back(args.profile);
 
     catalyst::logger.debug("Composing profiles.");
     auto res = generate::profileComposition(profiles);
@@ -62,10 +65,10 @@ Result<void> action(const Parse &args) {
 
     if (!type_opt || target_type != "binary") {
         if (!type_opt) {
-            return std::unexpected(std::format("Profile: {} does not define field: 'manifest.type'.", args.profile));
+            return std::unexpected("Profile does not define field: 'manifest.type'.");
         }
-        return std::unexpected(std::format(
-            "Profile: {} defines 'manifest.type' = {}. Expected 'manifest.type' = BINARY", args.profile, target_type));
+        return std::unexpected(
+            std::format("Profile defines 'manifest.type' = {}. Expected 'manifest.type' = BINARY", target_type));
     }
 
     std::string build_dir_base = profile_comp.getString("manifest.dirs.build").value_or("build");
@@ -111,7 +114,8 @@ Result<void> action(const Parse &args) {
 
     std::vector<std::string> exec_args;
     exec_args.push_back(exe_path.string());
-    exec_args.insert(exec_args.end(), args.params.begin(), args.params.end());
+    if (!args.params.empty())
+        exec_args.insert(exec_args.end(), args.params.begin(), args.params.end());
 
     if (int res = catalyst::processExec(std::move(exec_args), std::nullopt, exec_env).value().get(); res) {
         return std::unexpected(

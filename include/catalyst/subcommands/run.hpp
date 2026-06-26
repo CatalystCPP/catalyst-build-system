@@ -10,6 +10,7 @@
 namespace catalyst::run {
 struct Parse {
     std::string profile;
+    std::vector<std::string> profiles;
     std::vector<std::string> params;
 };
 
