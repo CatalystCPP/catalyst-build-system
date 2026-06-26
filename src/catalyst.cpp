@@ -25,11 +25,7 @@ int main(int argc, char **argv) {
         return exit_code;
 
     auto assign_ws_if = [&ctx](auto *subc, auto &res) {
-        if (subc && *subc) {
-            res->workspace = ctx.workspace;
-            return true;
-        }
-        return false;
+        return (subc && *subc) ? (res->workspace = ctx.workspace, true) : false;
     };
 
     assign_ws_if(ctx.bench_subc, ctx.bench_res) || assign_ws_if(ctx.build_subc, ctx.build_res)
