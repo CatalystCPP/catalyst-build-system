@@ -1,10 +1,10 @@
+#include "catalyst/utils/yaml/load_profile_file.hpp"
+
 #include <expected>
 #include <filesystem>
 #include <format>
 #include <string>
 #include <utility>
-
-#include <catalyst/utils/yaml/load_profile_file.hpp>
 
 #include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/result.hpp"

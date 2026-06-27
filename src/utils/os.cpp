@@ -3,6 +3,7 @@
 #include <sstream>
 #include <tuple>
 
+#include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/os/os_defs.hpp"
 
 namespace catalyst::utils::os {
@@ -38,8 +39,10 @@ bool isCommandInstalled(const std::string &command) {
                     return true;
                 }
 #endif
+            } catch (std::exception &e) {
+                catalyst::logger.warn("Exception occured trying to find command: {}, {}", command, e.what());
             } catch (...) {
-                std::ignore;
+                catalyst::logger.warn("Unknown exception occured trying to find command: {}", command);
             }
         }
     }
@@ -60,8 +63,10 @@ bool isCommandInstalled(const std::string &command) {
                     return true;
                 }
 #endif
+            } catch (std::exception &e) {
+                catalyst::logger.warn("Exception occured trying to find vcpkg command: {}", e.what());
             } catch (...) {
-                std::ignore;
+                catalyst::logger.warn("Unknown exception occured trying to find vcpkg command");
             }
         }
     }

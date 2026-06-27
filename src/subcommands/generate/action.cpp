@@ -126,7 +126,7 @@ Result<void> action(const Parse &parse_args) {
 
     catalyst::toolchain::ToolchainDef tc;
     if (auto toolchain_path = config.getString("manifest.toolchain")) {
-        auto parsed = catalyst::toolchain::parse_toolchain(*toolchain_path);
+        auto parsed = catalyst::toolchain::parseToolchain(*toolchain_path);
         if (!parsed) {
             return std::unexpected(std::format("Failed to load toolchain {}: {}", *toolchain_path, parsed.error()));
         }
@@ -248,11 +248,11 @@ void writeVariables(const catalyst::utils::yaml::Configuration &config,
     std::string build_dir_str = config.getBuildDir().string();
 
     auto build_sys_def =
-        catalyst::toolchain::expand_template(tc.flags.define, {{"name", "CATALYST_BUILD_SYS"}, {"value", "1"}});
-    auto proj_name_def = catalyst::toolchain::expand_template(
+        catalyst::toolchain::expandTemplate(tc.flags.define, {{"name", "CATALYST_BUILD_SYS"}, {"value", "1"}});
+    auto proj_name_def = catalyst::toolchain::expandTemplate(
         tc.flags.define,
         {{"name", "CATALYST_PROJ_NAME"}, {"value", "\"" + config.getString("manifest.name").value_or("name") + "\""}});
-    auto proj_ver_def = catalyst::toolchain::expand_template(
+    auto proj_ver_def = catalyst::toolchain::expandTemplate(
         tc.flags.define,
         {{"name", "CATALYST_PROJ_VER"},
          {"value", "\"" + config.getString("manifest.version").value_or("0.0.0") + "\""}});
@@ -264,7 +264,7 @@ void writeVariables(const catalyst::utils::yaml::Configuration &config,
     std::string cxxflags = tc.compiler.cxx.flags + " " + default_defines;
     std::string ccflags = tc.compiler.c.flags + " " + default_defines;
     std::string ldflags =
-        tc.linker.flags + " " + catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", "catalyst-libs"}});
+        tc.linker.flags + " " + catalyst::toolchain::expandTemplate(tc.flags.lib_dir, {{"path", "catalyst-libs"}});
 
     if (const char *vcpkg_root = std::getenv("VCPKG_ROOT"); vcpkg_root != nullptr) {
 #if defined(_WIN32)
@@ -276,14 +276,14 @@ void writeVariables(const catalyst::utils::yaml::Configuration &config,
 #endif
         cxxflags +=
             " "
-            + catalyst::toolchain::expand_template(
+            + catalyst::toolchain::expandTemplate(
                 tc.flags.include_dir, {{"path", (fs::path(vcpkg_root) / "installed" / triplet / "include").string()}});
         ccflags +=
             " "
-            + catalyst::toolchain::expand_template(
+            + catalyst::toolchain::expandTemplate(
                 tc.flags.include_dir, {{"path", (fs::path(vcpkg_root) / "installed" / triplet / "include").string()}});
         ldflags += " "
-                   + catalyst::toolchain::expand_template(
+                   + catalyst::toolchain::expandTemplate(
                        tc.flags.lib_dir, {{"path", (fs::path(vcpkg_root) / "installed" / triplet / "lib").string()}});
     } else {
         logger.warn("VCPKG_ROOT environment variable is not defined.");
@@ -294,7 +294,7 @@ void writeVariables(const catalyst::utils::yaml::Configuration &config,
         if (ff.type == "bool") {
             std::string flag =
                 " "
-                + catalyst::toolchain::expand_template(tc.flags.define,
+                + catalyst::toolchain::expandTemplate(tc.flags.define,
                                                        {{"name", std::format("FF_{}__{}", proj_name, ff.name)},
                                                         {"value", ff.resolved_val == "true" ? "1" : "0"}});
             cxxflags += flag;
@@ -304,7 +304,7 @@ void writeVariables(const catalyst::utils::yaml::Configuration &config,
             size_t active_idx = std::distance(ff.enum_values.begin(), it); // count which enum value is active
             std::string flag =
                 " "
-                + catalyst::toolchain::expand_template(
+                + catalyst::toolchain::expandTemplate(
                     tc.flags.define,
                     {{"name", std::format("FF_{}__{}", proj_name, ff.name)}, {"value", std::to_string(active_idx)}});
             cxxflags += flag;
@@ -314,7 +314,7 @@ void writeVariables(const catalyst::utils::yaml::Configuration &config,
                                                                  // FF_FOO__BAR__ENUMVAL0=0, FF_FOO__BAR__ENUMVAL1=1
                 std::string member_flag =
                     " "
-                    + catalyst::toolchain::expand_template(
+                    + catalyst::toolchain::expandTemplate(
                         tc.flags.define,
                         {{"name", std::format("FF_{}__{}__{}", proj_name, ff.name, ff.enum_values[i])},
                          {"value", std::to_string(i)}});
@@ -324,7 +324,7 @@ void writeVariables(const catalyst::utils::yaml::Configuration &config,
         } else if (ff.type == "int") { // simple integer value, just emit as-is.
             std::string flag =
                 " "
-                + catalyst::toolchain::expand_template(
+                + catalyst::toolchain::expandTemplate(
                     tc.flags.define,
                     {{"name", std::format("FF_{}__{}", proj_name, ff.name)}, {"value", ff.resolved_val}});
             cxxflags += flag;
@@ -332,7 +332,7 @@ void writeVariables(const catalyst::utils::yaml::Configuration &config,
         } else if (ff.type == "string") { // simple string value, emit as-is but wrapped in quotes.
             std::string flag =
                 " "
-                + catalyst::toolchain::expand_template(
+                + catalyst::toolchain::expandTemplate(
                     tc.flags.define,
                     {{"name", std::format("FF_{}__{}", proj_name, ff.name)}, {"value", "\"" + ff.resolved_val + "\""}});
             cxxflags += flag;
@@ -344,10 +344,10 @@ void writeVariables(const catalyst::utils::yaml::Configuration &config,
     for (const auto &inc_dir : inc_dirs) {
         cxxflags +=
             " "
-            + catalyst::toolchain::expand_template(tc.flags.include_dir, {{"path", fs::absolute(inc_dir).string()}});
+            + catalyst::toolchain::expandTemplate(tc.flags.include_dir, {{"path", fs::absolute(inc_dir).string()}});
         ccflags +=
             " "
-            + catalyst::toolchain::expand_template(tc.flags.include_dir, {{"path", fs::absolute(inc_dir).string()}});
+            + catalyst::toolchain::expandTemplate(tc.flags.include_dir, {{"path", fs::absolute(inc_dir).string()}});
     }
 
     std::string ldlibs;
@@ -391,14 +391,14 @@ void writeVariables(const catalyst::utils::yaml::Configuration &config,
 void writeRules(catalyst::generate::buildwriters::BaseWriter &writer, const catalyst::toolchain::ToolchainDef &tc) {
     catalyst::logger.debug("Writing rules to build file.");
     writer.addComment("Rules for compiling");
-    std::string cxx_compile = catalyst::toolchain::expand_template(tc.compiler.cxx.command,
+    std::string cxx_compile = catalyst::toolchain::expandTemplate(tc.compiler.cxx.command,
                                                                    {{"cxx", "$cxx"},
                                                                     {"cxxflags", "$cxxflags"},
                                                                     {"source", "$in"},
                                                                     {"object", "$out"},
                                                                     {"includes", ""},
                                                                     {"defines", ""}});
-    std::string c_compile = catalyst::toolchain::expand_template(tc.compiler.c.command,
+    std::string c_compile = catalyst::toolchain::expandTemplate(tc.compiler.c.command,
                                                                  {{"cc", "$cc"},
                                                                   {"cflags", "$cflags"},
                                                                   {"source", "$in"},
@@ -413,7 +413,7 @@ void writeRules(catalyst::generate::buildwriters::BaseWriter &writer, const cata
 
     writer.addComment("Rules for linking");
     void(writer.addRule("binary_link",
-                        catalyst::toolchain::expand_template(tc.linker.executable_command,
+                        catalyst::toolchain::expandTemplate(tc.linker.executable_command,
                                                              {{"linker", "$linker"},
                                                               {"objects", "$in"},
                                                               {"output", "$out"},
@@ -422,11 +422,11 @@ void writeRules(catalyst::generate::buildwriters::BaseWriter &writer, const cata
                                                               {"libs", "$ldlibs"}}),
                         "LINK $out"));
     void(writer.addRule("static_link",
-                        catalyst::toolchain::expand_template(
+                        catalyst::toolchain::expandTemplate(
                             tc.archiver.command, {{"archiver", "$archiver"}, {"objects", "$in"}, {"output", "$out"}}),
                         "LINK $out"));
     void(writer.addRule("shared_link",
-                        catalyst::toolchain::expand_template(tc.linker.shared_lib_command,
+                        catalyst::toolchain::expandTemplate(tc.linker.shared_lib_command,
                                                              {{"linker", "$linker"},
                                                               {"objects", "$in"},
                                                               {"output", "$out"},

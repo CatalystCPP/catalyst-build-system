@@ -1,8 +1,7 @@
-#include "catalyst/dispatch.hpp"
-
 #include <algorithm>
 #include <format>
 #include <functional>
+#include <print>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -10,6 +9,7 @@
 
 #include <CLI11.hpp>
 
+#include "catalyst/dispatch.hpp"
 #include "catalyst/subcommands/completion.hpp"
 #include "catalyst/subcommands/profile_ls.hpp"
 #include "catalyst/utils/log/log.hpp"
@@ -57,8 +57,8 @@ void setupCli(catalyst::CliContext &ctx) {
                    "Copyright 2026 Siddharth Mohanty\n"
                    "Licensed under the Apache License, Version 2.0");
 
-    ctx.app.add_subcommand("help", "Display help information for a subcommand.")->callback([&]() {
-        std::cout << ctx.app.help() << '\n';
+    ctx.app.add_subcommand("help", "Display help information for a subcommand.")->callback([&ctx]() constexpr -> void {
+        std::println("{}", ctx.app.help());
         ctx.helped = true;
     });
 }

@@ -3,7 +3,16 @@
 #include <iostream>
 #include <limits>
 
-static std::string escapeJsonString(const std::string &input) {
+#if FF_catalyst__log_machine_info
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
+#endif
+
+namespace {
+std::string escapeJsonString(const std::string &input) {
     std::string out;
     out.reserve(input.size());
     for (char c : input) {
@@ -39,33 +48,13 @@ static std::string escapeJsonString(const std::string &input) {
     }
     return out;
 }
-
-#if FF_catalyst__log_machine_info
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <unistd.h>
-#endif
-#endif
+}
 
 namespace catalyst {
 
-const char *toString(LogLevel level) {
-    switch (level) {
-        case LogLevel::DBG:
-            return "DEBUG";
-        case LogLevel::INFO:
-            return "INFO";
-        case LogLevel::WARN:
-            return "WARN";
-        case LogLevel::ERROR:
-            return "ERROR";
-    }
-    return "UNKNOWN";
-}
-
+namespace {
 #if FF_catalyst__log_machine_info
-static std::string getHostnameImpl() {
+std::string getHostnameImpl() {
     constexpr size_t BUFFER_SIZE = std::numeric_limits<char>::max() + 1;
     std::array<char, BUFFER_SIZE> buf{};
 
@@ -80,7 +69,7 @@ static std::string getHostnameImpl() {
     return "unknown";
 }
 
-static unsigned long getPidImpl() {
+unsigned long getPidImpl() {
 #ifdef _WIN32
     return GetCurrentProcessId();
 #else
@@ -88,6 +77,21 @@ static unsigned long getPidImpl() {
 #endif
 }
 #endif
+
+std::string_view toString(LogLevel level) {
+    switch (level) {
+        case LogLevel::DBG:
+            return "DEBUG";
+        case LogLevel::INFO:
+            return "INFO";
+        case LogLevel::WARN:
+            return "WARN";
+        case LogLevel::ERROR:
+            return "ERROR";
+    }
+    return "UNKNOWN";
+}
+}
 
 LogT::LogT()
     : log_file{".catalyst.log", std::ios_base::app}
@@ -180,7 +184,7 @@ void LogT::logImpl(LogLevel level, const std::string &message) const {
         std::ostream &sink = (level == LogLevel::ERROR) ? std::cerr : std::cout;
         std::string time_str = std::format("{:%Y-%m-%d %H:%M:%S}", now);
         std::string log_str = std::format("[{}] {}", toString(level), message);
-        sink << time_str << " " << color << log_str << RESET << std::endl;
+        sink << time_str << " " << color << log_str << RESET << '\n';
     }
 }
 

@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
     if (auto [exit_code, should_return] = catalyst::parseCli(argc, argv, ctx); should_return)
         return exit_code;
 
-    auto assign_ws_if = [&ctx](auto *subc, auto &res) {
+    auto assign_ws_if = [&ctx](auto *subc, auto &res) constexpr -> bool {
         return (subc && *subc) ? (res->workspace = ctx.workspace, true) : false;
     };
 

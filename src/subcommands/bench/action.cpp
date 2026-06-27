@@ -116,7 +116,7 @@ Result<void> action(const Parse &args) {
 
     catalyst::toolchain::ToolchainDef tc;
     if (auto tc_path = profile_comp.getString("manifest.toolchain")) {
-        auto parsed = catalyst::toolchain::parse_toolchain(*tc_path);
+        auto parsed = catalyst::toolchain::parseToolchain(*tc_path);
         if (!parsed) {
             return std::unexpected(std::format("Failed to load toolchain {}: {}", *tc_path, parsed.error()));
         }

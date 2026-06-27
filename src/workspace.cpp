@@ -103,8 +103,10 @@ std::optional<WorkspaceMember> Workspace::findPackage(std::string_view package_n
             if (name_opt && *name_opt == package_name) {
                 return member;
             }
+        } catch (std::exception &e) {
+            catalyst::logger.warn("Failed to load configuration for member '{}'. Error: {}. Ignoring.", key, e.what());
         } catch (...) {
-            std::ignore;
+            catalyst::logger.warn("Unknown error occurred while loading configuration for member '{}'. Ignoring.", key);
         }
     }
     return std::nullopt;

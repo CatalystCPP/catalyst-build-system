@@ -23,8 +23,6 @@ enum class LogLevel : std::uint8_t {
     ERROR  // errors
 };
 
-// Helper function to convert LogLevel to string
-const char *toString(LogLevel level);
 
 // C++20 Concept to check if type T has a .what() method returning something convertible to const char*
 template <typename Error_T>

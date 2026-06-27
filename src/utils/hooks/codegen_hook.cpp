@@ -118,7 +118,7 @@ Result<std::string> substituteCmdArgs(std::string cmd,
     };
 
     std::string new_cmd;
-    std::regex var_regex(R"((\$\$)|(\$(IN|OUT)(?:\[(?:(-?\d+)|(-?\d*)?:(-?\d*)?(?::(-?\d*)?)?)\])?))");
+    static const std::regex var_regex(R"((\$\$)|(\$(IN|OUT)(?:\[(?:(-?\d+)|(-?\d*)?:(-?\d*)?(?::(-?\d*)?)?)\])?))");
     std::sregex_iterator it(cmd.begin(), cmd.end(), var_regex);
     std::sregex_iterator end;
 

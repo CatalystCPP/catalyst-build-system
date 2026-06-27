@@ -41,7 +41,7 @@ findGit(const std::string &build_dir, ryml::ConstNodeRef dep, const catalyst::to
             fs::path abs_include_path = fs::absolute(dep_path / include_dir);
             catalyst::logger.debug("Adding include path: {}", abs_include_path.string());
             include_path_flags +=
-                " " + catalyst::toolchain::expand_template(tc.flags.include_dir, {{"path", abs_include_path.string()}});
+                " " + catalyst::toolchain::expandTemplate(tc.flags.include_dir, {{"path", abs_include_path.string()}});
         }
     }
 
@@ -52,14 +52,14 @@ findGit(const std::string &build_dir, ryml::ConstNodeRef dep, const catalyst::to
         fs::path lib_path = fs::absolute(dep_path / dep_build_dir);
         catalyst::logger.debug("Adding library path: {}", lib_path.string());
         library_path_flags +=
-            " " + catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", lib_path.string()}});
+            " " + catalyst::toolchain::expandTemplate(tc.flags.lib_dir, {{"path", lib_path.string()}});
         lib_dirs.push_back(lib_path.string());
     }
 
     std::string libs_flags;
     if (auto lib_name = profile.getString("manifest.name")) {
         catalyst::logger.debug("Adding library: {}", *lib_name);
-        libs_flags += " " + catalyst::toolchain::expand_template(tc.flags.lib, {{"name", *lib_name}});
+        libs_flags += " " + catalyst::toolchain::expandTemplate(tc.flags.lib, {{"name", *lib_name}});
     }
 
     return FindRes{

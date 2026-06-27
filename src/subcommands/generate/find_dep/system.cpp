@@ -34,7 +34,7 @@ std::optional<FindRes> findSystemFromPkgConfig(const std::string &dep_name,
     append_tokens(*cflags_res, [&](const std::string &token) {
         if (token.starts_with("-I")) {
             result.inc_path +=
-                " " + catalyst::toolchain::expand_template(tc.flags.include_dir, {{"path", token.substr(2)}});
+                " " + catalyst::toolchain::expandTemplate(tc.flags.include_dir, {{"path", token.substr(2)}});
         } else {
             result.inc_path += " " + token;
         }
@@ -42,7 +42,7 @@ std::optional<FindRes> findSystemFromPkgConfig(const std::string &dep_name,
     append_tokens(*link_dirs_res, [&](const std::string &token) {
         if (token.starts_with("-L")) {
             std::string path = token.substr(2);
-            result.lib_path += " " + catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", path}});
+            result.lib_path += " " + catalyst::toolchain::expandTemplate(tc.flags.lib_dir, {{"path", path}});
             result.lib_dirs.push_back(path);
         } else {
             result.lib_path += " " + token;
@@ -50,7 +50,7 @@ std::optional<FindRes> findSystemFromPkgConfig(const std::string &dep_name,
     });
     append_tokens(*link_libs_res, [&](const std::string &token) {
         if (token.starts_with("-l")) {
-            result.libs += " " + catalyst::toolchain::expand_template(tc.flags.lib, {{"name", token.substr(2)}});
+            result.libs += " " + catalyst::toolchain::expandTemplate(tc.flags.lib, {{"name", token.substr(2)}});
         } else {
             result.libs += " " + token;
         }
@@ -80,18 +80,18 @@ Result<FindRes> findSystem(ryml::ConstNodeRef dep, const catalyst::toolchain::To
     std::vector<std::string> lib_dirs;
 
     if (has_explicit_include) {
-        inc_path += " " + catalyst::toolchain::expand_template(tc.flags.include_dir, {{"path", *explicit_include}});
+        inc_path += " " + catalyst::toolchain::expandTemplate(tc.flags.include_dir, {{"path", *explicit_include}});
     }
 
     if (has_explicit_lib) {
-        lib_path += " " + catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", *explicit_lib}});
+        lib_path += " " + catalyst::toolchain::expandTemplate(tc.flags.lib_dir, {{"path", *explicit_lib}});
         lib_dirs.push_back(*explicit_lib);
     }
 
     if (has_explicit_include && has_explicit_lib) {
         // Fully explicit, just add library name
         if (linkage == "static" || linkage == "shared") {
-            libs = " " + catalyst::toolchain::expand_template(tc.flags.lib, {{"name", dep_name}});
+            libs = " " + catalyst::toolchain::expandTemplate(tc.flags.lib, {{"name", dep_name}});
         }
         return FindRes{.lib_path = lib_path, .inc_path = inc_path, .libs = libs, .lib_dirs = lib_dirs};
     }
@@ -118,7 +118,7 @@ Result<FindRes> findSystem(ryml::ConstNodeRef dep, const catalyst::toolchain::To
 #elif defined(__APPLE__)
         inc_path += " " + catalyst::toolchain::expand_template(tc.flags.include_dir, {{"path", "/usr/local/include"}});
 #else
-        inc_path += " " + catalyst::toolchain::expand_template(tc.flags.include_dir, {{"path", "/usr/include"}});
+        inc_path += " " + catalyst::toolchain::expandTemplate(tc.flags.include_dir, {{"path", "/usr/include"}});
 #endif
     }
 
@@ -128,13 +128,13 @@ Result<FindRes> findSystem(ryml::ConstNodeRef dep, const catalyst::toolchain::To
         lib_path += " " + catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", "/usr/local/lib"}});
         lib_dirs.push_back("/usr/local/lib");
 #else
-        lib_path += " " + catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", "/usr/lib"}});
+        lib_path += " " + catalyst::toolchain::expandTemplate(tc.flags.lib_dir, {{"path", "/usr/lib"}});
         lib_dirs.emplace_back("/usr/lib");
 #endif
     }
 
     if (linkage == "static" || linkage == "shared") {
-        libs += " " + catalyst::toolchain::expand_template(tc.flags.lib, {{"name", dep_name}});
+        libs += " " + catalyst::toolchain::expandTemplate(tc.flags.lib, {{"name", dep_name}});
     }
     return FindRes{.lib_path = lib_path, .inc_path = inc_path, .libs = libs, .lib_dirs = lib_dirs};
 }

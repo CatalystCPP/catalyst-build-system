@@ -1,10 +1,10 @@
+#include "catalyst/hooks.hpp"
+
 #include <expected>
 #include <format>
 #include <string>
 #include <string_view>
 #include <vector>
-
-#include <catalyst/hooks.hpp>
 
 #include "catalyst/process_exec.hpp"
 #include "catalyst/utils/log/log.hpp"

@@ -47,7 +47,7 @@ Result<FindRes> findLocal(ryml::ConstNodeRef dep, const catalyst::toolchain::Too
         for (const auto &dir : *includes) {
             auto curr = fs::absolute(dep_path / dir);
             catalyst::logger.debug("Adding include path: {}", curr.string());
-            include_path += " " + catalyst::toolchain::expand_template(tc.flags.include_dir, {{"path", curr.string()}});
+            include_path += " " + catalyst::toolchain::expandTemplate(tc.flags.include_dir, {{"path", curr.string()}});
         }
     }
 
@@ -58,7 +58,7 @@ Result<FindRes> findLocal(ryml::ConstNodeRef dep, const catalyst::toolchain::Too
         fs::path build_dir = catalyst::utils::yaml::multiplexedBuildDir(*build_dir_str, profiles);
         auto lib_path = fs::absolute(dep_path / build_dir);
         catalyst::logger.debug("Adding library path: {}", lib_path.string());
-        library_path += " " + catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", lib_path.string()}});
+        library_path += " " + catalyst::toolchain::expandTemplate(tc.flags.lib_dir, {{"path", lib_path.string()}});
         lib_dirs.push_back(lib_path.string());
     }
 
@@ -68,7 +68,7 @@ Result<FindRes> findLocal(ryml::ConstNodeRef dep, const catalyst::toolchain::Too
     if (type != "INTERFACE") {
         if (auto lib_name = profile.getString("manifest.name")) {
             catalyst::logger.debug("Adding library: {}", *lib_name);
-            libs += " " + catalyst::toolchain::expand_template(tc.flags.lib, {{"name", *lib_name}});
+            libs += " " + catalyst::toolchain::expandTemplate(tc.flags.lib, {{"name", *lib_name}});
         }
     }
 

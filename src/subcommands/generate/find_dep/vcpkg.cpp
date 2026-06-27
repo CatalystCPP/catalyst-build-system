@@ -36,7 +36,7 @@ void appendPkgConfigLibs(FindRes &result,
     while (lib_dir_stream >> token) {
         if (token.starts_with("-L")) {
             std::string path = token.substr(2);
-            result.lib_path += " " + catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", path}});
+            result.lib_path += " " + catalyst::toolchain::expandTemplate(tc.flags.lib_dir, {{"path", path}});
             result.lib_dirs.push_back(path);
         } else {
             result.lib_path += " " + token;
@@ -45,7 +45,7 @@ void appendPkgConfigLibs(FindRes &result,
 
     while (libs_stream >> token) {
         if (token.starts_with("-l")) {
-            result.libs += " " + catalyst::toolchain::expand_template(tc.flags.lib, {{"name", token.substr(2)}});
+            result.libs += " " + catalyst::toolchain::expandTemplate(tc.flags.lib, {{"name", token.substr(2)}});
         } else {
             result.libs += " " + token;
         }
@@ -139,7 +139,7 @@ void appendScannedLibs(std::string &libs, const fs::path &lib_path, const cataly
             continue;
         }
         std::string stem = strippedLibStem(entry.path().stem().string(), tc);
-        libs += " " + catalyst::toolchain::expand_template(tc.flags.lib, {{"name", stem}});
+        libs += " " + catalyst::toolchain::expandTemplate(tc.flags.lib, {{"name", stem}});
         catalyst::logger.debug("Found and added library: {}", stem);
     }
 }
@@ -202,11 +202,11 @@ FindRes resolveVcpkgPackage(const fs::path &vcpkg_root,
         catalyst::logger.warn(
             "Could not find library directory for vcpkg package '{}' at: {}", name, lib_path.string());
         if (fabricate_if_missing) {
-            libs += " " + catalyst::toolchain::expand_template(tc.flags.lib, {{"name", name}});
+            libs += " " + catalyst::toolchain::expandTemplate(tc.flags.lib, {{"name", name}});
         }
     }
 
-    library_path += " " + catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", lib_path.string()}});
+    library_path += " " + catalyst::toolchain::expandTemplate(tc.flags.lib_dir, {{"path", lib_path.string()}});
     catalyst::logger.debug("Adding library path: {}", lib_path.string());
     lib_dirs.push_back(lib_path.string());
 

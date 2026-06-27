@@ -54,7 +54,7 @@ findConan(const std::string &build_dir, ryml::ConstNodeRef dep, const catalyst::
     append_tokens(*cflags_res, [&](const std::string &token) {
         if (token.starts_with("-I")) {
             result.inc_path +=
-                " " + catalyst::toolchain::expand_template(tc.flags.include_dir, {{"path", token.substr(2)}});
+                " " + catalyst::toolchain::expandTemplate(tc.flags.include_dir, {{"path", token.substr(2)}});
         } else {
             result.inc_path += " " + token;
         }
@@ -62,7 +62,7 @@ findConan(const std::string &build_dir, ryml::ConstNodeRef dep, const catalyst::
     append_tokens(*link_dirs_res, [&](const std::string &token) {
         if (token.starts_with("-L")) {
             std::string path = token.substr(2);
-            result.lib_path += " " + catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", path}});
+            result.lib_path += " " + catalyst::toolchain::expandTemplate(tc.flags.lib_dir, {{"path", path}});
             result.lib_dirs.push_back(path);
         } else {
             result.lib_path += " " + token;
@@ -70,7 +70,7 @@ findConan(const std::string &build_dir, ryml::ConstNodeRef dep, const catalyst::
     });
     append_tokens(*link_libs_res, [&](const std::string &token) {
         if (token.starts_with("-l")) {
-            result.libs += " " + catalyst::toolchain::expand_template(tc.flags.lib, {{"name", token.substr(2)}});
+            result.libs += " " + catalyst::toolchain::expandTemplate(tc.flags.lib, {{"name", token.substr(2)}});
         } else {
             result.libs += " " + token;
         }
