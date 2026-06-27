@@ -17,12 +17,11 @@ constexpr const char *BLUE = "\033[34m";
 constexpr const char *PURPLE = "\033[35m";
 constexpr const char *RESET = "\033[0m";
 enum class LogLevel : std::uint8_t {
-    DBG, // hidden info (unless asked for opt in with -V)
-    INFO,  // user facing milestones
-    WARN,  // warnings
-    ERROR  // errors
+    DBG,  // hidden info (unless asked for opt in with -V)
+    INFO, // user facing milestones
+    WARN, // warnings
+    ERROR // errors
 };
-
 
 // C++20 Concept to check if type T has a .what() method returning something convertible to const char*
 template <typename Error_T>
@@ -101,3 +100,24 @@ template <typename Error_T> void logException(const Error_T &err) {
 }
 
 } // namespace catalyst
+
+template <> struct std::formatter<catalyst::LogLevel> : std::formatter<std::string_view> {
+    auto format(catalyst::LogLevel level, std::format_context &ctx) const {
+        std::string_view name = "UNKNOWN";
+        switch (level) {
+            case catalyst::LogLevel::DBG:
+                name = "DEBUG";
+                break;
+            case catalyst::LogLevel::INFO:
+                name = "INFO";
+                break;
+            case catalyst::LogLevel::WARN:
+                name = "WARN";
+                break;
+            case catalyst::LogLevel::ERROR:
+                name = "ERROR";
+                break;
+        }
+        return std::formatter<std::string_view>::format(name, ctx);
+    }
+};

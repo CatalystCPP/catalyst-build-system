@@ -77,20 +77,6 @@ unsigned long getPidImpl() {
 #endif
 }
 #endif
-
-std::string_view toString(LogLevel level) {
-    switch (level) {
-        case LogLevel::DBG:
-            return "DEBUG";
-        case LogLevel::INFO:
-            return "INFO";
-        case LogLevel::WARN:
-            return "WARN";
-        case LogLevel::ERROR:
-            return "ERROR";
-    }
-    return "UNKNOWN";
-}
 }
 
 LogT::LogT()
@@ -183,7 +169,7 @@ void LogT::logImpl(LogLevel level, const std::string &message) const {
 
         std::ostream &sink = (level == LogLevel::ERROR) ? std::cerr : std::cout;
         std::string time_str = std::format("{:%Y-%m-%d %H:%M:%S}", now);
-        std::string log_str = std::format("[{}] {}", toString(level), message);
+        std::string log_str = std::format("[{}] {}", level, message);
         sink << time_str << " " << color << log_str << RESET << '\n';
     }
 }
@@ -194,14 +180,14 @@ std::string LogT::generateJsonLogEvent(const std::chrono::system_clock::time_poi
 #if FF_catalyst__log_machine_info
     return std::format(R"({{"timestamp":"{:%Y-%m-%d %H:%M:%S}","level":"{}","message":"{}","hostname":"{}","pid":{}}})",
                        now,
-                       toString(level),
+                       level,
                        escapeJsonString(message),
                        this->hostname,
                        this->pid);
 #else
     return std::format(R"({{"timestamp":"{:%Y-%m-%d %H:%M:%S}","level":"{}","message":"{}"}})",
                        now,
-                       toString(level),
+                       level,
                        escapeJsonString(message));
 #endif
 }
