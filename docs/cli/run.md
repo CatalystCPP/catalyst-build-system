@@ -9,8 +9,8 @@ catalyst run [OPTIONS]
 
 OPTIONS:
   -h,     --help              Print this help message and exit
-  -p,     --profile TEXT [common]  
-  -P,     --params TEXT [{}]  ... 
+  -p,     --profiles TEXT [common]  ... 
+  -P,     --params TEXT ...   
 ```
 
 ## Examples
