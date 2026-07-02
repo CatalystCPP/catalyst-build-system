@@ -12,16 +12,10 @@
 #include "catalyst/dispatch.hpp"
 #include "catalyst/subcommands/completion.hpp"
 #include "catalyst/subcommands/profile_ls.hpp"
+#include "catalyst/utils/concat_argv.hpp"
 #include "catalyst/utils/log/log.hpp"
 
 namespace {
-std::string concatArgv(int argc, char **argv) {
-    std::string res;
-    for (int ii = 0; ii < argc; ++ii)
-        res += std::string{argv[ii]} + " ";
-    return res;
-}
-
 void setupCli(catalyst::CliContext &ctx) {
     using std::tie;
 
@@ -76,7 +70,7 @@ std::pair<int, bool> parseCli(int argc, char **argv, catalyst::CliContext &ctx) 
         if (std::none_of(argv, argv + argc, [](const char *arg) {
                 return string_view{arg} == "--help" || string_view{arg} == "-h";
             })) {
-            catalyst::logger.error("Failed to parse provided arguments: {}", concatArgv(argc, argv));
+            catalyst::logger.error("Failed to parse provided arguments: {}", catalyst::concatArgv(argc, argv));
             return {ctx.app.exit(e), true};
         }
         return {ctx.app.exit(e), true};

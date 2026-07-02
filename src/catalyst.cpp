@@ -4,21 +4,13 @@
 
 #include "catalyst/dispatch.hpp"
 #include "catalyst/globals.hpp"
+#include "catalyst/utils/concat_argv.hpp"
 #include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/yaml/ryml_init.hpp"
 
-namespace {
-std::string concatArgv(int argc, char **argv) {
-    std::string res;
-    for (int ii = 0; ii < argc; ++ii)
-        res += std::string{argv[ii]} + " ";
-    return res;
-}
-} // namespace
-
 int main(int argc, char **argv) {
     catalyst::utils::yaml::installRymlErrorHandler();
-    catalyst::logger.debug("{}", concatArgv(argc, argv));
+    catalyst::logger.debug("{}", catalyst::concatArgv(argc, argv));
 
     catalyst::CliContext ctx{.workspace = catalyst::Workspace::findRoot()};
     if (auto [exit_code, should_return] = catalyst::parseCli(argc, argv, ctx); should_return)
