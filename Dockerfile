@@ -4,7 +4,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 ARG LLVM_VERSION=21
 ARG VCPKG_REF=2025.07.25
 ARG COB_VERSION=0.5.0
-ARG CATALYST_VERSION=1.7.0
+ARG CATALYST_VERSION=1.8.0
 
 # Use a persistent apt cache instead of deleting lists every layer
 RUN rm -f /etc/apt/apt.conf.d/docker-clean && \
