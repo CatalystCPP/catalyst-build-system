@@ -2,23 +2,35 @@ site_name: Catalyst Build System Documentation
 theme:
   name: material
   logo: assets/logo.svg
+  favicon: assets/logo.svg
+  palette:
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  features:
+    - content.code.copy
 
 nav:
   - Home: index.md
-  - Getting Started: getting_started.md
   - Installation: installation.md
+  - Getting Started: getting_started.md
   - Concepts:
     - Overview: concepts/index.md
-    - Catalystignore: concepts/catalystignore.md
     - Configuration: concepts/configuration.md
-    - Dependencies: concepts/dependencies.md
-    - Environment Variables: concepts/environment-variables.md
-    - Hooks: concepts/hooks.md
-    - Log: concepts/log.md
-    - Preprocessor: concepts/preprocessor.md
     - Profiles: concepts/profiles.md
     - Toolchains: concepts/toolchains.md
+    - Dependencies: concepts/dependencies.md
+    - Preprocessor: concepts/preprocessor.md
+    - Catalystignore: concepts/catalystignore.md
+    - Hooks: concepts/hooks.md
     - Workspaces: concepts/workspaces.md
+    - Log: concepts/log.md
+    - Environment Variables: concepts/environment-variables.md
   - CLI Reference:
     - Overview: cli/index.md
     - add: cli/add.md

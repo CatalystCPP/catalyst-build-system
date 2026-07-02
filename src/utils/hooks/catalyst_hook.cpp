@@ -23,7 +23,7 @@ auto catalyst::hooks::executeCatalystHook(ryml::ConstNodeRef item, std::string_v
         if (!subcommand)
             return std::unexpected(std::format("Hook '{}' catalyst missing required 'subcommand' field", hook_name));
         std::vector<std::string> args;
-        auto append_strings = [&args](ryml::ConstNodeRef seq) {
+        auto append_strings = [&args](ryml::ConstNodeRef seq) constexpr -> void {
             if (!seq.readable() || !seq.is_seq())
                 return;
             for (ryml::ConstNodeRef a : seq.children())

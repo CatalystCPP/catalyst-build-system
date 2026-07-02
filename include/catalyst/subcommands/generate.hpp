@@ -75,6 +75,20 @@ findGit(const std::string &build_dir, ryml::ConstNodeRef dep, const catalyst::to
 Result<FindRes>
 findConan(const std::string &build_dir, ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
 
+struct FeatureFlag {
+    std::string name;
+    std::string type; // "bool", "enum", "int", "string"
+    std::string default_val;
+    std::vector<std::string> enum_values;
+    std::vector<std::string> files;
+
+    std::string resolved_val;
+    bool is_enabled = false;
+};
+
+Result<std::vector<FeatureFlag>> resolveFeatureFlags(const utils::yaml::Configuration &config,
+                                                     const std::vector<std::string> &enabled_features);
+
 Result<std::unordered_set<std::filesystem::path>> buildSourceSet(const std::vector<std::string> &source_dirs,
                                                                  const std::vector<std::string> &profiles);
 

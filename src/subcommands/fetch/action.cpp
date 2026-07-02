@@ -107,7 +107,7 @@ Result<void> fetchConanDeps(const std::vector<ryml::ConstNodeRef> &conan_deps,
     // 2. Determine compiler from the active toolchain's C++ compiler.
     catalyst::toolchain::ToolchainDef tc;
     if (auto tc_path = config.getString("manifest.toolchain")) {
-        auto parsed = catalyst::toolchain::parse_toolchain(*tc_path);
+        auto parsed = catalyst::toolchain::parseToolchain(*tc_path);
         if (!parsed) {
             return std::unexpected(std::format("Failed to load toolchain {}: {}", *tc_path, parsed.error()));
         }

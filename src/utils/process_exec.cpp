@@ -71,8 +71,8 @@ Result<void> ensureEmbeddedCobExtracted() {
 
 #ifndef _WIN32
     fs::permissions(cob_path,
-                    fs::perms::owner_all | fs::perms::group_read | fs::perms::group_exec | fs::perms::others_read |
-                        fs::perms::others_exec,
+                    fs::perms::owner_all | fs::perms::group_read | fs::perms::group_exec | fs::perms::others_read
+                        | fs::perms::others_exec,
                     fs::perm_options::replace,
                     ec);
     if (ec) {

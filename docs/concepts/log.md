@@ -27,7 +27,7 @@ This file is structured using JSON lines (JSONL), making it easy to parse and an
 
 ### Session Events
 
-!!! error
+!!! tip
     This can be changed by building catalyst with `-f uniform_logs`
 
 A logging session records when it begins and ends using specific events:

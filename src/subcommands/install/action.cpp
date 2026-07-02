@@ -84,9 +84,11 @@ Result<void> action(const Parse &parse_args) {
         target_filename = target_name;
 #endif
         artifact_subdir = "bin";
+    } else if (type == "INTERFACE") {
+        // noop
     } else {
-        return std::unexpected(
-            std::format("Unexpected value for manifest.type: {}. Expected: STATICLIB, SHAREDLIB, or BINARY.", type));
+        return std::unexpected(std::format(
+            "Unexpected value for manifest.type: {}. Expected: STATICLIB, SHAREDLIB, BINARY, or INTERFACE.", type));
     }
 
     auto copy_artifact =
@@ -106,11 +108,13 @@ Result<void> action(const Parse &parse_args) {
         return {};
     };
 
-    fs::path source_artifact = build_dir / target_filename;
-    fs::path dest_artifact_dir = install_path / artifact_subdir;
+    if (type != "INTERFACE") {
+        fs::path source_artifact = build_dir / target_filename;
+        fs::path dest_artifact_dir = install_path / artifact_subdir;
 
-    if (auto res = copy_artifact(source_artifact, dest_artifact_dir, target_filename); !res) {
-        return res;
+        if (auto res = copy_artifact(source_artifact, dest_artifact_dir, target_filename); !res) {
+            return res;
+        }
     }
 
     // Handle Windows import lib for SHAREDLIB

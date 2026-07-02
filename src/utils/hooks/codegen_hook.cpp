@@ -118,7 +118,7 @@ Result<std::string> substituteCmdArgs(std::string cmd,
     };
 
     std::string new_cmd;
-    std::regex var_regex(R"((\$\$)|(\$(IN|OUT)(?:\[(?:(-?\d+)|(-?\d*)?:(-?\d*)?(?::(-?\d*)?)?)\])?))");
+    static const std::regex var_regex(R"((\$\$)|(\$(IN|OUT)(?:\[(?:(-?\d+)|(-?\d*)?:(-?\d*)?(?::(-?\d*)?)?)\])?))");
     std::sregex_iterator it(cmd.begin(), cmd.end(), var_regex);
     std::sregex_iterator end;
 
@@ -135,10 +135,10 @@ Result<std::string> substituteCmdArgs(std::string cmd,
 
     size_t last_pos = 0;
     for (; it != end; ++it) {
-        std::smatch match = *it;
+        const std::smatch& match = *it;
         size_t match_pos = match.position();
 
-        new_cmd.append(cmd.begin() + last_pos, cmd.begin() + match_pos);
+        new_cmd.append(cmd.begin() + static_cast<ssize_t>(last_pos), cmd.begin() + static_cast<ssize_t>(match_pos));
         last_pos = match_pos + match.length();
 
         if (match[1].matched) {

@@ -6,12 +6,14 @@
 
 #include "catalyst/utils/log/log.hpp"
 
+static constexpr auto TUNABLE_WATCH_REFRESH_DURATION = std::chrono::milliseconds(500);
+
 namespace catalyst::utils::watcher {
 
 namespace fs = std::filesystem;
 
 Watcher::Watcher(std::vector<fs::path> watch_paths) : watch_paths(std::move(watch_paths)) {
-    // Initial scan to populate file_times_
+    // Initial scan to populate file_times
     std::filesystem::path dummy;
     checkChanges(dummy);
 }
@@ -23,7 +25,7 @@ void Watcher::watch(const std::function<void(const fs::path &)> &on_change) {
         if (checkChanges(changed_path)) {
             on_change(changed_path);
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::this_thread::sleep_for(TUNABLE_WATCH_REFRESH_DURATION);
     }
 }
 
@@ -50,6 +52,7 @@ bool Watcher::checkChanges(fs::path &changed_path) {
                     }
                 }
             } catch (...) {
+                std::ignore; // Ignore files that might be deleted during scan
             }
             continue;
         }
@@ -73,6 +76,7 @@ bool Watcher::checkChanges(fs::path &changed_path) {
                     }
                 }
             } catch (...) {
+                std::ignore;
                 // Ignore files that might be deleted during scan
             }
         }

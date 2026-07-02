@@ -3,6 +3,7 @@
 #include <sstream>
 #include <tuple>
 
+#include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/os/os_defs.hpp"
 
 namespace catalyst::utils::os {
@@ -28,9 +29,9 @@ bool isCommandInstalled(const std::string &command) {
                 std::filesystem::path dir(token);
                 std::filesystem::path file_path = dir / command;
 #ifdef _WIN32
-                if (std::filesystem::exists(file_path) || std::filesystem::exists(file_path.string() + ".exe") ||
-                    std::filesystem::exists(file_path.string() + ".bat") ||
-                    std::filesystem::exists(file_path.string() + ".cmd")) {
+                if (std::filesystem::exists(file_path) || std::filesystem::exists(file_path.string() + ".exe")
+                    || std::filesystem::exists(file_path.string() + ".bat")
+                    || std::filesystem::exists(file_path.string() + ".cmd")) {
                     return true;
                 }
 #else
@@ -38,8 +39,10 @@ bool isCommandInstalled(const std::string &command) {
                     return true;
                 }
 #endif
+            } catch (std::exception &e) {
+                catalyst::logger.warn("Exception occured trying to find command: {}, {}", command, e.what());
             } catch (...) {
-                std::ignore;
+                catalyst::logger.warn("Unknown exception occured trying to find command: {}", command);
             }
         }
     }
@@ -60,8 +63,10 @@ bool isCommandInstalled(const std::string &command) {
                     return true;
                 }
 #endif
+            } catch (std::exception &e) {
+                catalyst::logger.warn("Exception occured trying to find vcpkg command: {}", e.what());
             } catch (...) {
-                std::ignore;
+                catalyst::logger.warn("Unknown exception occured trying to find vcpkg command");
             }
         }
     }

@@ -97,11 +97,11 @@ std::optional<std::vector<std::string>> asStringVector(ryml::ConstNodeRef node) 
         return std::nullopt;
 
     std::vector<std::string> out;
-    for (ryml::ConstNodeRef child : node.children()) {
-        std::optional<std::string> item = asString(child);
+    for (ryml::ConstNodeRef node_child : node.children()) {
+        std::optional<std::string> item = asString(node_child);
         if (!item)
             return std::nullopt;
-        out.push_back(std::move(*item));
+        out.emplace_back(std::move(*item));
     }
     return out;
 }

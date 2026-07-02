@@ -60,9 +60,9 @@ struct ToolchainDef {
 };
 
 // Expands a template string replacing {key} with the corresponding value from vars
-std::string expand_template(std::string_view tmpl, const std::unordered_map<std::string_view, std::string> &vars);
+std::string expandTemplate(std::string_view tmpl, const std::unordered_map<std::string_view, std::string> &vars);
 
 // Parse a ToolchainDef from a YAML file
-Result<ToolchainDef> parse_toolchain(const std::filesystem::path &path);
+Result<ToolchainDef> parseToolchain(const std::filesystem::path &path);
 
 } // namespace catalyst::toolchain

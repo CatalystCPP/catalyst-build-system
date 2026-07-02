@@ -69,9 +69,9 @@ const ryml::Tree &getDefaultConfiguration() {
     return default_tree;
 }
 
-std::string verMax(std::string s1, std::string s2) {
-    catalyst::logger.debug("Comparing versions: {} and {}", s1, s2);
-    auto split_ver = [](const std::string &ver) {
+std::string verMax(const std::string &version_1, const std::string &version_2) {
+    catalyst::logger.debug("Comparing versions: {} and {}", version_1, version_2);
+    auto split_ver = [](const std::string &ver) -> std::vector<int> {
         std::vector<int> parts;
         std::istringstream iss(ver);
         for (std::string token; std::getline(iss, token, '.');) {
@@ -86,22 +86,22 @@ std::string verMax(std::string s1, std::string s2) {
         return parts;
     };
 
-    std::vector<int> v1 = split_ver(s1);
-    std::vector<int> v2 = split_ver(s2);
+    std::vector<int> v1 = split_ver(version_1);
+    std::vector<int> v2 = split_ver(version_2);
 
     for (size_t i = 0, lim = std::min(v1.size(), v2.size()); i < lim; ++i) {
         if (v1[i] > v2[i]) {
-            catalyst::logger.debug("Version {} is greater.", s1);
-            return s1;
+            catalyst::logger.debug("Version {} is greater.", version_1);
+            return version_1;
         }
         if (v1[i] < v2[i]) {
-            catalyst::logger.debug("Version {} is greater.", s2);
-            return s2;
+            catalyst::logger.debug("Version {} is greater.", version_2);
+            return version_2;
         }
     }
 
-    catalyst::logger.debug("Versions are equal, returning {}.", s1);
-    return s1;
+    catalyst::logger.debug("Versions are equal, returning {}.", version_1);
+    return version_1;
 }
 
 std::vector<std::string> splitPath(const std::string &key) {
@@ -453,7 +453,8 @@ void merge(ryml::Tree &composite, const std::string &profile_name, const fs::pat
 
     if (!fs::exists(profile_path)) {
         catalyst::logger.error("Profile {} not found in {} or CATALYST.yaml", profile_name, profile_path.string());
-        throw std::exception();
+        throw std::runtime_error(
+            std::format("Profile {} not found in {} or CATALYST.yaml", profile_name, profile_path.string()));
     }
     auto profile_yaml = catalyst::utils::yaml::loadFile(profile_path);
     if (!profile_yaml)

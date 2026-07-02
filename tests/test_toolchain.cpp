@@ -1,6 +1,7 @@
-#include <catch2/catch_test_macros.hpp>
 #include <filesystem>
 #include <fstream>
+
+#include <catch2/catch_test_macros.hpp>
 
 #include "catalyst/utils/toolchain.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
@@ -14,19 +15,13 @@ TEST_CASE("Template Expansion", "[toolchain]") {
     }
 
     SECTION("Multiple replacements") {
-        std::string res = expand_template("{cxx} -c {source} -o {object}", {
-            {"cxx", "clang++"},
-            {"source", "main.cpp"},
-            {"object", "main.o"}
-        });
+        std::string res = expand_template("{cxx} -c {source} -o {object}",
+                                          {{"cxx", "clang++"}, {"source", "main.cpp"}, {"object", "main.o"}});
         REQUIRE(res == "clang++ -c main.cpp -o main.o");
     }
 
     SECTION("Missing placeholder replaces with empty") {
-        std::string res = expand_template("{cxx} {missing} -o {object}", {
-            {"cxx", "clang++"},
-            {"object", "main.o"}
-        });
+        std::string res = expand_template("{cxx} {missing} -o {object}", {{"cxx", "clang++"}, {"object", "main.o"}});
         REQUIRE(res == "clang++  -o main.o");
     }
 
@@ -61,7 +56,7 @@ toolchain:
     auto tc_res = parse_toolchain(temp_yaml);
     REQUIRE(tc_res.has_value());
     auto tc = tc_res.value();
-    
+
     REQUIRE(tc.name == "msvc");
     REQUIRE(tc.extensions.object == ".obj");
     REQUIRE(tc.flags.include_dir == "/I\"{path}\"");
@@ -166,9 +161,9 @@ toolchain:
         auto tc = tc_res.value();
 
         REQUIRE(tc.name == "child-tc");
-        REQUIRE(tc.extensions.object == ".obj"); // Inherited
-        REQUIRE(tc.extensions.executable == ".exe"); // Inherited
-        REQUIRE(tc.compiler.cxx.executable == "g++"); // Overridden
+        REQUIRE(tc.extensions.object == ".obj");                // Inherited
+        REQUIRE(tc.extensions.executable == ".exe");            // Inherited
+        REQUIRE(tc.compiler.cxx.executable == "g++");           // Overridden
         REQUIRE(tc.compiler.cxx.command == "clang++ {source}"); // Inherited
     }
 
@@ -233,7 +228,7 @@ toolchain:
         auto tc = tc_res.value();
 
         REQUIRE(tc.name == "a-tc");
-        REQUIRE(tc.extensions.object == ".o2"); // b overrides c
+        REQUIRE(tc.extensions.object == ".o2");       // b overrides c
         REQUIRE(tc.extensions.executable == ".exe3"); // c survives
     }
 
@@ -331,3 +326,126 @@ toolchain:
     fs::remove_all(temp_dir);
 }
 
+TEST_CASE("Toolchain inheritance composition", "[toolchain]") {
+    std::filesystem::path temp_dir = std::filesystem::temp_directory_path() / "test_inheritance_comp";
+    std::filesystem::create_directories(temp_dir);
+
+    // Write base toolchain
+    std::ofstream out_base(temp_dir / "base.yaml");
+    out_base << R"(
+toolchain:
+  name: "base"
+  compiler:
+    cxx:
+      flags: "-std=c++23 -Wall -Wextra -O2"
+)";
+    out_base.close();
+
+    SECTION("Wholesale overwrite via 'flags'") {
+        std::ofstream out_child(temp_dir / "child.yaml");
+        out_child << R"(
+toolchain:
+  extends: "base.yaml"
+  name: "child"
+  compiler:
+    cxx:
+      flags: "-O3"
+)";
+        out_child.close();
+
+        auto res = parse_toolchain(temp_dir / "child.yaml");
+        REQUIRE(res.has_value());
+        REQUIRE(res->compiler.cxx.flags == "-O3");
+    }
+
+    SECTION("Append flags") {
+        std::ofstream out_child(temp_dir / "child.yaml");
+        out_child << R"(
+toolchain:
+  extends: "base.yaml"
+  name: "child"
+  compiler:
+    cxx:
+      flags_append: "-g -flto"
+)";
+        out_child.close();
+
+        auto res = parse_toolchain(temp_dir / "child.yaml");
+        REQUIRE(res.has_value());
+        REQUIRE(res->compiler.cxx.flags == "-std=c++23 -Wall -Wextra -O2 -g -flto");
+    }
+
+    SECTION("Remove flags") {
+        std::ofstream out_child(temp_dir / "child.yaml");
+        out_child << R"(
+toolchain:
+  extends: "base.yaml"
+  name: "child"
+  compiler:
+    cxx:
+      flags_remove: "-O2 -Wall"
+)";
+        out_child.close();
+
+        auto res = parse_toolchain(temp_dir / "child.yaml");
+        REQUIRE(res.has_value());
+        REQUIRE(res->compiler.cxx.flags == "-std=c++23 -Wextra");
+    }
+
+    SECTION("Append and Remove flags combined") {
+        std::ofstream out_child(temp_dir / "child.yaml");
+        out_child << R"(
+toolchain:
+  extends: "base.yaml"
+  name: "child"
+  compiler:
+    cxx:
+      flags_remove: "-O2"
+      flags_append: "-O3 -g"
+)";
+        out_child.close();
+
+        auto res = parse_toolchain(temp_dir / "child.yaml");
+        REQUIRE(res.has_value());
+        REQUIRE(res->compiler.cxx.flags == "-std=c++23 -Wall -Wextra -O3 -g");
+    }
+
+    SECTION("Flags as list") {
+        std::ofstream out_child(temp_dir / "child.yaml");
+        out_child << R"(
+toolchain:
+  extends: "base.yaml"
+  name: "child"
+  compiler:
+    cxx:
+      flags_remove: ["-O2", "-Wall"]
+      flags_append: ["-O3", "-g"]
+)";
+        out_child.close();
+
+        auto res = parse_toolchain(temp_dir / "child.yaml");
+        REQUIRE(res.has_value());
+        REQUIRE(res->compiler.cxx.flags == "-std=c++23 -Wextra -O3 -g");
+    }
+
+    SECTION("Wholesale overwrite flags as list") {
+        std::ofstream out_child(temp_dir / "child.yaml");
+        out_child << R"(
+toolchain:
+  extends: "base.yaml"
+  name: "child"
+  compiler:
+    cxx:
+      flags:
+        - "-O3"
+        - "-g"
+)";
+        out_child.close();
+
+        auto res = parse_toolchain(temp_dir / "child.yaml");
+        REQUIRE(res.has_value());
+        REQUIRE(res->compiler.cxx.flags == "-O3 -g");
+    }
+
+    std::filesystem::remove_all(temp_dir);
+}

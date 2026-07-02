@@ -3,7 +3,16 @@
 #include <iostream>
 #include <limits>
 
-static std::string escapeJsonString(const std::string &input) {
+#if FF_catalyst__log_machine_info
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
+#endif
+
+namespace {
+std::string escapeJsonString(const std::string &input) {
     std::string out;
     out.reserve(input.size());
     for (char c : input) {
@@ -39,33 +48,13 @@ static std::string escapeJsonString(const std::string &input) {
     }
     return out;
 }
-
-#if FF_catalyst__log_machine_info
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <unistd.h>
-#endif
-#endif
+}
 
 namespace catalyst {
 
-const char *toString(LogLevel level) {
-    switch (level) {
-        case LogLevel::DEBUG:
-            return "DEBUG";
-        case LogLevel::INFO:
-            return "INFO";
-        case LogLevel::WARN:
-            return "WARN";
-        case LogLevel::ERROR:
-            return "ERROR";
-    }
-    return "UNKNOWN";
-}
-
+namespace {
 #if FF_catalyst__log_machine_info
-static std::string getHostnameImpl() {
+std::string getHostnameImpl() {
     constexpr size_t BUFFER_SIZE = std::numeric_limits<char>::max() + 1;
     std::array<char, BUFFER_SIZE> buf{};
 
@@ -80,7 +69,7 @@ static std::string getHostnameImpl() {
     return "unknown";
 }
 
-static unsigned long getPidImpl() {
+unsigned long getPidImpl() {
 #ifdef _WIN32
     return GetCurrentProcessId();
 #else
@@ -88,6 +77,7 @@ static unsigned long getPidImpl() {
 #endif
 }
 #endif
+}
 
 LogT::LogT()
     : log_file{".catalyst.log", std::ios_base::app}
@@ -98,14 +88,14 @@ LogT::LogT()
 {
     auto now = std::chrono::system_clock::now();
 #if FF_catalyst__uniform_logs
-    log_file << generateJsonLogEvent(now, LogLevel::DEBUG, "begin session") << "\n";
+    log_file << generateJsonLogEvent(now, LogLevel::DBG, "begin session") << "\n";
 #else
 #if FF_catalyst__log_machine_info
     log_file << std::format(
-                    R"({{"event":"begin_session","timestamp":"{:%Y-%m-%d %H:%M:%S}","hostname":"{}","pid":{}}})",
-                    now,
-                    this->hostname,
-                    this->pid)
+        R"({{"event":"begin_session","timestamp":"{:%Y-%m-%d %H:%M:%S}","hostname":"{}","pid":{}}})",
+        now,
+        this->hostname,
+        this->pid)
              << "\n";
 #else
     log_file << std::format(R"({{"event":"begin_session","timestamp":"{:%Y-%m-%d %H:%M:%S}"}})", now) << "\n";
@@ -116,7 +106,7 @@ LogT::LogT()
 LogT::~LogT() {
     auto now = std::chrono::system_clock::now();
 #if FF_catalyst__uniform_logs
-    log_file << generateJsonLogEvent(now, LogLevel::DEBUG, "end session") << "\n";
+    log_file << generateJsonLogEvent(now, LogLevel::DBG, "end session") << "\n";
 #else
     // Destructor assumes single thread or end of life
 #if FF_catalyst__log_machine_info
@@ -160,10 +150,10 @@ void LogT::logImpl(LogLevel level, const std::string &message) const {
     auto now = std::chrono::system_clock::now();
     log_file << generateJsonLogEvent(now, level, message) << "\n";
 
-    if (verbose_logging || level != LogLevel::DEBUG) {
+    if (verbose_logging || level != LogLevel::DBG) {
         const char *color = RESET;
         switch (level) {
-            case LogLevel::DEBUG:
+            case LogLevel::DBG:
                 color = PURPLE;
                 break;
             case LogLevel::INFO:
@@ -179,8 +169,8 @@ void LogT::logImpl(LogLevel level, const std::string &message) const {
 
         std::ostream &sink = (level == LogLevel::ERROR) ? std::cerr : std::cout;
         std::string time_str = std::format("{:%Y-%m-%d %H:%M:%S}", now);
-        std::string log_str = std::format("[{}] {}", toString(level), message);
-        sink << time_str << " " << color << log_str << RESET << std::endl;
+        std::string log_str = std::format("[{}] {}", level, message);
+        sink << time_str << " " << color << log_str << RESET << '\n';
     }
 }
 
@@ -190,14 +180,14 @@ std::string LogT::generateJsonLogEvent(const std::chrono::system_clock::time_poi
 #if FF_catalyst__log_machine_info
     return std::format(R"({{"timestamp":"{:%Y-%m-%d %H:%M:%S}","level":"{}","message":"{}","hostname":"{}","pid":{}}})",
                        now,
-                       toString(level),
+                       level,
                        escapeJsonString(message),
                        this->hostname,
                        this->pid);
 #else
     return std::format(R"({{"timestamp":"{:%Y-%m-%d %H:%M:%S}","level":"{}","message":"{}"}})",
                        now,
-                       toString(level),
+                       level,
                        escapeJsonString(message));
 #endif
 }

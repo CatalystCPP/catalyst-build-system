@@ -8,7 +8,7 @@ Catalyst source code.
 ## Overview
 
 Projects opt into a custom toolchain by setting `manifest.toolchain` in their
-configuration:
+profile configuration:
 
 ```yaml
 manifest:
@@ -50,10 +50,12 @@ Defines the metadata and command templates Catalyst will use during generation.
 | `linker` | Object | - | Executable and shared library linker executable, base flags, and templates. |
 | `archiver` | Object | - | Static library archive template. |
 
-> **Note**: `compiler.c.flags`, `compiler.cxx.flags`, and `linker.flags` define the
-> compiler/linker flags for the target — this is the only home for build flags. The
-> `manifest.tooling` flag overrides (`CCFLAGS`/`CXXFLAGS`/`LDFLAGS`) were removed in 1.7.0;
-> set `compiler.c.flags`, `compiler.cxx.flags`, and `linker.flags` here instead.
+!!! note
+
+    `compiler.c.flags`, `compiler.cxx.flags`, and `linker.flags` define the
+    compiler/linker flags for the target — this is the only home for build flags. The
+    `manifest.tooling` flag overrides (`CCFLAGS`/`CXXFLAGS`/`LDFLAGS`) were removed in 1.7.0;
+    set `compiler.c.flags`, `compiler.cxx.flags`, and `linker.flags` here instead.
 
 ### `toolchain.extensions`
 
@@ -76,7 +78,9 @@ Defines the metadata and command templates Catalyst will use during generation.
 | `define` | String | `-D{name}={value}` | Template for a preprocessor define with a value. |
 | `define_empty` | String | `-D{name}` | Template for a value-less preprocessor define. |
 
-> **Note**: `flags` templates interpolate `{path}`, `{name}`, and `{value}` placeholders.
+!!! note
+
+    `flags` templates interpolate `{path}`, `{name}`, and `{value}` placeholders.
 
 ### `toolchain.compiler`
 
@@ -90,7 +94,9 @@ Defines the metadata and command templates Catalyst will use during generation.
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `executable` | String | `cc` | C compiler executable. |
-| `flags` | String | `""` | Base C compiler flags, interpolated as `{cflags}`. |
+| `flags` | String or List | `""` | Base C compiler flags, interpolated as `{cflags}`. |
+| `flags_append` | String or List | `""` | Appends flags to the inherited C compiler flags. |
+| `flags_remove` | String or List | `""` | Removes matching flag tokens from the inherited C compiler flags. |
 | `command` | String | `{cc} {cflags} -MMD -MF {object}.d -c {source} -o {object} {includes} {defines}` | Command template for compiling C sources. |
 
 ### `toolchain.compiler.cxx`
@@ -98,23 +104,31 @@ Defines the metadata and command templates Catalyst will use during generation.
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `executable` | String | `c++` | C++ compiler executable. |
-| `flags` | String | `""` | Base C++ compiler flags, interpolated as `{cxxflags}`. |
+| `flags` | String or List | `""` | Base C++ compiler flags, interpolated as `{cxxflags}`. |
+| `flags_append` | String or List | `""` | Appends flags to the inherited C++ compiler flags. |
+| `flags_remove` | String or List | `""` | Removes matching flag tokens from the inherited C++ compiler flags. |
 | `command` | String | `{cxx} {cxxflags} -MMD -MF {object}.d -c {source} -o {object} {includes} {defines}` | Command template for compiling C++ sources. |
 
-> **Note**: Compiler command templates interpolate `{cc}` or `{cxx}`, plus
-> `{cflags}` or `{cxxflags}`, `{source}`, `{object}`, `{includes}`, and `{defines}`.
+!!! note
+
+    Compiler command templates interpolate `{cc}` or `{cxx}`, plus
+    `{cflags}` or `{cxxflags}`, `{source}`, `{object}`, `{includes}`, and `{defines}`.
 
 ### `toolchain.linker`
 
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `executable` | String | `c++` | Linker executable. |
-| `flags` | String | `""` | Base linker flags, interpolated as `{ldflags}`. |
+| `flags` | String or List | `""` | Base linker flags, interpolated as `{ldflags}`. |
+| `flags_append` | String or List | `""` | Appends flags to the inherited linker flags. |
+| `flags_remove` | String or List | `""` | Removes matching flag tokens from the inherited linker flags. |
 | `executable_command` | String | `{linker} {objects} -o {output} {ldflags} {lib_dirs} {libs}` | Command template for building executables. |
 | `shared_lib_command` | String | `{linker} -shared {objects} -o {output} {ldflags} {lib_dirs} {libs}` | Command template for building shared libraries. |
 
-> **Note**: Linker command templates interpolate `{linker}`, `{objects}`,
-> `{output}`, `{ldflags}`, `{lib_dirs}`, and `{libs}`.
+!!! note
+
+    Linker command templates interpolate `{linker}`, `{objects}`,
+    `{output}`, `{ldflags}`, `{lib_dirs}`, and `{libs}`.
 
 ### `toolchain.archiver`
 
@@ -123,8 +137,10 @@ Defines the metadata and command templates Catalyst will use during generation.
 | `executable` | String | `ar` | Archive tool executable. |
 | `command` | String | `{archiver} rcs {output} {objects}` | Command template for building static libraries. |
 
-> **Note**: Archiver command templates interpolate `{archiver}`, `{output}`,
-> and `{objects}`.
+!!! note
+
+    Archiver command templates interpolate `{archiver}`, `{output}`,
+    and `{objects}`.
 
 ---
 
@@ -195,8 +211,21 @@ Precedence order (lowest to highest):
 
 Every unspecified key inherits from its parent base toolchain.
 
-For flags (e.g. `compiler.c.flags`, `compiler.cxx.flags`, `linker.flags`), the flag strings
-are replaced wholesale, not appended.
+For flag fields (e.g. `compiler.c.flags`, `compiler.cxx.flags`, `linker.flags`), you can control composition using:
+
+- `flags`: Replaces the inherited flag string entirely.
+- `flags_append`: Appends the provided flags to the inherited flags.
+- `flags_remove`: Filters out matching space-separated tokens from the inherited flags.
+
+!!! note
+
+    You can specify these as either a string or a list of strings. A list of strings is automatically space-separated.
+
+!!! warning
+
+    You should generally pick one of the two composition paradigms per block: either wholesale replacement (`flags`) OR modification (`flags_remove` and `flags_append`).
+
+    If `flags` is specified, it completely replaces the inherited string, making `flags_remove` and `flags_append` in the exact same file largely redundant. (If multiple are used, the evaluation order is: `flags` overwrite, then `flags_remove`, then `flags_append`).
 
 ### Path Resolution
 

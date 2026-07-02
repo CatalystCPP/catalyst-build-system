@@ -40,8 +40,8 @@ struct BuildFailureGuard {
             if (auto hook_res = hooks::onBuildFailure(config); !hook_res) {
                 catalyst::logger.error("on_build_failure hook failed: {}", hook_res.error());
                 result =
-                    std::unexpected(result.error() +
-                                    "\nAdditionally, the on_build_failure hook failed with error: " + hook_res.error());
+                    std::unexpected(result.error() + "\nAdditionally, the on_build_failure hook failed with error: "
+                                    + hook_res.error());
             }
         }
     }

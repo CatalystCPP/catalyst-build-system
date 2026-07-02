@@ -89,8 +89,8 @@ void addIndividualProfiles(std::vector<std::string> &out_profiles) {
         std::optional<std::string> profile_name{std::nullopt};
         if (filename == "catalyst.yaml") {
             profile_name = "common";
-        } else if (filename.starts_with(prefix) && filename.ends_with(suffix) &&
-                   filename.size() > prefix.size() + suffix.size()) {
+        } else if (filename.starts_with(prefix) && filename.ends_with(suffix)
+                   && filename.size() > prefix.size() + suffix.size()) {
             profile_name = filename.substr(prefix.size(), filename.size() - prefix.size() - suffix.size());
         }
         if (profile_name) {
