@@ -1,34 +1,15 @@
 # NOTE: we can't use extends here yet because 1.8.0 is still in development so it can't be used in CI
 
 toolchain:
+  extends: ./tc_catalyst.yaml
   name: "catalyst debug"
-  extensions:
-    object: ".o"
-    executable: ""
-    static_lib: ".a"
-    shared_lib: ".so"
-    static_lib_prefix: "lib"
-    shared_lib_prefix: "lib"
-  flags:
-    include_dir: "-I{path}"
-    lib_dir: "-L{path}"
-    lib: "-l{name}"
-    define: "-D{name}={value}"
-    define_empty: "-D{name}"
   compiler:
     c:
-      executable: "clang"
-      flags: -std=c23 -O0 -ggdb -Wall -Wextra -Wpedantic -Wshadow -DDEBUG
-      command: "{cc} {cflags} -MMD -MF {object}.d -c {source} -o {object} {includes} {defines}"
+      flags_remove: -O3 -DNDEBUG -march=native -flto=full -ffunction-sections -fdata-sections
+      flags_append: -O0 -ggdb -Wshadow -DDEBUG
     cxx:
-      executable: "clang++"
-      flags: -std=c++23 -O0 -ggdb -Wall -Wextra -Wpedantic -Wshadow -DDEBUG
-      command: "{cxx} {cxxflags} -MMD -MF {object}.d -c {source} -o {object} {includes} {defines}"
+      flags_remove: -O3 -DNDEBUG -march=native -flto=full -ffunction-sections -fdata-sections
+      flags_append: -O0 -ggdb -Wshadow -DDEBUG
   linker:
-    executable: "clang++"
-    executable_command: "{linker} {objects} -o {output} {ldflags} {lib_dirs} {libs}"
-    shared_lib_command: "{linker} -shared {objects} -o {output} {ldflags} {lib_dirs} {libs}"
-    flags: -fuse-ld=mold -flto=thin -Wl,--as-needed -Wl,--no-undefined -Wl,--hash-style=gnu -Wl,--build-id=fast
-  archiver:
-    executable: "ar"
-    command: "{archiver} rcs {output} {objects}"
+    flags_remove: -flto=full -Wl,-O3 -Wl,--gc-sections -Wl,--icf=safe -Wl,-z,relro,-z,now -Wl,--build-id=sha1 -Wl,--strip-all -static
+    flags_append: -flto=thin -Wl,--build-id=fast

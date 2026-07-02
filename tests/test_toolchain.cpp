@@ -6,6 +6,15 @@
 #include "catalyst/utils/toolchain.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 
+namespace catalyst::toolchain {
+inline std::string expand_template(std::string_view tmpl, const std::unordered_map<std::string_view, std::string> &vars) {
+    return expandTemplate(tmpl, vars);
+}
+inline Result<ToolchainDef> parse_toolchain(const std::filesystem::path &path) {
+    return parseToolchain(path);
+}
+} // namespace catalyst::toolchain
+
 using namespace catalyst::toolchain;
 
 TEST_CASE("Template Expansion", "[toolchain]") {

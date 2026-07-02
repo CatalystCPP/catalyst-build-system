@@ -16,11 +16,11 @@ toolchain:
   compiler:
     c:
       executable: "clang"
-      flags: -std=c23 -O3 -Wall -Wextra -Wpedantic -DNDEBUG -march=native -flto=full -ffunction-sections -fdata-sections
+      flags: -std=c23 -O3 -Wall -Wextra -Wpedantic -DNDEBUG -march=x86-64-v2 -flto=full -ffunction-sections -fdata-sections
       command: "{cc} {cflags} -MMD -MF {object}.d -c {source} -o {object} {includes} {defines}"
     cxx:
       executable: "clang++"
-      flags: -std=c++23 -O3 -Wall -Wextra -Wpedantic -DNDEBUG -march=native -flto=full -ffunction-sections -fdata-sections
+      flags: -std=c++23 -O3 -Wall -Wextra -Wpedantic -DNDEBUG -march=x86-64-v2 -flto=full -ffunction-sections -fdata-sections
       command: "{cxx} {cxxflags} -MMD -MF {object}.d -c {source} -o {object} {includes} {defines}"
   linker:
     executable: "clang++"
