@@ -175,7 +175,8 @@ public:
     virtual Result<void> addBuild(const std::vector<std::string> &outputs,
                                   std::string_view rule,
                                   const std::vector<std::string> &inputs,
-                                  const std::vector<std::string> &implicit_deps = {} // e.g., headers for validation
+                                  const std::vector<std::string> &implicit_deps = {}, // e.g., headers for validation
+                                  const std::vector<std::string> &extra_args = {}     // per-step compiler flags
                                   ) = 0;
 
     virtual void addComment(std::string_view comment) = 0;
@@ -250,7 +251,8 @@ public:
     Result<void> addBuild([[maybe_unused]] const std::vector<std::string> &outputs,
                           [[maybe_unused]] std::string_view rule,
                           [[maybe_unused]] const std::vector<std::string> &inputs,
-                          [[maybe_unused]] const std::vector<std::string> &implicit_deps = {}) override {
+                          [[maybe_unused]] const std::vector<std::string> &implicit_deps = {},
+                          [[maybe_unused]] const std::vector<std::string> &extra_args = {}) override {
         throw std::logic_error("Unimplemented base template method");
     }
 
