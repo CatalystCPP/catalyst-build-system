@@ -301,10 +301,14 @@ Result<void> action(const Parse &parse_args) {
             }
         }
 
-        if (!fs::exists(build_dir / "catalyst-libs") || parse_args.force_refetch || depMissing(config)) {
+        const auto fetch_sentinel = build_dir / ".catalyst_fetched";
+        bool needs_fetch = !fs::exists(fetch_sentinel) || parse_args.force_refetch || depMissing(config);
+        if (needs_fetch) {
             if (parse_args.force_refetch) {
                 catalyst::logger.info("Forcefully refetching dependencies.");
                 fs::remove_all(fs::path{build_dir / "catalyst-libs"}); // cleanup
+                std::error_code ec;
+                fs::remove(build_dir / ".catalyst_fetched", ec);
             }
             catalyst::logger.info("Fetching dependencies.");
             if (auto res =
@@ -314,6 +318,9 @@ Result<void> action(const Parse &parse_args) {
                 result = std::unexpected(res.error());
                 return;
             }
+            std::error_code ec;
+            fs::create_directories(build_dir, ec);
+            std::ofstream{fetch_sentinel}; // create sentinel file and close it via RAII
         }
 
         catalyst::logger.info("Building project.");
