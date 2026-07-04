@@ -22,5 +22,5 @@ catalyst run
 
 **Run the debug build with arguments:**
 ```bash
-catalyst run --profile debug --params "--verbose --input data.txt"
+catalyst run --profiles debug --params "--verbose --input data.txt"
 ```
