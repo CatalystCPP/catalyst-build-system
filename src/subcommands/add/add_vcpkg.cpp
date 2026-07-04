@@ -65,11 +65,12 @@ std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &add) {
     CLI::App *add_vcpkg = add.add_subcommand("vcpkg", "add a vcpkg dependency");
     auto ret = std::make_unique<Parse>();
 
-    add_vcpkg->add_option("-n,--name", ret->name)->required();
-    add_vcpkg->add_option("-t,--triplet", ret->triplet)->required();
-    add_vcpkg->add_option("-v,--version", ret->version)->default_str("latest");
-    add_vcpkg->add_option("-p,--profiles", ret->profiles)->default_val(std::vector<std::string>{"common"});
-    add_vcpkg->add_option("-f,--features", ret->enabled_features);
+    add_vcpkg->add_option("-n,--name", ret->name, "dependency name")->required();
+    add_vcpkg->add_option("-t,--triplet", ret->triplet, "vcpkg triplet")->required();
+    add_vcpkg->add_option("-v,--version", ret->version, "dependency version")->default_str("latest");
+    add_vcpkg->add_option("-p,--profiles", ret->profiles, "profiles to add the dependency to")
+        ->default_val(std::vector<std::string>{"common"});
+    add_vcpkg->add_option("-f,--features", ret->enabled_features, "features to enable");
 
     return {add_vcpkg, std::move(ret)};
 }
