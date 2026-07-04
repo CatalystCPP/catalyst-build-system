@@ -264,5 +264,32 @@ public:
         throw std::logic_error("Unimplemented base template method");
     }
 };
+
+// The writer backends are implemented as explicit member specializations in
+// writers/{ninja,make,cob}.cpp. Declare them here so every TU that calls a
+// writer uses the real implementation instead of implicitly instantiating the
+// throwing primary-template bodies above (an ODR violation).
+#define CATALYST_DECLARE_WRITER_SPECIALIZATION(TARGET)                                                                 \
+    template <> Result<void> DerivedWriter<TARGET>::addVariable(std::string_view name, std::string_view value);        \
+    template <>                                                                                                        \
+    Result<void> DerivedWriter<TARGET>::addRule(std::string_view name,                                                 \
+                                                std::string_view command,                                              \
+                                                std::string_view description,                                          \
+                                                std::string_view depfile,                                              \
+                                                std::string_view deps);                                                \
+    template <>                                                                                                        \
+    Result<void> DerivedWriter<TARGET>::addBuild(const std::vector<std::string> &outputs,                              \
+                                                 std::string_view rule,                                                \
+                                                 const std::vector<std::string> &inputs,                               \
+                                                 const std::vector<std::string> &implicit_deps,                        \
+                                                 const std::vector<std::string> &extra_args);                          \
+    template <> void DerivedWriter<TARGET>::addComment(std::string_view comment);                                      \
+    template <> void DerivedWriter<TARGET>::addDefault(std::string_view target);                                       \
+    extern template class DerivedWriter<TARGET>;
+
+CATALYST_DECLARE_WRITER_SPECIALIZATION(TargetType::Ninja)
+CATALYST_DECLARE_WRITER_SPECIALIZATION(TargetType::Make)
+CATALYST_DECLARE_WRITER_SPECIALIZATION(TargetType::COB)
+#undef CATALYST_DECLARE_WRITER_SPECIALIZATION
 } // namespace buildwriters
 } // namespace catalyst::generate
