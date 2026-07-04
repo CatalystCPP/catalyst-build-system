@@ -17,5 +17,5 @@ OPTIONS:
 
 ```bash
 catalyst clean
-catalyst clean --profile debug
+catalyst clean --profiles debug
 ```
