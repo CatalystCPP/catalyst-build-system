@@ -33,6 +33,7 @@ common:
   hooks:
     pre-fetch:
       - script: "scripts/fetch_cli_11.sh"
+    pre-build:
       - codegen:
           cmd: "python3 $IN[0]"
           input: "scripts/embed_cob.py"
