@@ -13,9 +13,6 @@ automatically at generate time.
     `import std;`, header units (`import <vector>;`), GCC, and MSVC are not
     supported yet.
 
-    The `ninja` and `make` backends build modules today; the default `cob`      <!-- NOTE: this entire block will be removed-->
-    backend emits a correct manifest but cob itself cannot consume it yet.
-
 ## Quick Start
 
 ```

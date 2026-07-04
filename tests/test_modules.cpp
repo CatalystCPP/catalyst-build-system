@@ -111,13 +111,13 @@ TEST_CASE("COB writer module emission", "[modules][writers]") {
                     .has_value());
         REQUIRE(out.str()
                 == "cxx|main.cpp,!obj/foo.o,!obj/bar.o|obj/main.o|"
-                   "-fmodule-file=foo=obj/foo.pcm -fmodule-file=bar=obj/bar.pcm\n");
+                   "extra = -fmodule-file=foo=obj/foo.pcm -fmodule-file=bar=obj/bar.pcm\n");
     }
 
     SECTION("Interface unit: -fmodule-output only, no opaque inputs") {
         REQUIRE(writer.addBuild({"obj/foo.o"}, "cxx_compile", {"foo.cppm"}, {}, {"-fmodule-output=obj/foo.pcm"})
                     .has_value());
-        REQUIRE(out.str() == "cxx|foo.cppm|obj/foo.o|-fmodule-output=obj/foo.pcm\n");
+        REQUIRE(out.str() == "cxx|foo.cppm|obj/foo.o|extra = -fmodule-output=obj/foo.pcm\n");
     }
 }
 
