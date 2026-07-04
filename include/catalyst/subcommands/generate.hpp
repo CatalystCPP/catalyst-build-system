@@ -92,6 +92,45 @@ Result<std::vector<FeatureFlag>> resolveFeatureFlags(const utils::yaml::Configur
 Result<std::unordered_set<std::filesystem::path>> buildSourceSet(const std::vector<std::string> &source_dirs,
                                                                  const std::vector<std::string> &profiles);
 
+namespace modules {
+
+/// What one C++ TU provides/requires in the module graph, learned from a
+/// P1689 dependency scan.
+struct ModuleInfo {
+    std::string provides;              ///< logical module name; empty if the TU is not an interface unit
+    std::vector<std::string> required; ///< logical names of imported modules
+};
+
+/// Scan result over the whole source set.
+struct ScanResult {
+    std::unordered_map<std::filesystem::path, ModuleInfo> tu_modules; ///< only TUs that touch modules
+    std::unordered_map<std::string, std::filesystem::path> providers; ///< module name -> interface unit source
+};
+
+/// Parses one clang-scan-deps -format=p1689 JSON document (P1689r5).
+Result<ModuleInfo> parseP1689(std::string_view json);
+
+/// True for the canonical module-interface extensions (.cppm/.ixx/.mpp/.cxxm).
+bool isInterfaceExtension(const std::filesystem::path &src);
+
+/// True when Clang needs an explicit `-x c++-module` to treat @p src as an
+/// interface unit (it only recognizes .cppm/.cxxm natively).
+bool needsExplicitModuleType(const std::filesystem::path &src);
+
+/// BMI output path Catalyst chooses for a module name (obj/<name>.pcm).
+std::string bmiPath(std::string_view module_name);
+
+/// Runs `clang-scan-deps -format=p1689` over every C++ TU in @p source_set,
+/// reusing @p cxxflags (the exact flags the compile steps will get). Skipped
+/// entirely (empty result) when the set contains no module-interface unit, so
+/// projects without modules never need clang-scan-deps installed. A required
+/// module with no provider in the set is an error.
+Result<ScanResult> scanModules(const std::unordered_set<std::filesystem::path> &source_set,
+                               const catalyst::toolchain::ToolchainDef &tc,
+                               std::string_view cxxflags);
+
+} // namespace modules
+
 namespace buildwriters {
 
 struct WriterVariable {
