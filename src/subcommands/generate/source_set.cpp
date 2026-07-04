@@ -91,8 +91,14 @@ Result<std::unordered_set<fs::path>> buildSourceSet(const fs::path &dir, const s
             if (!ignored) {
                 const auto &path = entry.path();
                 const std::string extension = path.extension().string();
-                if (extension == ".cpp" || extension == ".cxx" || extension == ".cc" || extension == ".c"
-                    || extension == ".cu" || extension == ".cupp") {
+                if (
+                    // common C/C++ extensions
+                    extension == ".cpp" || extension == ".cxx" || extension == ".cc" || extension == ".c"
+                    // CUDA extensions
+                    || extension == ".cu" || extension == ".cupp"
+                    // C++ module interface units
+                    || extension == ".cppm" || extension == ".ixx" || extension == ".mpp" || extension == ".cxxm"
+                ) {
                     logger.debug("Adding file to source set: {}", path.string());
                     source_set.insert(path);
                 }
