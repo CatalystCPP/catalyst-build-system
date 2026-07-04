@@ -39,8 +39,8 @@ auto catalyst::init::parse(CLI::App &app) -> std::pair<CLI::App *, std::unique_p
         {"vscode", Parse::IdeType::vsc},
         {"clion", Parse::IdeType::clion},
     };
-    init->add_option("--ides", ret->ides, "IDEs to generate project files for")
-        ->transform(CLI::CheckedTransformer(ide_map, CLI::ignore_case));
+    init->add_option("--ides", ret->ides, "IDEs to generate project files for (vscode, clion)")
+        ->transform(CLI::CheckedTransformer(ide_map, CLI::ignore_case).description(""));
     init->add_option("-p,--profile", ret->profile, "the profile to initialize")->default_val("common");
     init->add_flag("-f,--force-ide", ret->force_emit_ide, "force emitting IDE config even if one already exists")
         ->default_val(false);
