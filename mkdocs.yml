@@ -26,6 +26,7 @@ nav:
     - Toolchains: concepts/toolchains.md
     - Dependencies: concepts/dependencies.md
     - Preprocessor: concepts/preprocessor.md
+    - C++ Modules: concepts/modules.md
     - Catalystignore: concepts/catalystignore.md
     - Hooks: concepts/hooks.md
     - Workspaces: concepts/workspaces.md

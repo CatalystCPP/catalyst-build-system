@@ -58,9 +58,23 @@ template <>
 Result<void> DerivedWriter<TargetType::Make>::addBuild(const std::vector<std::string> &outputs,
                                                        std::string_view rule,
                                                        const std::vector<std::string> &inputs,
-                                                       const std::vector<std::string> &implicit_deps) {
+                                                       const std::vector<std::string> &implicit_deps,
+                                                       const std::vector<std::string> &extra_args) {
     if (outputs.empty())
         return {};
+
+    // Per-target flags, referenced as $(extra_args) in the rule command.
+    // `private` keeps them from leaking into prerequisites' recipes.
+    if (!extra_args.empty()) {
+        for (const auto &out : outputs) {
+            std::print(stream, "{} ", escape(out));
+        }
+        std::print(stream, ": private extra_args :=");
+        for (const auto &arg : extra_args) {
+            std::print(stream, " {}", arg);
+        }
+        std::println(stream);
+    }
 
     for (const auto &out : outputs) {
         std::print(stream, "{} ", escape(out));

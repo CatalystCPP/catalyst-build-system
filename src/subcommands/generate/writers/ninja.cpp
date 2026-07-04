@@ -83,7 +83,8 @@ template <>
 Result<void> DerivedWriter<TargetType::Ninja>::addBuild(const std::vector<std::string> &outputs,
                                                         std::string_view rule,
                                                         const std::vector<std::string> &inputs,
-                                                        const std::vector<std::string> &implicit_deps) {
+                                                        const std::vector<std::string> &implicit_deps,
+                                                        const std::vector<std::string> &extra_args) {
     std::print(stream, "build");
     for (const auto &out : outputs)
         std::print(stream, " {}", escape(out));
@@ -100,6 +101,14 @@ Result<void> DerivedWriter<TargetType::Ninja>::addBuild(const std::vector<std::s
     }
 
     std::println(stream);
+
+    // Per-edge flags, referenced as $extra_args in the rule command.
+    if (!extra_args.empty()) {
+        std::print(stream, "  extra_args =");
+        for (const auto &arg : extra_args)
+            std::print(stream, " {}", arg);
+        std::println(stream);
+    }
     return {};
 }
 
