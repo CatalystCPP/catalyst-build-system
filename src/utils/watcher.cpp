@@ -2,99 +2,94 @@
 
 #include <chrono>
 #include <filesystem>
-#include <thread>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+
+#include <efsw/efsw.hpp>
 
 #include "catalyst/utils/log/log.hpp"
 
-static constexpr auto TUNABLE_WATCH_REFRESH_DURATION = std::chrono::milliseconds(500);
+/// After the first event of a burst arrives, wait for this quiet period before rebuilding
+/// so editors that emit multiple events per save (atomic rename, metadata touch) trigger once.
+static constexpr auto TUNABLE_WATCH_SETTLE_DURATION = std::chrono::milliseconds(200);
 
 namespace catalyst::utils::watcher {
 
 namespace fs = std::filesystem;
 
-Watcher::Watcher(std::vector<fs::path> watch_paths) : watch_paths(std::move(watch_paths)) {
-    // Initial scan to populate file_times
-    std::filesystem::path dummy;
-    checkChanges(dummy);
+Watcher::Watcher(std::vector<fs::path> watch_paths)
+    : watch_paths(std::move(watch_paths)), listener(std::make_unique<Listener>(this)),
+      file_watcher(std::make_unique<efsw::FileWatcher>()) {
+    // efsw only watches directories: watch directory paths recursively, and for single-file
+    // paths watch the parent directory (grouped, since efsw rejects duplicate watches) with a
+    // filename filter in the listener.
+    std::unordered_map<std::string, std::unordered_set<std::string>> file_groups;
+
+    for (const auto &path : this->watch_paths) {
+        std::error_code ec;
+        if (!fs::exists(path, ec)) {
+            catalyst::logger.warn("Watch path does not exist, skipping: {}", path.string());
+            continue;
+        }
+        if (fs::is_directory(path, ec)) {
+            efsw::WatchID id = file_watcher->addWatch(path.string(), listener.get(), true);
+            if (id < 0) {
+                catalyst::logger.warn("Failed to watch {}: {}", path.string(), efsw::Errors::Log::getLastErrorLog());
+            }
+        } else {
+            file_groups[path.parent_path().string()].insert(path.filename().string());
+        }
+    }
+
+    for (auto &[dir, filenames] : file_groups) {
+        efsw::WatchID id = file_watcher->addWatch(dir, listener.get(), false);
+        if (id < 0) {
+            catalyst::logger.warn("Failed to watch {}: {}", dir, efsw::Errors::Log::getLastErrorLog());
+            continue;
+        }
+        listener->filename_filters[id] = std::move(filenames);
+    }
+
+    file_watcher->watch(); // starts the event dispatch thread
 }
 
+Watcher::~Watcher() = default;
+
 void Watcher::watch(const std::function<void(const fs::path &)> &on_change) {
+    std::unique_lock lock(mutex);
     running = true;
     while (running) {
-        fs::path changed_path;
-        if (checkChanges(changed_path)) {
-            on_change(changed_path);
+        cv.wait(lock, [&] { return !running || !pending.empty(); });
+        if (!running)
+            break;
+
+        // Debounce: wait until no new events arrive within the settle window.
+        for (;;) {
+            size_t seen = pending.size();
+            if (cv.wait_for(lock, TUNABLE_WATCH_SETTLE_DURATION, [&] { return !running || pending.size() != seen; })) {
+                if (!running)
+                    return;
+                continue;
+            }
+            break;
         }
-        std::this_thread::sleep_for(TUNABLE_WATCH_REFRESH_DURATION);
+
+        fs::path changed = std::move(pending.back());
+        pending.clear();
+
+        lock.unlock();
+        on_change(changed);
+        lock.lock();
     }
 }
 
 void Watcher::stop() {
-    running = false;
-}
-
-bool Watcher::checkChanges(fs::path &changed_path) {
-    bool changed = false;
-    std::unordered_map<std::string, fs::file_time_type> current_times;
-
-    for (const auto &root : watch_paths) {
-        if (!fs::exists(root))
-            continue;
-
-        if (fs::is_regular_file(root)) {
-            try {
-                auto time = fs::last_write_time(root);
-                current_times[root.string()] = time;
-                if (!file_times.contains(root.string()) || file_times[root.string()] != time) {
-                    if (!file_times.empty()) { // Don't trigger on initial scan
-                        changed = true;
-                        changed_path = root;
-                    }
-                }
-            } catch (...) {
-                std::ignore; // Ignore files that might be deleted during scan
-            }
-            continue;
-        }
-
-        for (const auto &entry :
-             fs::recursive_directory_iterator(root, fs::directory_options::skip_permission_denied)) {
-            if (!entry.is_regular_file())
-                continue;
-
-            const auto &path = entry.path();
-            try {
-                auto time = fs::last_write_time(path);
-                current_times[path.string()] = time;
-
-                if (!file_times.contains(path.string()) || file_times[path.string()] != time) {
-                    if (!file_times.empty()) {
-                        changed = true;
-                        changed_path = path;
-                        // We could break here if we only want one change at a time,
-                        // but we need to update all times to avoid repeated triggers
-                    }
-                }
-            } catch (...) {
-                std::ignore;
-                // Ignore files that might be deleted during scan
-            }
-        }
+    {
+        std::lock_guard lock(mutex);
+        running = false;
     }
-
-    // Check for deleted files
-    if (!file_times.empty()) {
-        for (const auto &[path, time] : file_times) {
-            if (!current_times.contains(path)) {
-                changed = true;
-                changed_path = path;
-                break;
-            }
-        }
-    }
-
-    file_times = std::move(current_times);
-    return changed;
+    cv.notify_all();
 }
 
 } // namespace catalyst::utils::watcher
