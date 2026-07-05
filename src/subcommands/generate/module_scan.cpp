@@ -17,9 +17,11 @@ namespace fs = std::filesystem;
 
 namespace {
 
-bool isCxxSource(const fs::path &src) {
+bool isCxxSource(const fs::path &src, const catalyst::toolchain::ToolchainDef &tc) {
     const std::string ext = src.extension().string();
-    return ext == ".cpp" || ext == ".cxx" || ext == ".cc" || catalyst::generate::modules::isInterfaceExtension(src);
+    return std::ranges::contains(tc.extensions.cpp_sources, ext)
+        || std::ranges::contains(tc.extensions.c_sources, ext)
+        || catalyst::generate::modules::isInterfaceExtension(src, tc);
 }
 
 // Whitespace-split a flags string into argv elements for the scanner
@@ -45,22 +47,23 @@ std::vector<std::string> splitFlags(std::string_view flags) {
 
 namespace catalyst::generate::modules {
 
-bool isInterfaceExtension(const fs::path &src) {
+bool isInterfaceExtension(const fs::path &src, const catalyst::toolchain::ToolchainDef &tc) {
     const std::string ext = src.extension().string();
-    return ext == ".cppm" || ext == ".ixx" || ext == ".mpp" || ext == ".cxxm";
+    return std::ranges::contains(tc.extensions.module_interfaces, ext);
 }
 
-bool needsExplicitModuleType(const fs::path &src) {
+bool needsExplicitModuleType(const fs::path &src, const catalyst::toolchain::ToolchainDef &tc) {
     const std::string ext = src.extension().string();
-    return ext != ".cppm" && ext != ".cxxm";
+    return !std::ranges::contains(tc.extensions.clang_modules, ext);
 }
 
-std::string bmiPath(std::string_view module_name) {
+std::string bmiPath(std::string_view module_name, const catalyst::toolchain::ToolchainDef &tc) {
     // Partition names contain ':', which is unfriendly to build files; map it
     // to '-' (module names themselves cannot contain '-').
     std::string name{module_name};
     std::ranges::replace(name, ':', '-');
-    return (fs::path{"obj"} / (name + ".pcm")).string();
+    std::string ext = tc.extensions.bmi.empty() ? ".pcm" : tc.extensions.bmi;
+    return (fs::path{"obj"} / (name + ext)).string();
 }
 
 Result<ModuleInfo> parseP1689(std::string_view json) {
@@ -108,7 +111,7 @@ Result<ScanResult> scanModules(const std::unordered_set<fs::path> &source_set,
 
     // Modules only enter a project through an interface unit; without one
     // there is nothing to resolve, and we avoid requiring clang-scan-deps.
-    if (std::ranges::none_of(source_set, [](const fs::path &src) { return isInterfaceExtension(src); })) {
+    if (std::ranges::none_of(source_set, [&tc](const fs::path &src) { return isInterfaceExtension(src, tc); })) {
         return scan;
     }
 
@@ -117,12 +120,12 @@ Result<ScanResult> scanModules(const std::unordered_set<fs::path> &source_set,
     const fs::path current_dir = fs::current_path();
 
     for (const auto &src : source_set) {
-        if (!isCxxSource(src))
+        if (!isCxxSource(src, tc))
             continue;
 
         std::vector<std::string> cmd = {"clang-scan-deps", "-format=p1689", "--", tc.compiler.cxx.executable};
         cmd.insert(cmd.end(), flag_args.begin(), flag_args.end());
-        if (isInterfaceExtension(src) && needsExplicitModuleType(src)) {
+        if (isInterfaceExtension(src, tc) && needsExplicitModuleType(src, tc)) {
             cmd.emplace_back("-x");
             cmd.emplace_back("c++-module");
         }
