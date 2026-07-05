@@ -7,6 +7,7 @@
 #include "catalyst/subcommands/install.hpp"
 #include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/result.hpp"
+#include "catalyst/utils/toolchain.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 
 namespace catalyst::install {
@@ -51,6 +52,14 @@ Result<void> action(const Parse &parse_args) {
         return std::unexpected(std::format("Failed to create install directory: {}", e.what()));
     }
 
+    // Resolve active toolchain to get extensions
+    catalyst::toolchain::ToolchainDef tc;
+    if (auto toolchain_path = config.getString("manifest.toolchain")) {
+        if (auto parsed = catalyst::toolchain::parseToolchain(*toolchain_path)) {
+            tc = std::move(*parsed);
+        }
+    }
+
     std::string type = config.getString("manifest.type").value_or("BINARY");
     std::string target_name = config.getString("manifest.name").value_or("name");
     std::string target_filename;
@@ -59,29 +68,33 @@ Result<void> action(const Parse &parse_args) {
     fs::path import_lib_subdir = "lib";
 
     if (type == "STATICLIB") {
-#if defined(_WIN32)
-        target_filename = target_name + ".lib";
-#else
-        target_filename = "lib" + target_name + ".a";
-#endif
+        std::string static_prefix = tc.extensions.static_lib_prefix;
+        std::string static_ext = tc.extensions.static_lib.empty() ? ".a" : tc.extensions.static_lib;
+        target_filename = static_prefix + target_name + static_ext;
         artifact_subdir = "lib";
     } else if (type == "SHAREDLIB") {
 #if defined(_WIN32)
-        target_filename = target_name + ".dll";
-        import_lib_filename = target_name + ".lib";
+        std::string shared_ext = tc.extensions.shared_lib.empty() ? ".dll" : tc.extensions.shared_lib;
+        target_filename = target_name + shared_ext;
+        import_lib_filename = target_name + (tc.extensions.static_lib.empty() ? ".lib" : tc.extensions.static_lib);
         artifact_subdir = "bin";
 #elif defined(__APPLE__)
-        target_filename = "lib" + target_name + ".dylib";
+        std::string shared_prefix = tc.extensions.shared_lib_prefix;
+        std::string shared_ext = tc.extensions.shared_lib.empty() ? ".dylib" : tc.extensions.shared_lib;
+        target_filename = shared_prefix + target_name + shared_ext;
         artifact_subdir = "lib";
 #else
-        target_filename = "lib" + target_name + ".so";
+        std::string shared_prefix = tc.extensions.shared_lib_prefix;
+        std::string shared_ext = tc.extensions.shared_lib.empty() ? ".so" : tc.extensions.shared_lib;
+        target_filename = shared_prefix + target_name + shared_ext;
         artifact_subdir = "lib";
 #endif
     } else if (type == "BINARY") {
 #if defined(_WIN32)
-        target_filename = target_name + ".exe";
+        std::string binary_ext = tc.extensions.executable.empty() ? ".exe" : tc.extensions.executable;
+        target_filename = target_name + binary_ext;
 #else
-        target_filename = target_name;
+        target_filename = target_name + tc.extensions.executable;
 #endif
         artifact_subdir = "bin";
     } else if (type == "INTERFACE") {
