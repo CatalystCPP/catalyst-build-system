@@ -93,23 +93,7 @@ bool packageHasArtifacts(const fs::path &vcpkg_root, const std::string &name, co
 // The library-file extensions a vcpkg package may ship, derived from the
 // toolchain (falling back to platform defaults).
 std::vector<std::string> libExtensions(const catalyst::toolchain::ToolchainDef &tc) {
-    std::vector<std::string> extensions;
-    if (!tc.extensions.static_lib.empty()) {
-        extensions.push_back(tc.extensions.static_lib);
-    }
-    if (!tc.extensions.shared_lib.empty() && tc.extensions.shared_lib != tc.extensions.static_lib) {
-        extensions.push_back(tc.extensions.shared_lib);
-    }
-    if (extensions.empty()) {
-#if defined(_WIN32)
-        extensions.push_back(".lib");
-#elif defined(__APPLE__)
-        extensions = {".a", ".dylib"};
-#else
-        extensions = {".a", ".so"};
-#endif
-    }
-    return extensions;
+    return tc.extensions.library_scan;
 }
 
 // Strips the toolchain's library prefix (e.g. "lib") from a library file stem.
