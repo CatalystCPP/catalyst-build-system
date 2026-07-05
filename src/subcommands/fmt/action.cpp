@@ -5,6 +5,7 @@
 #include <format>
 #include <future>
 #include <mutex>
+#include <ranges>
 #include <regex>
 #include <string>
 #include <unordered_set>
@@ -15,6 +16,7 @@
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/result.hpp"
+#include "catalyst/utils/toolchain.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::fmt {
@@ -34,6 +36,14 @@ Result<void> action(const Parse &parse_args) {
     }
     const std::string &formatter = *formatter_opt;
     catalyst::logger.debug("Using formatter: {}", formatter);
+
+    // Resolve active toolchain to get extensions
+    catalyst::toolchain::ToolchainDef tc;
+    if (auto toolchain_path = profile_comp.getString("manifest.toolchain")) {
+        if (auto parsed = catalyst::toolchain::parseToolchain(*toolchain_path)) {
+            tc = std::move(*parsed);
+        }
+    }
 
     namespace fs = std::filesystem;
 
@@ -94,9 +104,9 @@ Result<void> action(const Parse &parse_args) {
                 if (is_ignored(entry.path(), ignore_regexes)) {
                     continue;
                 }
-                if (std::string extension = entry.path().extension(); extension == ".cpp" || extension == ".cxx"
-                                                                      || extension == ".cc" || extension == ".c"
-                                                                      || extension == ".cu" || extension == ".cupp") {
+                std::string extension = entry.path().extension().string();
+                if (std::ranges::contains(tc.extensions.cpp_sources, extension)
+                    || std::ranges::contains(tc.extensions.c_sources, extension)) {
                     files_to_format.push_back(entry.path());
                 }
             }
@@ -110,9 +120,8 @@ Result<void> action(const Parse &parse_args) {
                 if (is_ignored(entry.path(), ignore_regexes)) {
                     continue;
                 }
-                if (std::string extension = entry.path().extension(); extension == ".hpp" || extension == ".hxx"
-                                                                      || extension == ".hh" || extension == ".h"
-                                                                      || extension == ".cuh") {
+                std::string extension = entry.path().extension().string();
+                if (std::ranges::contains(tc.extensions.headers, extension)) {
                     files_to_format.push_back(entry.path());
                 }
             }
