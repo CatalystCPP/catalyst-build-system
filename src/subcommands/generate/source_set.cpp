@@ -11,6 +11,7 @@
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/result.hpp"
+#include "catalyst/utils/toolchain.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace fs = std::filesystem;
@@ -51,7 +52,7 @@ std::optional<std::unordered_set<std::string>> createIgnorePatterns(const fs::pa
     return ignore_patterns;
 }
 
-Result<std::unordered_set<fs::path>> buildSourceSet(const fs::path &dir, const std::vector<std::string> &profiles) {
+Result<std::unordered_set<fs::path>> buildSourceSet(const fs::path &dir, const std::vector<std::string> &profiles, const catalyst::toolchain::ToolchainDef &tc) {
     using catalyst::LogLevel, catalyst::logger;
 
     logger.debug("Processing source directory: {}", dir.string());
@@ -92,12 +93,9 @@ Result<std::unordered_set<fs::path>> buildSourceSet(const fs::path &dir, const s
                 const auto &path = entry.path();
                 const std::string extension = path.extension().string();
                 if (
-                    // common C/C++ extensions
-                    extension == ".cpp" || extension == ".cxx" || extension == ".cc" || extension == ".c"
-                    // CUDA extensions
-                    || extension == ".cu" || extension == ".cupp"
-                    // C++ module interface units
-                    || extension == ".cppm" || extension == ".ixx" || extension == ".mpp" || extension == ".cxxm"
+                    std::ranges::contains(tc.extensions.cpp_sources, extension)
+                    || std::ranges::contains(tc.extensions.c_sources, extension)
+                    || std::ranges::contains(tc.extensions.module_interfaces, extension)
                 ) {
                     logger.debug("Adding file to source set: {}", path.string());
                     source_set.insert(path);
@@ -122,8 +120,18 @@ Result<std::unordered_set<fs::path>> buildSourceSet(const std::vector<std::strin
                  | std::ranges::to<std::vector>();
     std::unordered_set<fs::path> source_set;
 
+    // Resolve active toolchain to get extensions
+    catalyst::toolchain::ToolchainDef tc;
+    if (auto res = generate::profileComposition(profiles)) {
+        if (auto toolchain_path = res.value().getString("manifest.toolchain")) {
+            if (auto parsed = catalyst::toolchain::parseToolchain(*toolchain_path)) {
+                tc = std::move(*parsed);
+            }
+        }
+    }
+
     for (const auto &dir : paths) {
-        auto source_set_ex = ::buildSourceSet(dir, common_prepended_profiles);
+        auto source_set_ex = ::buildSourceSet(dir, common_prepended_profiles, tc);
         if (!source_set_ex) {
             return std::unexpected(std::format(
                 "Failed to build source set for directory: {}. Error: {}", dir.string(), source_set_ex.error()));
