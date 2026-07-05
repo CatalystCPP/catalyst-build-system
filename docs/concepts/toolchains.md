@@ -67,6 +67,14 @@ Defines the metadata and command templates Catalyst will use during generation.
 | `shared_lib` | String | `.so` | Shared library extension. |
 | `static_lib_prefix` | String | `lib` | Prefix used for static library filenames. |
 | `shared_lib_prefix` | String | `lib` | Prefix used for shared library filenames. |
+| `cpp_sources` | List of Strings | `[".cpp", ".cxx", ".cc", ".cupp"]` | List of C++ source file extensions. |
+| `headers` | List of Strings | `[".h", ".hpp", ".hxx", ".hh", ".ipp", ".inl", ".tpp", ".cuh", ".tcc"]` | List of header file extensions. |
+| `c_sources` | List of Strings | `[".c", ".cu"]` | List of C / CUDA source file extensions (compiled with the C compiler rule). |
+| `module_interfaces` | List of Strings | `[".cppm", ".ixx", ".mpp", ".cxxm"]` | List of C++ module interface file extensions. |
+| `clang_modules` | List of Strings | `[".cppm", ".cxxm"]` | List of C++ module interface extensions that do not need explicit compiler flags to specify the module compilation type. |
+| `bmi` | String | `.pcm` | Compiled binary module interface (BMI) extension. |
+| `library_scan` | List of Strings | Platform specific | Library extensions used to scan for vcpkg/dependency libraries (Windows defaults to `[".lib"]`; macOS defaults to `[".a", ".dylib"]`; others default to `[".a", ".so"]`). |
+| `shell_scripts` | List of Strings | `[".bat", ".cmd"]` | Windows batch/shell script extensions to search when resolving paths for command executables. |
 
 ### `toolchain.flags`
 

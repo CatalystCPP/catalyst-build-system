@@ -222,10 +222,10 @@ Result<std::vector<std::string>> intermediateTargets(catalyst::generate::buildwr
         if (auto it = module_scan.tu_modules.find(src); it != module_scan.tu_modules.end()) {
             const modules::ModuleInfo &info = it->second;
             if (!info.provides.empty()) {
-                if (modules::needsExplicitModuleType(src)) {
+                if (modules::needsExplicitModuleType(src, tc)) {
                     extra_args.emplace_back("-x c++-module");
                 }
-                extra_args.push_back(std::format("-fmodule-output={}", modules::bmiPath(info.provides)));
+                extra_args.push_back(std::format("-fmodule-output={}", modules::bmiPath(info.provides, tc)));
             }
             for (const auto &req : info.required) {
                 auto provider = module_scan.providers.find(req);
@@ -233,13 +233,13 @@ Result<std::vector<std::string>> intermediateTargets(catalyst::generate::buildwr
                     return std::unexpected(
                         std::format("No provider for module '{}' required by {}", req, src.string()));
                 }
-                extra_args.push_back(std::format("-fmodule-file={}={}", req, modules::bmiPath(req)));
+                extra_args.push_back(std::format("-fmodule-file={}={}", req, modules::bmiPath(req, tc)));
                 implicit_deps.push_back(objectFilePath(provider->second, current_dir, tc));
             }
         }
 
         void(writer.addBuild({object_files.back()},
-                             ((src.extension() == ".c" || src.extension() == ".cu") ? "cc_compile" : "cxx_compile"),
+                             (std::ranges::contains(tc.extensions.c_sources, src.extension().string()) ? "cc_compile" : "cxx_compile"),
                              {src.string()},
                              implicit_deps,
                              extra_args));

@@ -165,7 +165,9 @@ Result<void> fetchConanDeps(const std::vector<ryml::ConstNodeRef> &conan_deps,
 
 namespace {
 
-Result<void> fetchVcpkg(const std::string &name, const std::string &triplet) {
+Result<void> fetchVcpkg(const std::string &name,
+                        const std::string &triplet,
+                        [[maybe_unused]] const catalyst::toolchain::ToolchainDef &tc) {
     catalyst::logger.debug("Fetching vcpkg dependency: {} with triplet: {}", name, triplet);
     char *vcpkg_root_env = std::getenv("VCPKG_ROOT");
     if (vcpkg_root_env == nullptr) {
@@ -175,7 +177,8 @@ Result<void> fetchVcpkg(const std::string &name, const std::string &triplet) {
     fs::path vcpkg_root(vcpkg_root_env);
     fs::path vcpkg_exe = vcpkg_root / "vcpkg";
 #if defined(_WIN32)
-    vcpkg_exe.replace_extension(".exe");
+    std::string exe_ext = tc.extensions.executable.empty() ? ".exe" : tc.extensions.executable;
+    vcpkg_exe.replace_extension(exe_ext);
 #endif
     std::string target = name + ":" + triplet;
     std::string command = std::format("\"{}\" install {}", vcpkg_exe.string(), target);
@@ -315,7 +318,8 @@ struct LockedDep {
 Result<void> fetchDependency(ryml::ConstNodeRef dep,
                              const std::string &build_dir,
                              const std::unordered_map<std::string, LockedDep> &lockfile_deps,
-                             const Parse &parse_args) {
+                             const Parse &parse_args,
+                             const catalyst::toolchain::ToolchainDef &tc) {
     namespace yaml = utils::yaml;
     auto name = yaml::asString(yaml::child(dep, "name")).value_or("");
     auto source = yaml::asString(yaml::child(dep, "source")).value_or("");
@@ -382,7 +386,7 @@ Result<void> fetchDependency(ryml::ConstNodeRef dep,
         else
             return std::unexpected(std::format("vcpkg dependency '{}' is missing triplet.", name));
 
-        if (auto res = fetchVcpkg(name, triplet); !res)
+        if (auto res = fetchVcpkg(name, triplet, tc); !res)
             return std::unexpected(res.error());
 
     } else if (source == "system") {
@@ -435,6 +439,14 @@ Result<void> action(const Parse &parse_args) {
     catalyst::logger.debug("Fetch subcommand invoked.");
     catalyst::logger.debug("Composing profiles.");
     utils::yaml::Configuration config{parse_args.profiles};
+
+    // Resolve active toolchain to get extensions
+    catalyst::toolchain::ToolchainDef tc;
+    if (auto toolchain_path = config.getString("manifest.toolchain")) {
+        if (auto parsed = catalyst::toolchain::parseToolchain(*toolchain_path)) {
+            tc = std::move(*parsed);
+        }
+    }
 
     catalyst::logger.debug("Running pre-fetch hooks.");
     if (auto res = hooks::preFetch(config); !res) {
@@ -519,8 +531,8 @@ Result<void> action(const Parse &parse_args) {
             std::vector<std::future<Result<void>>> futures;
             for (auto dep : parallel_deps) {
                 // Launch fetch in parallel
-                futures.push_back(std::async(std::launch::async, [dep, build_dir, &lockfile_deps, &parse_args]() {
-                    return fetchDependency(dep, build_dir, lockfile_deps, parse_args);
+                futures.push_back(std::async(std::launch::async, [dep, build_dir, &lockfile_deps, &parse_args, tc]() {
+                    return fetchDependency(dep, build_dir, lockfile_deps, parse_args, tc);
                 }));
             }
 
@@ -544,7 +556,7 @@ Result<void> action(const Parse &parse_args) {
         // 4. Execute serial-only (vcpkg, local, workspace link)
         // Maintain fail-fast semantics for these
         for (auto dep : serial_deps) {
-            if (auto res = fetchDependency(dep, build_dir, lockfile_deps, parse_args); !res) {
+            if (auto res = fetchDependency(dep, build_dir, lockfile_deps, parse_args, tc); !res) {
                 return res; // Fail fast
             }
         }

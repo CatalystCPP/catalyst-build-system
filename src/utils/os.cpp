@@ -2,9 +2,11 @@
 #include <filesystem>
 #include <sstream>
 #include <tuple>
+#include <ranges>
 
 #include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/os/os_defs.hpp"
+#include "catalyst/utils/toolchain.hpp"
 
 namespace catalyst::utils::os {
 
@@ -12,6 +14,9 @@ bool isCommandInstalled(const std::string &command) {
     if (command == "cob") {
         return true;
     }
+    
+    catalyst::toolchain::ToolchainDef tc;
+
     // 1. Try checking PATH
     const char *path_env = std::getenv("PATH");
     if (path_env) {
@@ -29,9 +34,17 @@ bool isCommandInstalled(const std::string &command) {
                 std::filesystem::path dir(token);
                 std::filesystem::path file_path = dir / command;
 #ifdef _WIN32
-                if (std::filesystem::exists(file_path) || std::filesystem::exists(file_path.string() + ".exe")
-                    || std::filesystem::exists(file_path.string() + ".bat")
-                    || std::filesystem::exists(file_path.string() + ".cmd")) {
+                std::string exe_ext = tc.extensions.executable.empty() ? ".exe" : tc.extensions.executable;
+                bool found = std::filesystem::exists(file_path) || std::filesystem::exists(file_path.string() + exe_ext);
+                if (!found) {
+                    for (const auto &script_ext : tc.extensions.shell_scripts) {
+                        if (std::filesystem::exists(file_path.string() + script_ext)) {
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+                if (found) {
                     return true;
                 }
 #else
@@ -55,7 +68,8 @@ bool isCommandInstalled(const std::string &command) {
                 std::filesystem::path root_path(vcpkg_root);
                 std::filesystem::path vcpkg_bin = root_path / "vcpkg";
 #ifdef _WIN32
-                if (std::filesystem::exists(vcpkg_bin) || std::filesystem::exists(vcpkg_bin.string() + ".exe")) {
+                std::string exe_ext = tc.extensions.executable.empty() ? ".exe" : tc.extensions.executable;
+                if (std::filesystem::exists(vcpkg_bin) || std::filesystem::exists(vcpkg_bin.string() + exe_ext)) {
                     return true;
                 }
 #else

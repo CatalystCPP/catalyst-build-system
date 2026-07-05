@@ -111,14 +111,14 @@ struct ScanResult {
 Result<ModuleInfo> parseP1689(std::string_view json);
 
 /// True for the canonical module-interface extensions (.cppm/.ixx/.mpp/.cxxm).
-bool isInterfaceExtension(const std::filesystem::path &src);
+bool isInterfaceExtension(const std::filesystem::path &src, const catalyst::toolchain::ToolchainDef &tc = {});
 
 /// True when Clang needs an explicit `-x c++-module` to treat @p src as an
 /// interface unit (it only recognizes .cppm/.cxxm natively).
-bool needsExplicitModuleType(const std::filesystem::path &src);
+bool needsExplicitModuleType(const std::filesystem::path &src, const catalyst::toolchain::ToolchainDef &tc = {});
 
 /// BMI output path Catalyst chooses for a module name (obj/<name>.pcm).
-std::string bmiPath(std::string_view module_name);
+std::string bmiPath(std::string_view module_name, const catalyst::toolchain::ToolchainDef &tc = {});
 
 /// Runs `clang-scan-deps -format=p1689` over every C++ TU in @p source_set,
 /// reusing @p cxxflags (the exact flags the compile steps will get). Skipped

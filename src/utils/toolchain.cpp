@@ -133,6 +133,12 @@ parseToolchainImpl(const std::filesystem::path &path, ToolchainDef &tc, std::vec
             target = std::move(*val);
     };
 
+    // Assigns the sequence child `key` of `parent` to `target`, if present.
+    auto set_vector = [](ryml::ConstNodeRef parent, std::string_view key, std::vector<std::string> &target) {
+        if (auto val = yaml::asStringVector(yaml::child(parent, key)))
+            target = std::move(*val);
+    };
+
     set(node, "name", tc.name);
 
     ryml::ConstNodeRef ext = yaml::child(node, "extensions");
@@ -142,6 +148,15 @@ parseToolchainImpl(const std::filesystem::path &path, ToolchainDef &tc, std::vec
     set(ext, "shared_lib", tc.extensions.shared_lib);
     set(ext, "static_lib_prefix", tc.extensions.static_lib_prefix);
     set(ext, "shared_lib_prefix", tc.extensions.shared_lib_prefix);
+
+    set_vector(ext, "cpp_sources", tc.extensions.cpp_sources);
+    set_vector(ext, "headers", tc.extensions.headers);
+    set_vector(ext, "c_sources", tc.extensions.c_sources);
+    set_vector(ext, "module_interfaces", tc.extensions.module_interfaces);
+    set_vector(ext, "clang_modules", tc.extensions.clang_modules);
+    set(ext, "bmi", tc.extensions.bmi);
+    set_vector(ext, "library_scan", tc.extensions.library_scan);
+    set_vector(ext, "shell_scripts", tc.extensions.shell_scripts);
 
     ryml::ConstNodeRef flags = yaml::child(node, "flags");
     set(flags, "include_dir", tc.flags.include_dir);
@@ -207,6 +222,15 @@ Result<ToolchainDef> parseToolchain(const std::filesystem::path &path) {
     auto res = parseToolchainImpl(path, tc, visited);
     if (!res) {
         return std::unexpected(res.error());
+    }
+    if (tc.extensions.library_scan.empty()) {
+#if defined(_WIN32)
+        tc.extensions.library_scan = {".lib"};
+#elif defined(__APPLE__)
+        tc.extensions.library_scan = {".a", ".dylib"};
+#else
+        tc.extensions.library_scan = {".a", ".so"};
+#endif
     }
     return tc;
 }

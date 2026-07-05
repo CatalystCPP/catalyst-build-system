@@ -108,6 +108,52 @@ toolchain:
     std::filesystem::remove(temp_yaml);
 }
 
+TEST_CASE("YAML Parsing reads new extension properties", "[toolchain]") {
+    std::filesystem::path temp_yaml = std::filesystem::temp_directory_path() / "test_toolchain_extensions.yaml";
+    std::ofstream out(temp_yaml);
+    out << R"(
+toolchain:
+  name: "custom-extensions"
+  extensions:
+    cpp_sources:
+      - ".cpp"
+      - ".cxx"
+      - ".cc"
+    headers:
+      - ".h"
+      - ".hpp"
+    c_sources:
+      - ".c"
+    module_interfaces:
+      - ".cppm"
+      - ".ixx"
+    clang_modules:
+      - ".cppm"
+    bmi: ".pcm"
+    library_scan:
+      - ".a"
+      - ".so"
+    shell_scripts:
+      - ".bat"
+)";
+    out.close();
+
+    auto tc_res = parse_toolchain(temp_yaml);
+    REQUIRE(tc_res.has_value());
+    auto tc = tc_res.value();
+
+    REQUIRE(tc.extensions.cpp_sources == std::vector<std::string>{".cpp", ".cxx", ".cc"});
+    REQUIRE(tc.extensions.headers == std::vector<std::string>{".h", ".hpp"});
+    REQUIRE(tc.extensions.c_sources == std::vector<std::string>{".c"});
+    REQUIRE(tc.extensions.module_interfaces == std::vector<std::string>{".cppm", ".ixx"});
+    REQUIRE(tc.extensions.clang_modules == std::vector<std::string>{".cppm"});
+    REQUIRE(tc.extensions.bmi == ".pcm");
+    REQUIRE(tc.extensions.library_scan == std::vector<std::string>{".a", ".so"});
+    REQUIRE(tc.extensions.shell_scripts == std::vector<std::string>{".bat"});
+
+    std::filesystem::remove(temp_yaml);
+}
+
 TEST_CASE("Configuration preserves manifest.toolchain", "[toolchain][configuration]") {
     namespace fs = std::filesystem;
 

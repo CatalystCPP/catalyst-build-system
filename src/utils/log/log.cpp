@@ -171,6 +171,7 @@ void LogT::logImpl(LogLevel level, const std::string &message) const {
         std::string time_str = std::format("{:%Y-%m-%d %H:%M:%S}", now);
         std::string log_str = std::format("[{}] {}", level, message);
         sink << time_str << " " << color << log_str << RESET << '\n';
+        sink.flush();
     }
 }
 
