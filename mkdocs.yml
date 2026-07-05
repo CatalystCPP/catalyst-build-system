@@ -26,8 +26,8 @@ nav:
     - Toolchains: concepts/toolchains.md
     - Dependencies: concepts/dependencies.md
     - Preprocessor: concepts/preprocessor.md
-    - C++ Modules: concepts/modules.md
     - Catalystignore: concepts/catalystignore.md
+    - C++ Modules: concepts/modules.md
     - Hooks: concepts/hooks.md
     - Workspaces: concepts/workspaces.md
     - Log: concepts/log.md
@@ -38,6 +38,7 @@ nav:
     - bench: cli/bench.md
     - build: cli/build.md
     - clean: cli/clean.md
+    - completion: cli/completion.md
     - doc: cli/doc.md
     - download: cli/download.md
     - feature_ls: cli/feature_ls.md
