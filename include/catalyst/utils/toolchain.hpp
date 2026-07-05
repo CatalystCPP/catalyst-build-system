@@ -5,6 +5,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <vector>
 
 #include "catalyst/utils/result.hpp"
 
@@ -20,6 +21,14 @@ struct ToolchainDef {
         std::string shared_lib = ".so";
         std::string static_lib_prefix = "lib";
         std::string shared_lib_prefix = "lib";
+        std::vector<std::string> cpp_sources = {".cpp", ".cxx", ".cc", ".cupp"};
+        std::vector<std::string> headers = {".h", ".hpp", ".hxx", ".hh", ".ipp", ".inl", ".tpp", ".cuh", ".tcc"};
+        std::vector<std::string> c_sources = {".c", ".cu"};
+        std::vector<std::string> module_interfaces = {".cppm", ".ixx", ".mpp", ".cxxm"};
+        std::vector<std::string> clang_modules = {".cppm", ".cxxm"};
+        std::string bmi = ".pcm";
+        std::vector<std::string> library_scan;
+        std::vector<std::string> shell_scripts = {".bat", ".cmd"};
     } extensions;
 
     struct Flags {
