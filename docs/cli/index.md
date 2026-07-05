@@ -8,6 +8,7 @@ Catalyst provides a suite of subcommands to manage the entire project lifecycle.
 | [`bench`](bench.md) | Execute project benchmarks. |
 | [`build`](build.md) | Build the project. |
 | [`clean`](clean.md) | Remove build artifacts. |
+| [`completion`](completion.md) | Generate shell completion scripts. |
 | [`doc`](doc.md) | Build a package's documentation. |
 | [`download`](download.md) | Download, build, and install a project from git. |
 | [`feature-ls`](feature_ls.md) | List all available features across all profiles. |
