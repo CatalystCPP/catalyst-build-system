@@ -25,3 +25,4 @@ __pycache__/
 src/utils/cob_embedded.cpp
 include/catalyst/cob_embedded.hpp
 include/catalyst/dispatch.hpp
+include/catalyst/hooks.hpp
