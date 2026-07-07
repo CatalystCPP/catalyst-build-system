@@ -26,17 +26,17 @@ public:
     explicit Configuration(const std::vector<std::string> &profiles,
                            const std::filesystem::path &root_dir = std::filesystem::current_path());
 
-    bool has(const std::string &key) const;
+    [[nodiscard]] bool has(const std::string &key) const;
 
-    std::optional<std::string> getString(const std::string &key) const;
-    std::optional<int> getInt(const std::string &key) const;
-    std::optional<bool> getBool(const std::string &key) const;
-    std::optional<std::vector<std::string>> getStringVector(const std::string &key) const;
+    [[nodiscard]] std::optional<std::string> getString(const std::string &key) const;
+    [[nodiscard]] std::optional<int> getInt(const std::string &key) const;
+    [[nodiscard]] std::optional<bool> getBool(const std::string &key) const;
+    [[nodiscard]] std::optional<std::vector<std::string>> getStringVector(const std::string &key) const;
 
-    std::filesystem::path getBuildDir() const;
+    [[nodiscard]] std::filesystem::path getBuildDir() const;
 
     /** The composed configuration tree (rapidyaml). */
-    ryml::ConstNodeRef rootRef() const {
+    [[nodiscard]] ryml::ConstNodeRef rootRef() const {
         return composition.crootref();
     }
 
