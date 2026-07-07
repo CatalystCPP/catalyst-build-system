@@ -31,5 +31,8 @@ auto catalyst::generate::findDep(const std::string &build_dir,
     if (*source_type == "conan") {
         return findConan(build_dir, dep, tc);
     }
+    if (*source_type == "custom") {
+        return findCustom(dep, tc);
+    }
     return std::unexpected(std::format("Unkown source_type: {}", *source_type));
 }

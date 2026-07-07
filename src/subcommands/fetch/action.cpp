@@ -239,6 +239,13 @@ Result<void> fetchSystem(const std::string &name) {
     return {};
 }
 
+Result<void> fetchCustom(const std::string &name) {
+    // Resolution happens by running the dependency's command/script at
+    // generate time (see findCustom); nothing to fetch upfront.
+    catalyst::logger.debug("Skipping fetch for custom dependency: {}", name);
+    return {};
+}
+
 struct FetchLocalArgs {
     std::string name;
     std::string path;
@@ -391,6 +398,9 @@ Result<void> fetchDependency(ryml::ConstNodeRef dep,
 
     } else if (source == "system") {
         if (auto res = fetchSystem(name); !res)
+            return std::unexpected(res.error());
+    } else if (source == "custom") {
+        if (auto res = fetchCustom(name); !res)
             return std::unexpected(res.error());
     } else if (source == "local") {
         std::string path;
