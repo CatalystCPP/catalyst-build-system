@@ -24,3 +24,4 @@ doxygen_docs
 __pycache__/
 src/utils/cob_embedded.cpp
 include/catalyst/cob_embedded.hpp
+include/catalyst/dispatch.hpp
