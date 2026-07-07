@@ -74,6 +74,25 @@ Result<FindRes>
 findGit(const std::string &build_dir, ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
 Result<FindRes>
 findConan(const std::string &build_dir, ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
+Result<FindRes> findCustom(ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
+
+/// Which unrecognized-token bucket appendPkgConfigFlags() should fall back to.
+/// Mirrors which pkg-config invocation produced the tokens: `--cflags` mixes
+/// non--I compile flags into the same stream, `--libs-only-l --libs-only-other`
+/// mixes non--l link flags into that stream, and `--libs-only-L` never emits
+/// unrecognized tokens in practice.
+enum class PkgConfigFlagBucket : std::uint8_t { Compile, LinkDirs, Link };
+
+/// Tokenizes @p flags on whitespace and appends each pkg-config-style token to
+/// @p result, expanding `-I`/`-L`/`-l` tokens through the toolchain's
+/// include_dir/lib_dir/lib flag templates (`-L` paths are also collected into
+/// lib_dirs). Tokens matching none of those prefixes are appended verbatim to
+/// the bucket selected by @p fallback. Shared by findSystem, findConan, and
+/// findCustom so the tokenizer isn't reimplemented per backend.
+void appendPkgConfigFlags(const std::string &flags,
+                          const catalyst::toolchain::ToolchainDef &tc,
+                          PkgConfigFlagBucket fallback,
+                          FindRes &result);
 
 struct FeatureFlag {
     std::string name;
