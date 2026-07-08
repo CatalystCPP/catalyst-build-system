@@ -155,6 +155,27 @@
                   "lib": { "type": "string" },
                   "include": { "type": "string" }
                 }
+              },
+              {
+                "properties": {
+                  "source": { "const": "conan" },
+                  "name": { "type": "string" },
+                  "version": { "type": "string" }
+                },
+                "required": ["version"]
+              },
+              {
+                "properties": {
+                  "source": { "const": "custom" },
+                  "name": { "type": "string" },
+                  "command": { "type": "string" },
+                  "script": { "type": "string" },
+                  "version": { "type": "string" }
+                },
+                "oneOf": [
+                  { "required": ["command"] },
+                  { "required": ["script"] }
+                ]
               }
             ]
           }

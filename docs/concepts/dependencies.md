@@ -110,6 +110,38 @@ Uses Conan 2.x to fetch and resolve dependencies using Conan's native `PkgConfig
   version: 10.1.1
 ```
 
+### 6. `custom`
+Runs a user-supplied command or script and parses its stdout as pkg-config-style flags
+(`-I...`, `-L...`, `-l...`) — the same shape `pkg-config --cflags --libs <pkg>` would print.
+Useful for emulating `FindXYZ.cmake`-style discovery logic that Catalyst has no built-in
+source for.
+
+| Field | Required | Description |
+|---|---|---|
+| `name` | Yes | Name of the dependency. Exported to the command/script as `CATALYST_DEP_NAME`. |
+| `source` | Yes | Must be `custom`. |
+| `command` | One of `command`/`script` | Inline shell command whose stdout is parsed. |
+| `script` | One of `command`/`script` | Path to a script (or any executable) to run. |
+| `version` | No | Exported to the command/script as `CATALYST_DEP_VERSION`. |
+
+```yaml
+- name: openssl
+  source: custom
+  command: "pkg-config --cflags --libs openssl"
+```
+
+```yaml
+- name: mylib
+  source: custom
+  script: "scripts/find_mylib.sh"
+  version: 1.2.3
+```
+
+The command/script must print pkg-config-style flags to stdout; a nonzero exit or output with
+no recognizable `-I`/`-L`/`-l` tokens is treated as "dependency not found". It re-runs on every
+`generate` (no caching), participates in neither `catalyst fetch` nor `catalyst lock` (same as
+`system`), and runs with the current working directory and `PATH` of the `catalyst` process.
+
 ## Adding Dependencies via CLI
 
 

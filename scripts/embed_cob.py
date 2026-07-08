@@ -82,7 +82,11 @@ def main():
 #include <cstddef>
 
 namespace catalyst::embedded {
+
+/// @brief Embedded cob binary data.
 extern const unsigned char cob_binary[];
+
+/// @brief Length of the embedded cob binary data.
 extern const std::size_t cob_binary_len;
 } // namespace catalyst::embedded
 """

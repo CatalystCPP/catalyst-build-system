@@ -44,6 +44,16 @@ common:
           output:
             - "include/catalyst/cob_embedded.hpp"
             - "src/utils/cob_embedded.cpp"
+      - codegen:
+          cmd: "python3 $IN[0] -o $OUT[0]"
+          input: "scripts/generate_dispatch.py"
+          output:
+            - "include/catalyst/dispatch.hpp"
+      - codegen:
+          cmd: "python3 $IN[0] -o $OUT[0]"
+          input: "scripts/generate_hooks.py"
+          output:
+            - "include/catalyst/hooks.hpp"
   features:
     uniform_logs: false
     log_machine_info: false
