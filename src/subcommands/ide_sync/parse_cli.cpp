@@ -16,7 +16,7 @@ auto catalyst::ide_sync::parse(CLI::App &app) -> std::pair<CLI::App *, std::uniq
     };
 
     ide_sync->add_option("-p,--profiles", ret->profiles, "Profiles to use from the configuration file")
-        ->default_val("common");
+        ->default_val(std::vector<std::string>{"common"});
     ide_sync->add_option("--ides", ret->ides, "IDEs to generate project files for: vscode, clion")
         ->transform(CLI::CheckedTransformer(ide_map, CLI::ignore_case).description(""));
     ide_sync->add_flag("-f,--force-ide", ret->force_emit_ide, "force emitting IDE config even if one already exists")

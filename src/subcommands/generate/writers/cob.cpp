@@ -46,7 +46,8 @@ template <>
 Result<void> DerivedWriter<TargetType::COB>::addBuild(const std::vector<std::string> &outputs,
                                                       std::string_view rule,
                                                       const std::vector<std::string> &inputs,
-                                                      [[maybe_unused]] const std::vector<std::string> &implicit_deps) {
+                                                      const std::vector<std::string> &implicit_deps,
+                                                      const std::vector<std::string> &extra_args) {
     if (outputs.empty()) {
         return std::unexpected("COB writer requires at least one output.");
     }
@@ -74,7 +75,8 @@ Result<void> DerivedWriter<TargetType::COB>::addBuild(const std::vector<std::str
         return std::unexpected(std::string("Unknown rule type for COB: ") + std::string(rule));
     }
 
-    // Join inputs with comma
+    // Join inputs with comma; implicit deps become opaque ordering inputs
+    // (leading '!'): they order the step but are not passed to the command.
     std::string input_list;
     for (size_t i = 0; i < inputs.size(); ++i) {
         input_list.append(inputs[i]);
@@ -82,8 +84,27 @@ Result<void> DerivedWriter<TargetType::COB>::addBuild(const std::vector<std::str
             input_list.push_back(',');
         }
     }
+    for (const auto &dep : implicit_deps) {
+        if (!input_list.empty()) {
+            input_list.push_back(',');
+        }
+        input_list.push_back('!');
+        input_list.append(dep);
+    }
 
-    std::println(stream, "{}|{}|{}", step_type, input_list, output_file);
+    if (extra_args.empty()) {
+        // No 4th field: keeps non-module manifests byte-identical to before.
+        std::println(stream, "{}|{}|{}", step_type, input_list, output_file);
+    } else {
+        std::string args_field;
+        for (size_t i = 0; i < extra_args.size(); ++i) {
+            args_field.append(extra_args[i]);
+            if (i < extra_args.size() - 1) {
+                args_field.push_back(' ');
+            }
+        }
+        std::println(stream, "{}|{}|{}|extra = {}", step_type, input_list, output_file, escape(args_field));
+    }
     return {};
 }
 

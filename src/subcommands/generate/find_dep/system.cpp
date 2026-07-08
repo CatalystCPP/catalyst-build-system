@@ -1,6 +1,5 @@
 #include <expected>
 #include <optional>
-#include <sstream>
 #include <string>
 #include <vector>
 
@@ -22,39 +21,10 @@ std::optional<FindRes> findSystemFromPkgConfig(const std::string &dep_name,
         return std::nullopt;
     }
 
-    FindRes result{.lib_path = "", .inc_path = "", .libs = "", .lib_dirs = {}};
-    auto append_tokens = [&](const std::string &value, auto &&handler) {
-        std::stringstream stream(value);
-        std::string token;
-        while (stream >> token) {
-            handler(token);
-        }
-    };
-
-    append_tokens(*cflags_res, [&](const std::string &token) {
-        if (token.starts_with("-I")) {
-            result.inc_path +=
-                " " + catalyst::toolchain::expandTemplate(tc.flags.include_dir, {{"path", token.substr(2)}});
-        } else {
-            result.inc_path += " " + token;
-        }
-    });
-    append_tokens(*link_dirs_res, [&](const std::string &token) {
-        if (token.starts_with("-L")) {
-            std::string path = token.substr(2);
-            result.lib_path += " " + catalyst::toolchain::expandTemplate(tc.flags.lib_dir, {{"path", path}});
-            result.lib_dirs.push_back(path);
-        } else {
-            result.lib_path += " " + token;
-        }
-    });
-    append_tokens(*link_libs_res, [&](const std::string &token) {
-        if (token.starts_with("-l")) {
-            result.libs += " " + catalyst::toolchain::expandTemplate(tc.flags.lib, {{"name", token.substr(2)}});
-        } else {
-            result.libs += " " + token;
-        }
-    });
+    FindRes result{};
+    appendPkgConfigFlags(*cflags_res, tc, PkgConfigFlagBucket::Compile, result);
+    appendPkgConfigFlags(*link_dirs_res, tc, PkgConfigFlagBucket::LinkDirs, result);
+    appendPkgConfigFlags(*link_libs_res, tc, PkgConfigFlagBucket::Link, result);
 
     catalyst::logger.debug(
         "Resolved via pkg-config: cflags='{}' L='{}' l='{}'", result.inc_path, result.lib_path, result.libs);

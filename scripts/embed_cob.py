@@ -3,10 +3,26 @@ import os
 import sys
 import shutil
 import subprocess
+import argparse
 
 def main():
-    # 1. Find cob executable locally
-    cob_path = os.getenv("COB_PATH")
+    parser = argparse.ArgumentParser(description="Embed cob binary into C++ files.")
+    parser.add_argument("--cob-path", help="Explicit path to the cob executable.")
+    args = parser.parse_args()
+
+    cob_path = args.cob_path
+    if cob_path:
+        if not os.path.exists(cob_path):
+            resolved = shutil.which(cob_path)
+            if resolved:
+                cob_path = resolved
+            else:
+                print(f"Error: Explicitly specified --cob-path '{cob_path}' could not be found.", file=sys.stderr)
+                sys.exit(1)
+
+    # 1. Find cob executable locally if not explicitly provided
+    if not cob_path:
+        cob_path = os.getenv("COB_PATH")
     if not cob_path:
         cob_path = shutil.which("cob")
     if not cob_path:
@@ -66,27 +82,23 @@ def main():
 #include <cstddef>
 
 namespace catalyst::embedded {
+
+/// @brief Embedded cob binary data.
 extern const unsigned char cob_binary[];
+
+/// @brief Length of the embedded cob binary data.
 extern const std::size_t cob_binary_len;
 } // namespace catalyst::embedded
 """
 
-    # Check if header is already matching
-    if os.path.exists(header_path):
-        with open(header_path, "r") as f:
-            if f.read() == header_content:
-                header_content = None # No need to write
+    with open(header_path, "w") as f:
+        f.write(header_content)
+    print(f"Generated {header_path}")
 
-    if header_content:
-        with open(header_path, "w") as f:
-            f.write(header_content)
-        print(f"Generated {header_path}")
-
-    # Generate cpp file. To avoid writing if unchanged, we can check size first.
+    # Generate cpp file.
     # We will write in chunks to avoid memory issues with huge strings.
     print(f"Generating {cpp_path}...")
-    temp_cpp_path = cpp_path + ".tmp"
-    with open(temp_cpp_path, "w") as f:
+    with open(cpp_path, "w") as f:
         f.write('#include "catalyst/cob_embedded.hpp"\n\n')
         f.write('namespace catalyst::embedded {\n')
         f.write('alignas(16) const unsigned char cob_binary[] = {\n')
@@ -103,27 +115,7 @@ extern const std::size_t cob_binary_len;
         f.write('};\n')
         f.write(f'const std::size_t cob_binary_len = {len(data)};\n')
         f.write('} // namespace catalyst::embedded\n')
-
-    # If cpp_path already exists and has the same size and content, discard temp
-    # Otherwise replace it
-    if os.path.exists(cpp_path):
-        same = True
-        if os.path.getsize(cpp_path) == os.path.getsize(temp_cpp_path):
-            with open(cpp_path, "rb") as f1, open(temp_cpp_path, "rb") as f2:
-                if f1.read() != f2.read():
-                    same = False
-        else:
-            same = False
-
-        if same:
-            os.remove(temp_cpp_path)
-            print(f"{cpp_path} is already up to date.")
-        else:
-            os.replace(temp_cpp_path, cpp_path)
-            print(f"Generated {cpp_path}")
-    else:
-        os.replace(temp_cpp_path, cpp_path)
-        print(f"Generated {cpp_path}")
+    print(f"Generated {cpp_path}")
 
 if __name__ == "__main__":
     main()

@@ -219,7 +219,9 @@ void validateProfileKeys(ryml::ConstNodeRef profile, const std::string &profile_
                         "profiles",
                         "include",
                         "lib",
-                        "hash"},
+                        "hash",
+                        "command",
+                        "script"},
                        "dependencies[]");
         }
     }

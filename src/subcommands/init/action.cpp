@@ -131,6 +131,14 @@ toolchain:
     shared_lib: ".so"
     static_lib_prefix: "lib"
     shared_lib_prefix: "lib"
+    c_sources: [".c", ".cu"]
+    cpp_sources: [".cpp", ".cxx", ".cc", ".cupp"]
+    headers: [".h", ".hpp", ".hxx", ".hh", ".ipp", ".inl", ".tpp", ".cuh", ".tcc"]
+    module_interfaces: [".cppm", ".ixx", ".mpp", ".cxxm"]
+    clang_modules: [".cppm", ".cxxm"]
+    bmi: ".pcm"
+    library_scan: [".a", ".so"]
+    shell_scripts: [".sh"]
   flags:
     include_dir: "-I{path}"
     lib_dir: "-L{path}"

@@ -41,6 +41,10 @@ Catalyst automatically generates preprocessor macros from these features, bridgi
 Exclude specific source files from the build based on active profiles using regex patterns.
 This is essential for handling platform-specific or build-type-specific code without complex directory structures.
 
+### [C++20 Modules](modules.md)
+
+Discover and compile C++20 named modules automatically with zero configuration. Catalyst scans your source set to resolve the import graph at generate time.
+
 ## Lifecycle
 
 ### [Hooks](hooks.md)

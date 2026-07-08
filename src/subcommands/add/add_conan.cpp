@@ -52,9 +52,10 @@ std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &add) {
     CLI::App *add_conan = add.add_subcommand("conan", "add a conan dependency");
     auto ret = std::make_unique<Parse>();
 
-    add_conan->add_option("-n,--name", ret->name)->required();
-    add_conan->add_option("-v,--version", ret->version)->required();
-    add_conan->add_option("-p,--profiles", ret->profiles)->default_val(std::vector<std::string>{"common"});
+    add_conan->add_option("-n,--name", ret->name, "dependency name")->required();
+    add_conan->add_option("-v,--version", ret->version, "dependency version")->required();
+    add_conan->add_option("-p,--profiles", ret->profiles, "profiles to add the dependency to")
+        ->default_val(std::vector<std::string>{"common"});
 
     return {add_conan, std::move(ret)};
 }

@@ -5,7 +5,7 @@ common:
   manifest:
     name: catalyst
     type: BINARY
-    version: 1.8.0
+    version: 1.9.0
     description: Catalyst is a Declarative C++ Build System
     provides: catalyst
     toolchain: tc_catalyst.yaml
@@ -30,15 +30,30 @@ common:
       source: vcpkg
       triplet: x64-linux
       version: latest
+    - name: efsw
+      source: vcpkg
+      triplet: x64-linux
+      version: latest
   hooks:
     pre-fetch:
       - script: "scripts/fetch_cli_11.sh"
+    pre-build:
       - codegen:
           cmd: "python3 $IN[0]"
           input: "scripts/embed_cob.py"
           output:
             - "include/catalyst/cob_embedded.hpp"
             - "src/utils/cob_embedded.cpp"
+      - codegen:
+          cmd: "python3 $IN[0] -o $OUT[0]"
+          input: "scripts/generate_dispatch.py"
+          output:
+            - "include/catalyst/dispatch.hpp"
+      - codegen:
+          cmd: "python3 $IN[0] -o $OUT[0]"
+          input: "scripts/generate_hooks.py"
+          output:
+            - "include/catalyst/hooks.hpp"
   features:
     uniform_logs: false
     log_machine_info: false

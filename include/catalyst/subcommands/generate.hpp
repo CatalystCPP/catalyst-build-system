@@ -74,6 +74,25 @@ Result<FindRes>
 findGit(const std::string &build_dir, ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
 Result<FindRes>
 findConan(const std::string &build_dir, ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
+Result<FindRes> findCustom(ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
+
+/// Which unrecognized-token bucket appendPkgConfigFlags() should fall back to.
+/// Mirrors which pkg-config invocation produced the tokens: `--cflags` mixes
+/// non--I compile flags into the same stream, `--libs-only-l --libs-only-other`
+/// mixes non--l link flags into that stream, and `--libs-only-L` never emits
+/// unrecognized tokens in practice.
+enum class PkgConfigFlagBucket : std::uint8_t { Compile, LinkDirs, Link };
+
+/// Tokenizes @p flags on whitespace and appends each pkg-config-style token to
+/// @p result, expanding `-I`/`-L`/`-l` tokens through the toolchain's
+/// include_dir/lib_dir/lib flag templates (`-L` paths are also collected into
+/// lib_dirs). Tokens matching none of those prefixes are appended verbatim to
+/// the bucket selected by @p fallback. Shared by findSystem, findConan, and
+/// findCustom so the tokenizer isn't reimplemented per backend.
+void appendPkgConfigFlags(const std::string &flags,
+                          const catalyst::toolchain::ToolchainDef &tc,
+                          PkgConfigFlagBucket fallback,
+                          FindRes &result);
 
 struct FeatureFlag {
     std::string name;
@@ -91,6 +110,45 @@ Result<std::vector<FeatureFlag>> resolveFeatureFlags(const utils::yaml::Configur
 
 Result<std::unordered_set<std::filesystem::path>> buildSourceSet(const std::vector<std::string> &source_dirs,
                                                                  const std::vector<std::string> &profiles);
+
+namespace modules {
+
+/// What one C++ TU provides/requires in the module graph, learned from a
+/// P1689 dependency scan.
+struct ModuleInfo {
+    std::string provides;              ///< logical module name; empty if the TU is not an interface unit
+    std::vector<std::string> required; ///< logical names of imported modules
+};
+
+/// Scan result over the whole source set.
+struct ScanResult {
+    std::unordered_map<std::filesystem::path, ModuleInfo> tu_modules; ///< only TUs that touch modules
+    std::unordered_map<std::string, std::filesystem::path> providers; ///< module name -> interface unit source
+};
+
+/// Parses one clang-scan-deps -format=p1689 JSON document (P1689r5).
+Result<ModuleInfo> parseP1689(std::string_view json);
+
+/// True for the canonical module-interface extensions (.cppm/.ixx/.mpp/.cxxm).
+bool isInterfaceExtension(const std::filesystem::path &src, const catalyst::toolchain::ToolchainDef &tc = {});
+
+/// True when Clang needs an explicit `-x c++-module` to treat @p src as an
+/// interface unit (it only recognizes .cppm/.cxxm natively).
+bool needsExplicitModuleType(const std::filesystem::path &src, const catalyst::toolchain::ToolchainDef &tc = {});
+
+/// BMI output path Catalyst chooses for a module name (obj/<name>.pcm).
+std::string bmiPath(std::string_view module_name, const catalyst::toolchain::ToolchainDef &tc = {});
+
+/// Runs `clang-scan-deps -format=p1689` over every C++ TU in @p source_set,
+/// reusing @p cxxflags (the exact flags the compile steps will get). Skipped
+/// entirely (empty result) when the set contains no module-interface unit, so
+/// projects without modules never need clang-scan-deps installed. A required
+/// module with no provider in the set is an error.
+Result<ScanResult> scanModules(const std::unordered_set<std::filesystem::path> &source_set,
+                               const catalyst::toolchain::ToolchainDef &tc,
+                               std::string_view cxxflags);
+
+} // namespace modules
 
 namespace buildwriters {
 
@@ -136,7 +194,8 @@ public:
     virtual Result<void> addBuild(const std::vector<std::string> &outputs,
                                   std::string_view rule,
                                   const std::vector<std::string> &inputs,
-                                  const std::vector<std::string> &implicit_deps = {} // e.g., headers for validation
+                                  const std::vector<std::string> &implicit_deps = {}, // e.g., headers for validation
+                                  const std::vector<std::string> &extra_args = {}     // per-step compiler flags
                                   ) = 0;
 
     virtual void addComment(std::string_view comment) = 0;
@@ -211,7 +270,8 @@ public:
     Result<void> addBuild([[maybe_unused]] const std::vector<std::string> &outputs,
                           [[maybe_unused]] std::string_view rule,
                           [[maybe_unused]] const std::vector<std::string> &inputs,
-                          [[maybe_unused]] const std::vector<std::string> &implicit_deps = {}) override {
+                          [[maybe_unused]] const std::vector<std::string> &implicit_deps = {},
+                          [[maybe_unused]] const std::vector<std::string> &extra_args = {}) override {
         throw std::logic_error("Unimplemented base template method");
     }
 
@@ -223,5 +283,32 @@ public:
         throw std::logic_error("Unimplemented base template method");
     }
 };
+
+// The writer backends are implemented as explicit member specializations in
+// writers/{ninja,make,cob}.cpp. Declare them here so every TU that calls a
+// writer uses the real implementation instead of implicitly instantiating the
+// throwing primary-template bodies above (an ODR violation).
+#define CATALYST_DECLARE_WRITER_SPECIALIZATION(TARGET)                                                                 \
+    template <> Result<void> DerivedWriter<TARGET>::addVariable(std::string_view name, std::string_view value);        \
+    template <>                                                                                                        \
+    Result<void> DerivedWriter<TARGET>::addRule(std::string_view name,                                                 \
+                                                std::string_view command,                                              \
+                                                std::string_view description,                                          \
+                                                std::string_view depfile,                                              \
+                                                std::string_view deps);                                                \
+    template <>                                                                                                        \
+    Result<void> DerivedWriter<TARGET>::addBuild(const std::vector<std::string> &outputs,                              \
+                                                 std::string_view rule,                                                \
+                                                 const std::vector<std::string> &inputs,                               \
+                                                 const std::vector<std::string> &implicit_deps,                        \
+                                                 const std::vector<std::string> &extra_args);                          \
+    template <> void DerivedWriter<TARGET>::addComment(std::string_view comment);                                      \
+    template <> void DerivedWriter<TARGET>::addDefault(std::string_view target);                                       \
+    extern template class DerivedWriter<TARGET>;
+
+CATALYST_DECLARE_WRITER_SPECIALIZATION(TargetType::Ninja)
+CATALYST_DECLARE_WRITER_SPECIALIZATION(TargetType::Make)
+CATALYST_DECLARE_WRITER_SPECIALIZATION(TargetType::COB)
+#undef CATALYST_DECLARE_WRITER_SPECIALIZATION
 } // namespace buildwriters
 } // namespace catalyst::generate

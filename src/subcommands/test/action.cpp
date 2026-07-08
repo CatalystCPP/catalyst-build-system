@@ -16,6 +16,7 @@
 #include "catalyst/subcommands/test.hpp"
 #include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/result.hpp"
+#include "catalyst/utils/toolchain.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 
 namespace fs = std::filesystem;
@@ -57,8 +58,13 @@ void warnIfStale(const fs::path &exe_path,
         catalyst::logger.debug("Skipping source set in staleness check, failed to build: {}", source_set.error());
     }
 
-    static constexpr std::array<std::string_view, 9> HEADER_EXTS{
-        ".h", ".hpp", ".hxx", ".hh", ".ipp", ".inl", ".tpp", ".cuh", ".tcc"};
+    catalyst::toolchain::ToolchainDef tc;
+    if (auto toolchain_path = profile_comp.getString("manifest.toolchain")) {
+        if (auto parsed = catalyst::toolchain::parseToolchain(*toolchain_path)) {
+            tc = std::move(*parsed);
+        }
+    }
+
     std::vector<std::string> include_dirs =
         profile_comp.getStringVector("manifest.dirs.include").value_or(std::vector<std::string>{"include"});
     for (const auto &inc : include_dirs) {
@@ -69,7 +75,7 @@ void warnIfStale(const fs::path &exe_path,
         std::error_code walk_ec;
         for (const auto &entry : fs::recursive_directory_iterator(inc_dir, walk_ec)) {
             if (entry.is_regular_file()
-                && std::ranges::find(HEADER_EXTS, entry.path().extension().string()) != HEADER_EXTS.end()) {
+                && std::ranges::contains(tc.extensions.headers, entry.path().extension().string())) {
                 inputs.push_back(entry.path());
             }
         }

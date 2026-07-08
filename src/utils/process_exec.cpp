@@ -15,6 +15,7 @@
 
 #include "catalyst/cob_embedded.hpp"
 #include "catalyst/utils/result.hpp"
+#include "catalyst/utils/toolchain.hpp"
 
 #include "reproc++/drain.hpp"
 #include "reproc++/reproc.hpp"
@@ -41,7 +42,9 @@ fs::path getEmbeddedCobPath() {
 
     fs::path cob_name = "cob";
 #ifdef _WIN32
-    cob_name.replace_extension(".exe");
+    catalyst::toolchain::ToolchainDef tc;
+    std::string exe_ext = tc.extensions.executable.empty() ? ".exe" : tc.extensions.executable;
+    cob_name.replace_extension(exe_ext);
 #endif
     return base_dir / cob_name;
 }
