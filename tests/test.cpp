@@ -16,6 +16,13 @@ TEST_CASE("Basic Check", "[basic]") {
     REQUIRE(1 == 1);
 }
 
+TEST_CASE("Generator build filenames", "[generate]") {
+    REQUIRE(catalyst::generate::buildFilename("cob") == "catalyst.build");
+    REQUIRE(catalyst::generate::buildFilename("ninja") == "build.ninja");
+    REQUIRE(catalyst::generate::buildFilename("make") == "Makefile");
+    REQUIRE(catalyst::generate::buildFilename("gmake") == "Makefile");
+}
+
 class MockProcessExecutor : public catalyst::IProcessExecutor {
 public:
     std::vector<std::vector<std::string>> executed_commands;

@@ -21,6 +21,7 @@ struct Parse {
     std::vector<std::string> profiles;
     std::vector<std::string> enabled_features;
     std::string backend;
+    bool skip_pre_generate = false;
 };
 
 struct FindRes {
@@ -33,6 +34,7 @@ struct FindRes {
 Result<utils::yaml::Configuration> profileComposition(const std::vector<std::string> &profiles);
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);
 Result<void> action(const Parse &);
+std::string buildFilename(std::string_view generator);
 
 Result<std::string> libPath(const utils::yaml::Configuration &profile_comp,
                             const std::vector<std::string> &profiles,

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <format>
 #include <ranges>
+#include <sstream>
 #include <vector>
 
 #include "catalyst/utils/result.hpp"
@@ -13,6 +14,73 @@ static constexpr size_t TUNABLE_MAX_INHERITANCE_DEPTH = 32;
 namespace catalyst::toolchain {
 
 namespace {
+
+std::string yamlQuote(std::string_view value) {
+    constexpr char HEX_DIGITS[] = "0123456789ABCDEF";
+
+    std::string quoted;
+    quoted.reserve(value.size() + 2);
+    quoted.push_back('"');
+    for (unsigned char c : value) {
+        switch (c) {
+            case '"':
+                quoted += "\\\"";
+                break;
+            case '\\':
+                quoted += "\\\\";
+                break;
+            case '\n':
+                quoted += "\\n";
+                break;
+            case '\r':
+                quoted += "\\r";
+                break;
+            case '\t':
+                quoted += "\\t";
+                break;
+            default:
+                if (c < 0x20 || c == 0x7f) {
+                    quoted += "\\x";
+                    quoted.push_back(HEX_DIGITS[c >> 4]);
+                    quoted.push_back(HEX_DIGITS[c & 0x0f]);
+                } else {
+                    quoted.push_back(static_cast<char>(c));
+                }
+        }
+    }
+    quoted.push_back('"');
+    return quoted;
+}
+
+void writeScalar(std::ostringstream &out, size_t indentation, std::string_view key, std::string_view value) {
+    out << std::string(indentation, ' ') << key << ": " << yamlQuote(value) << '\n';
+}
+
+void writeSequence(std::ostringstream &out,
+                   size_t indentation,
+                   std::string_view key,
+                   const std::vector<std::string> &values) {
+    out << std::string(indentation, ' ') << key << ':';
+    if (values.empty()) {
+        out << " []\n";
+        return;
+    }
+    out << '\n';
+    for (const auto &value : values)
+        out << std::string(indentation + 2, ' ') << "- " << yamlQuote(value) << '\n';
+}
+
+void finalizeToolchain(ToolchainDef &toolchain) {
+    if (!toolchain.extensions.library_scan.empty())
+        return;
+#if defined(_WIN32)
+    toolchain.extensions.library_scan = {".lib"};
+#elif defined(__APPLE__)
+    toolchain.extensions.library_scan = {".a", ".dylib"};
+#else
+    toolchain.extensions.library_scan = {".a", ".so"};
+#endif
+}
 
 std::vector<std::string> splitTokens(std::string_view str) {
     auto is_space = [](char c) constexpr -> bool { return c == ' ' || c == '\t' || c == '\r' || c == '\n'; };
@@ -223,16 +291,77 @@ Result<ToolchainDef> parseToolchain(const std::filesystem::path &path) {
     if (!res) {
         return std::unexpected(res.error());
     }
-    if (tc.extensions.library_scan.empty()) {
-#if defined(_WIN32)
-        tc.extensions.library_scan = {".lib"};
-#elif defined(__APPLE__)
-        tc.extensions.library_scan = {".a", ".dylib"};
-#else
-        tc.extensions.library_scan = {".a", ".so"};
-#endif
-    }
+    finalizeToolchain(tc);
     return tc;
+}
+
+Result<ToolchainDef> resolveToolchain(const std::optional<std::filesystem::path> &path) {
+    if (!path) {
+        ToolchainDef toolchain;
+        finalizeToolchain(toolchain);
+        return toolchain;
+    }
+
+    auto toolchain = parseToolchain(*path);
+    if (!toolchain) {
+        return std::unexpected(std::format("Failed to load toolchain {}: {}", path->string(), toolchain.error()));
+    }
+    return toolchain;
+}
+
+std::string serializeToolchain(const ToolchainDef &toolchain) {
+    std::ostringstream out;
+    out << "# Fully resolved Catalyst toolchain. Generated automatically.\n"
+           "toolchain:\n";
+    writeScalar(out, 2, "name", toolchain.name);
+
+    out << "  extensions:\n";
+    writeScalar(out, 4, "object", toolchain.extensions.object);
+    writeScalar(out, 4, "executable", toolchain.extensions.executable);
+    writeScalar(out, 4, "static_lib", toolchain.extensions.static_lib);
+    writeScalar(out, 4, "shared_lib", toolchain.extensions.shared_lib);
+    writeScalar(out, 4, "static_lib_prefix", toolchain.extensions.static_lib_prefix);
+    writeScalar(out, 4, "shared_lib_prefix", toolchain.extensions.shared_lib_prefix);
+    writeSequence(out, 4, "cpp_sources", toolchain.extensions.cpp_sources);
+    writeSequence(out, 4, "headers", toolchain.extensions.headers);
+    writeSequence(out, 4, "c_sources", toolchain.extensions.c_sources);
+    writeSequence(out, 4, "module_interfaces", toolchain.extensions.module_interfaces);
+    writeSequence(out, 4, "clang_modules", toolchain.extensions.clang_modules);
+    writeScalar(out, 4, "bmi", toolchain.extensions.bmi);
+    writeSequence(out, 4, "library_scan", toolchain.extensions.library_scan);
+    writeSequence(out, 4, "shell_scripts", toolchain.extensions.shell_scripts);
+
+    out << "  flags:\n";
+    writeScalar(out, 4, "include_dir", toolchain.flags.include_dir);
+    writeScalar(out, 4, "lib_dir", toolchain.flags.lib_dir);
+    writeScalar(out, 4, "lib", toolchain.flags.lib);
+    writeScalar(out, 4, "define", toolchain.flags.define);
+    writeScalar(out, 4, "define_empty", toolchain.flags.define_empty);
+
+    out << "  compiler:\n"
+           "    c:\n";
+    writeScalar(out, 6, "executable", toolchain.compiler.c.executable);
+    writeScalar(out, 6, "flags", toolchain.compiler.c.flags);
+    writeScalar(out, 6, "command", toolchain.compiler.c.command);
+    out << "    cxx:\n";
+    writeScalar(out, 6, "executable", toolchain.compiler.cxx.executable);
+    writeScalar(out, 6, "flags", toolchain.compiler.cxx.flags);
+    writeScalar(out, 6, "command", toolchain.compiler.cxx.command);
+
+    out << "  linker:\n";
+    writeScalar(out, 4, "executable", toolchain.linker.executable);
+    writeScalar(out, 4, "flags", toolchain.linker.flags);
+    writeScalar(out, 4, "executable_command", toolchain.linker.executable_command);
+    writeScalar(out, 4, "shared_lib_command", toolchain.linker.shared_lib_command);
+
+    out << "  archiver:\n";
+    writeScalar(out, 4, "executable", toolchain.archiver.executable);
+    writeScalar(out, 4, "command", toolchain.archiver.command);
+    return std::move(out).str();
+}
+
+std::string serializeToolchainStore(const ToolchainDef &toolchain, std::string_view generator) {
+    return "catalyst_generator: " + yamlQuote(generator) + '\n' + serializeToolchain(toolchain);
 }
 
 } // namespace catalyst::toolchain

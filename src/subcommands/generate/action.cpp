@@ -5,6 +5,7 @@
 #include <expected>
 #include <filesystem>
 #include <fstream>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <unordered_set>
@@ -19,6 +20,14 @@
 
 namespace catalyst::generate {
 namespace fs = std::filesystem;
+
+std::string buildFilename(std::string_view generator) {
+    if (generator == "ninja")
+        return "build.ninja";
+    if (generator == "gmake" || generator == "make")
+        return "Makefile";
+    return "catalyst.build";
+}
 
 namespace {
 
@@ -70,9 +79,10 @@ Result<void> action(const Parse &parse_args) {
     }
     const std::vector<FeatureFlag> &features = *features_res;
 
-    catalyst::logger.debug("Running pre-generate hooks.");
-    if (auto res = hooks::preGenerate(config); !res) {
-        return res;
+    if (!parse_args.skip_pre_generate) {
+        catalyst::logger.debug("Running pre-generate hooks.");
+        if (auto res = hooks::preGenerate(config); !res)
+            return res;
     }
 
     fs::path current_dir = fs::current_path();
@@ -110,30 +120,21 @@ Result<void> action(const Parse &parse_args) {
         generator = config.getString("meta.generator").value_or("cob");
     }
 
-    std::string build_filename;
-    if (generator == "ninja") {
-        build_filename = "build.ninja";
-    } else if (generator == "gmake" || generator == "make") {
-        build_filename = "Makefile";
-    } else {
-        build_filename = "catalyst.build";
-    }
+    const std::string build_filename = buildFilename(generator);
 
     const fs::path buildfile_path = build_dir / build_filename;
+    std::optional<fs::path> toolchain_path;
+    if (auto configured_path = config.getString("manifest.toolchain"))
+        toolchain_path = *configured_path;
+    auto resolved_toolchain = catalyst::toolchain::resolveToolchain(toolchain_path);
+    if (!resolved_toolchain)
+        return std::unexpected(resolved_toolchain.error());
+    catalyst::toolchain::ToolchainDef tc = std::move(*resolved_toolchain);
+
     catalyst::logger.debug("Writing build file to: {}", buildfile_path.string());
     std::ofstream buildfile{buildfile_path};
-
     if (!buildfile) {
         return std::unexpected(std::format("Failed to open {} for writing", buildfile_path.string()));
-    }
-
-    catalyst::toolchain::ToolchainDef tc;
-    if (auto toolchain_path = config.getString("manifest.toolchain")) {
-        auto parsed = catalyst::toolchain::parseToolchain(*toolchain_path);
-        if (!parsed) {
-            return std::unexpected(std::format("Failed to load toolchain {}: {}", *toolchain_path, parsed.error()));
-        }
-        tc = std::move(*parsed);
     }
 
     auto generate_build = [&](buildwriters::BaseWriter &writer) -> Result<void> {
@@ -166,6 +167,10 @@ Result<void> action(const Parse &parse_args) {
     if (!generate_res) {
         return generate_res;
     }
+    buildfile.close();
+    if (!buildfile) {
+        return std::unexpected(std::format("Failed to write {}", buildfile_path.string()));
+    }
 
     catalyst::logger.debug("Writing profile composition to: {}", (build_dir / "profile_composition.yaml").string());
     std::ofstream profile_comp_file{build_dir / "profile_composition.yaml"};
@@ -177,6 +182,18 @@ Result<void> action(const Parse &parse_args) {
     catalyst::logger.debug("Running post-generate hooks.");
     if (auto res = hooks::postGenerate(config); !res) {
         return res;
+    }
+
+    const fs::path toolchain_store_path = build_dir / catalyst::toolchain::RESOLVED_TOOLCHAIN_STORE_FILENAME;
+    catalyst::logger.debug("Writing resolved toolchain to: {}", toolchain_store_path.string());
+    std::ofstream toolchain_store{toolchain_store_path, std::ios::binary | std::ios::trunc};
+    if (!toolchain_store) {
+        return std::unexpected(std::format("Failed to open {} for writing", toolchain_store_path.string()));
+    }
+    toolchain_store << catalyst::toolchain::serializeToolchainStore(tc, generator);
+    toolchain_store.close();
+    if (!toolchain_store) {
+        return std::unexpected(std::format("Failed to write {}", toolchain_store_path.string()));
     }
     catalyst::logger.debug("Generate subcommand finished successfully.");
     return {};
@@ -238,11 +255,12 @@ Result<std::vector<std::string>> intermediateTargets(catalyst::generate::buildwr
             }
         }
 
-        void(writer.addBuild({object_files.back()},
-                             (std::ranges::contains(tc.extensions.c_sources, src.extension().string()) ? "cc_compile" : "cxx_compile"),
-                             {src.string()},
-                             implicit_deps,
-                             extra_args));
+        void(writer.addBuild(
+            {object_files.back()},
+            (std::ranges::contains(tc.extensions.c_sources, src.extension().string()) ? "cc_compile" : "cxx_compile"),
+            {src.string()},
+            implicit_deps,
+            extra_args));
     }
     return object_files;
 }

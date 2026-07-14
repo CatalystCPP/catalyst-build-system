@@ -1,5 +1,6 @@
 #include <filesystem>
 #include <fstream>
+#include <optional>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -7,7 +8,8 @@
 #include "catalyst/utils/yaml/configuration.hpp"
 
 namespace catalyst::toolchain {
-inline std::string expand_template(std::string_view tmpl, const std::unordered_map<std::string_view, std::string> &vars) {
+inline std::string expand_template(std::string_view tmpl,
+                                   const std::unordered_map<std::string_view, std::string> &vars) {
     return expandTemplate(tmpl, vars);
 }
 inline Result<ToolchainDef> parse_toolchain(const std::filesystem::path &path) {
@@ -152,6 +154,130 @@ toolchain:
     REQUIRE(tc.extensions.shell_scripts == std::vector<std::string>{".bat"});
 
     std::filesystem::remove(temp_yaml);
+}
+
+TEST_CASE("Resolved toolchain serialization is deterministic and complete", "[toolchain]") {
+    namespace fs = std::filesystem;
+
+    ToolchainDef tc;
+    tc.name = "custom \"snapshot\"\\path\nnext-line";
+    tc.extensions.object = ".object";
+    tc.extensions.executable = ".executable";
+    tc.extensions.static_lib = ".static";
+    tc.extensions.shared_lib = ".shared";
+    tc.extensions.static_lib_prefix = "static-";
+    tc.extensions.shared_lib_prefix = "shared-";
+    tc.extensions.cpp_sources = {".cpp-custom"};
+    tc.extensions.headers = {".header-custom"};
+    tc.extensions.c_sources = {".c-custom"};
+    tc.extensions.module_interfaces = {".module-custom"};
+    tc.extensions.clang_modules = {".clang-module-custom"};
+    tc.extensions.bmi = ".bmi-custom";
+    tc.extensions.library_scan = {".library-custom"};
+    tc.extensions.shell_scripts = {".shell-custom", ".shell\\windows"};
+    tc.flags.include_dir = "include {path}";
+    tc.flags.lib_dir = "lib-dir {path}";
+    tc.flags.lib = "lib {name}";
+    tc.flags.define = "define {name} {value}";
+    tc.flags.define_empty = "define {name}";
+    tc.compiler.c = {.executable = "custom-cc", .flags = "custom-c-flags", .command = "custom\tc command"};
+    tc.compiler.cxx = {.executable = "custom-cxx", .flags = "custom-cxx-flags", .command = "custom cxx command"};
+    tc.linker.executable = "custom-linker";
+    tc.linker.flags = "custom-linker-flags";
+    tc.linker.executable_command = "custom executable link command";
+    tc.linker.shared_lib_command = "custom shared link command";
+    tc.archiver.executable = "custom-archiver";
+    tc.archiver.command = "custom archive command";
+
+    const std::string serialized = serializeToolchain(tc);
+    REQUIRE(serializeToolchain(tc) == serialized);
+    REQUIRE(serialized.find("extends") == std::string::npos);
+    REQUIRE(serializeToolchainStore(tc, "cob") != serializeToolchainStore(tc, "ninja"));
+
+    const fs::path temp_dir = fs::temp_directory_path() / "catalyst_resolved_toolchain_serialization";
+    fs::remove_all(temp_dir);
+    fs::create_directories(temp_dir);
+    const fs::path snapshot_path = temp_dir / RESOLVED_TOOLCHAIN_STORE_FILENAME;
+    {
+        std::ofstream snapshot{snapshot_path};
+        snapshot << serializeToolchainStore(tc, "cob");
+    }
+
+    auto reparsed = parseToolchain(snapshot_path);
+    REQUIRE(reparsed.has_value());
+    REQUIRE(*reparsed == tc);
+
+    auto defaults = resolveToolchain(std::nullopt);
+    REQUIRE(defaults.has_value());
+    REQUIRE_FALSE(defaults->extensions.library_scan.empty());
+    {
+        std::ofstream snapshot{snapshot_path};
+        snapshot << serializeToolchain(*defaults);
+    }
+    auto reparsed_defaults = parseToolchain(snapshot_path);
+    REQUIRE(reparsed_defaults.has_value());
+    REQUIRE(*reparsed_defaults == *defaults);
+    fs::remove_all(temp_dir);
+}
+
+TEST_CASE("Resolved toolchain serialization compares effective inheritance", "[toolchain]") {
+    namespace fs = std::filesystem;
+
+    const fs::path temp_dir = fs::temp_directory_path() / "catalyst_resolved_toolchain_inheritance";
+    fs::remove_all(temp_dir);
+    fs::create_directories(temp_dir);
+
+    const fs::path base_path = temp_dir / "base.yaml";
+    const fs::path child_path = temp_dir / "child.yaml";
+    {
+        std::ofstream base{base_path};
+        base << R"(toolchain:
+  compiler:
+    cxx:
+      executable: clang++
+      flags: -O2
+)";
+        std::ofstream child{child_path};
+        child << R"(toolchain:
+  extends: base.yaml
+  compiler:
+    cxx:
+      flags: -O0
+)";
+    }
+
+    auto original = parseToolchain(child_path);
+    REQUIRE(original.has_value());
+    const std::string original_snapshot = serializeToolchain(*original);
+
+    // The changed base flag is overridden by the leaf, so the effective toolchain is unchanged.
+    {
+        std::ofstream base{base_path};
+        base << R"(toolchain:
+  compiler:
+    cxx:
+      executable: "clang++"
+      flags: "-O3"
+)";
+    }
+    auto equivalent = parseToolchain(child_path);
+    REQUIRE(equivalent.has_value());
+    REQUIRE(serializeToolchain(*equivalent) == original_snapshot);
+
+    // The compiler executable is inherited, so changing it changes the effective snapshot.
+    {
+        std::ofstream base{base_path};
+        base << R"(toolchain:
+  compiler:
+    cxx:
+      executable: g++
+      flags: -O3
+)";
+    }
+    auto changed = parseToolchain(child_path);
+    REQUIRE(changed.has_value());
+    REQUIRE(serializeToolchain(*changed) != original_snapshot);
+    fs::remove_all(temp_dir);
 }
 
 TEST_CASE("Configuration preserves manifest.toolchain", "[toolchain][configuration]") {

@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <format>
 #include <fstream>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -15,6 +16,7 @@
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/result.hpp"
+#include "catalyst/utils/toolchain.hpp"
 #include "catalyst/utils/watcher.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 #include "catalyst/workspace.hpp"
@@ -184,6 +186,40 @@ Result<void> generateCompileCommands(const fs::path &build_dir, const std::strin
     return {}; // don't fail if we don't know how to generate compile commands for this generator, it's not critical
 }
 
+Result<bool>
+toolchainChanged(const utils::yaml::Configuration &config, const fs::path &store_path, std::string_view generator) {
+    std::optional<fs::path> toolchain_path;
+    if (auto configured_path = config.getString("manifest.toolchain"))
+        toolchain_path = *configured_path;
+
+    auto resolved_toolchain = catalyst::toolchain::resolveToolchain(toolchain_path);
+    if (!resolved_toolchain)
+        return std::unexpected(resolved_toolchain.error());
+
+    std::error_code ec;
+    if (!fs::exists(store_path, ec)) {
+        if (ec)
+            return std::unexpected(
+                std::format("Failed to inspect resolved toolchain store {}: {}", store_path.string(), ec.message()));
+        return true;
+    }
+
+    std::ifstream store{store_path, std::ios::binary};
+    if (!store)
+        return std::unexpected(std::format("Failed to open {} for reading", store_path.string()));
+
+    std::string stored_toolchain;
+    char buffer[4096];
+    while (store) {
+        store.read(buffer, sizeof(buffer));
+        stored_toolchain.append(buffer, static_cast<size_t>(store.gcount()));
+    }
+    if (!store.eof())
+        return std::unexpected(std::format("Failed to read {}", store_path.string()));
+
+    return stored_toolchain != catalyst::toolchain::serializeToolchainStore(*resolved_toolchain, generator);
+}
+
 } // namespace
 
 Result<void> action(const Parse &parse_args) {
@@ -260,12 +296,31 @@ Result<void> action(const Parse &parse_args) {
             return;
         }
 
+        catalyst::logger.info("Running pre-generate hooks.");
+        if (auto res = hooks::preGenerate(config); !res) {
+            catalyst::logger.error("Pre-generate hook failed: {}", res.error());
+            result = std::unexpected(res.error());
+            return;
+        }
+
         fs::path build_dir = config.getBuildDir();
         std::string generator =
             parse_args.backend.empty() ? config.getString("meta.generator").value_or("cob") : parse_args.backend;
-        std::string build_filename = (generator == "ninja") ? "build.ninja" : "catalyst.build";
+        std::string build_filename = catalyst::generate::buildFilename(generator);
 
         bool needs_regen = !fs::exists(build_dir / build_filename) || parse_args.regen;
+        if (!needs_regen) {
+            const fs::path toolchain_store = build_dir / catalyst::toolchain::RESOLVED_TOOLCHAIN_STORE_FILENAME;
+            auto toolchain_changed = toolchainChanged(config, toolchain_store, generator);
+            if (!toolchain_changed) {
+                catalyst::logger.error("Failed to resolve toolchain state: {}", toolchain_changed.error());
+                result = std::unexpected(toolchain_changed.error());
+                return;
+            }
+            needs_regen = *toolchain_changed;
+            if (needs_regen)
+                catalyst::logger.debug("Resolved toolchain changed; build files must be regenerated.");
+        }
         if (!needs_regen) {
             auto build_time = fs::last_write_time(build_dir / build_filename);
             if (fs::exists("CATALYST.yaml") && fs::last_write_time("CATALYST.yaml") > build_time) {
@@ -286,16 +341,10 @@ Result<void> action(const Parse &parse_args) {
             catalyst::logger.info("Generating build files.");
             auto res = catalyst::generate::action({.profiles = parse_args.profiles,
                                                    .enabled_features = parse_args.enabled_features,
-                                                   .backend = parse_args.backend});
+                                                   .backend = parse_args.backend,
+                                                   .skip_pre_generate = true});
             if (!res) {
                 catalyst::logger.error("Failed to generate build files: {}", res.error());
-                result = std::unexpected(res.error());
-                return;
-            }
-        } else {
-            catalyst::logger.info("Running pre-generate hooks.");
-            if (auto res = hooks::preGenerate(config); !res) {
-                catalyst::logger.error("Pre-generate hook failed: {}", res.error());
                 result = std::unexpected(res.error());
                 return;
             }
