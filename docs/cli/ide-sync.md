@@ -9,7 +9,7 @@ catalyst ide-sync [OPTIONS]
 
 OPTIONS:
   -h,     --help              Print this help message and exit
-  -p,     --profiles TEXT [common]  ... 
+  -p,     --profiles TEXT [[common]]  ... 
                               Profiles to use from the configuration file
           --ides ENUM ...     IDEs to generate project files for: vscode, clion
   -f,     --force-ide [0]     force emitting IDE config even if one already exists

@@ -9,7 +9,8 @@ catalyst fetch [OPTIONS]
 
 OPTIONS:
   -h,     --help              Print this help message and exit
-  -p,     --profiles TEXT ... 
+  -p,     --profiles TEXT [[common]]  ... 
+                              Profile composition to fetch.
 ```
 
 ## Details
