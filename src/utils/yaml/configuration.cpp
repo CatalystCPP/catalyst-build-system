@@ -214,6 +214,7 @@ void validateProfileKeys(ryml::ConstNodeRef profile, const std::string &profile_
                         "triplet",
                         "using",
                         "linkage",
+                        "transitive",
                         "path",
                         "url",
                         "profiles",
