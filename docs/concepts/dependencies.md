@@ -31,8 +31,8 @@ Uses `vcpkg` to satisfy the dependency.
 |---|---|---|
 | `name` | Yes | Package name in vcpkg. |
 | `source` | Yes | Must be `vcpkg`. |
-| `version` | No | Package version (informative only; vcpkg classic mode resolves versions based on VCPKG_ROOT's registry). |
-| `triplet` | No | vcpkg triplet (e.g., `x64-linux`). |
+| `version` | No | Exact package version. Catalyst emits a vcpkg manifest override; omit it or use `latest` to select the baseline version. |
+| `triplet` | Yes | vcpkg triplet (e.g., `x64-linux`). |
 | `linkage` | No | `static` or `shared` (default `shared`). Controls which library artifacts are scanned. |
 | `transitive` | No | Automatically resolve and link the package's transitive vcpkg dependencies (default `true`). |
 | `using` | No | List of features to enable. |
@@ -41,6 +41,7 @@ Uses `vcpkg` to satisfy the dependency.
 - name: nlohmann-json
   source: vcpkg
   version: 3.11.2
+  triplet: x64-linux
 ```
 
 #### Transitive dependencies
@@ -48,7 +49,7 @@ Uses `vcpkg` to satisfy the dependency.
 vcpkg packages each dependency as its own port, so a single library can rely on
 several others installed alongside it (for example, `ryml` depends on `c4core`).
 By default Catalyst discovers and links these automatically by reading vcpkg's
-installed-package database (`$VCPKG_ROOT/installed/vcpkg/status`), so you only
+profile-local installed-package database (`<build-dir>/vcpkg_installed/vcpkg/status`), so you only
 need to declare the packages you use directly:
 
 ```yaml
@@ -63,6 +64,11 @@ link or include artifacts, and packages are emitted in a valid static-link order
 (a package always precedes the packages it depends on). Set `transitive: false`
 on a dependency to opt out and link only that package — useful if you prefer to
 pin every transitive package explicitly.
+
+Catalyst uses vcpkg manifest mode and installs packages beneath the composed
+profile's generated build tree (`<build-dir>/vcpkg_installed`). The generated
+manifest records the current vcpkg registry commit as its builtin baseline and
+uses overrides for every exact version declared by the project or lockfile.
 
 ### 3. `local`
 Builds a dependency found on the local filesystem.
@@ -158,7 +164,8 @@ Catalyst supports pinning dependency versions to ensure that everyone working on
 
 By running [`catalyst lock`](../cli/lock.md), you generate a `catalyst.lock` file. This file pins:
 - **Git** dependencies to specific 40-character commit hashes.
-- **Vcpkg** dependencies to their current versions and triplets.
+- **Vcpkg** dependencies to their resolved versions, port revisions, triplets,
+  and builtin registry baseline.
 - **Local/System** dependencies to their paths.
 
 When a `catalyst.lock` is present, `catalyst fetch` and `catalyst build` will prioritize its contents over the loose version constraints in `catalyst.yaml`.

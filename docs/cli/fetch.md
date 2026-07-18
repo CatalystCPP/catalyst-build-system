@@ -18,7 +18,8 @@ OPTIONS:
 This command is usually run automatically by `catalyst build`, but can be run manually to prepare the environment (e.g., in CI/CD pipelines).
 
 - **Git**: Clones repositories.
-- **Vcpkg**: Installs packages.
+- **Vcpkg**: Generates a versioned manifest and installs packages into the
+  composed profile's build tree.
 - **System**: Verifies presence via pkg-config.
 
 ## Examples

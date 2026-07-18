@@ -18,7 +18,8 @@ OPTIONS:
 The `lock` command resolves all dependencies declared in your `catalyst.yaml` (and workspace member manifests) to specific, reproducible states.
 
 - **Git**: Resolves branches, tags, or "latest" to specific 40-character commit hashes using `git ls-remote`.
-- **Vcpkg**: Records the version and triplet.
+- **Vcpkg**: Resolves through manifest mode and records the actual installed
+  version, port revision, triplet, and builtin registry baseline.
 - **System/Local**: Records the source type and paths.
 
 In a **Workspace**, a single `catalyst.lock` is generated at the workspace root, containing a consolidated set of pinned dependencies for all workspace members.
