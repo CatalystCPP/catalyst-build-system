@@ -331,29 +331,6 @@ std::string writeVariables(const catalyst::utils::yaml::Configuration &config,
     std::string ldflags =
         tc.linker.flags + " " + catalyst::toolchain::expandTemplate(tc.flags.lib_dir, {{"path", "catalyst-libs"}});
 
-    if (const char *vcpkg_root = std::getenv("VCPKG_ROOT"); vcpkg_root != nullptr) {
-#if defined(_WIN32)
-        const char *triplet = "x64-windows";
-#elif defined(__APPLE__)
-        const char *triplet = "x64-osx";
-#else
-        const char *triplet = "x64-linux";
-#endif
-        cxxflags +=
-            " "
-            + catalyst::toolchain::expandTemplate(
-                tc.flags.include_dir, {{"path", (fs::path(vcpkg_root) / "installed" / triplet / "include").string()}});
-        ccflags +=
-            " "
-            + catalyst::toolchain::expandTemplate(
-                tc.flags.include_dir, {{"path", (fs::path(vcpkg_root) / "installed" / triplet / "include").string()}});
-        ldflags += " "
-                   + catalyst::toolchain::expandTemplate(
-                       tc.flags.lib_dir, {{"path", (fs::path(vcpkg_root) / "installed" / triplet / "lib").string()}});
-    } else {
-        logger.warn("VCPKG_ROOT environment variable is not defined.");
-    }
-
     std::string proj_name = config.getString("manifest.name").value_or("name");
     for (const auto &ff : features) {
         if (ff.type == "bool") {

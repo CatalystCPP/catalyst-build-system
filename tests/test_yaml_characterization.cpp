@@ -165,6 +165,31 @@ TEST_CASE("Profile composition: scalar override, sequence append, dependency app
     CHECK(yaml::asString(yaml::child(deps[1], "name")) == "zlib");
 }
 
+TEST_CASE("Profile composition: vcpkg transitive booleans survive dependency composition",
+          "[yaml][characterization]") {
+    TempDir dir{"catalyst_char_vcpkg_transitive"};
+    writeFile(dir.path / "CATALYST.yaml",
+              R"(common:
+  dependencies:
+    - name: fmt
+      source: vcpkg
+      transitive: true
+    - name: zlib
+      source: vcpkg
+      transitive: false
+)");
+
+    Configuration config({"common"}, dir.path);
+
+    namespace yaml = catalyst::utils::yaml;
+    ryml::ConstNodeRef deps = yaml::child(config.rootRef(), "dependencies");
+    REQUIRE(deps.readable());
+    REQUIRE(deps.is_seq());
+    REQUIRE(deps.num_children() == 2);
+    CHECK(yaml::asBool(yaml::child(deps[0], "transitive")) == true);
+    CHECK(yaml::asBool(yaml::child(deps[1], "transitive")) == false);
+}
+
 TEST_CASE("Profile composition: min_ver takes the maximum version seen", "[yaml][characterization]") {
     TempDir dir{"catalyst_char_minver"};
     writeFile(dir.path / "CATALYST.yaml", kCompositionYaml);

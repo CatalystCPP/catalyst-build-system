@@ -27,14 +27,16 @@ catalyst add git [OPTIONS] [remote]
 
 
 POSITIONALS:
-  remote TEXT                 
+  remote TEXT                 remote git repository URL
 
 OPTIONS:
   -h,     --help              Print this help message and exit
-  -n,     --name TEXT         
+  -n,     --name TEXT         dependency name
   -v,     --version TEXT [latest]  
-  -f,     --features TEXT ... 
-  -p,     --profiles TEXT ... 
+                              dependency version
+  -f,     --features TEXT ... features to enable
+  -p,     --profiles TEXT [[common]]  ... 
+                              profiles to add the dependency to
 ```
 
 ### system
@@ -48,9 +50,11 @@ catalyst add system [OPTIONS]
 OPTIONS:
   -h,     --help              Print this help message and exit
   -n,     --name TEXT REQUIRED 
-  -l,     --lib TEXT          
-  -i,     --inc TEXT          
-  -p,     --profiles TEXT ... 
+                              dependency name
+  -l,     --lib TEXT          system library name or path
+  -i,     --inc TEXT          system include path
+  -p,     --profiles TEXT [[common]]  ... 
+                              profiles to add the dependency to
 ```
 
 ### local
@@ -62,13 +66,15 @@ catalyst add local [OPTIONS] path
 
 
 POSITIONALS:
-  path TEXT REQUIRED          
+  path TEXT REQUIRED          local package directory path
 
 OPTIONS:
   -h,     --help              Print this help message and exit
   -n,     --name TEXT REQUIRED 
-  -p,     --profiles TEXT ... 
-  -f,     --features TEXT ... 
+                              dependency name
+  -p,     --profiles TEXT [[common]]  ... 
+                              profiles to add the dependency to
+  -f,     --features TEXT ... features to enable
 ```
 
 ### vcpkg
@@ -82,10 +88,14 @@ catalyst add vcpkg [OPTIONS]
 OPTIONS:
   -h,     --help              Print this help message and exit
   -n,     --name TEXT REQUIRED 
+                              dependency name
   -t,     --triplet TEXT REQUIRED 
+                              vcpkg triplet
   -v,     --version TEXT [latest]  
+                              dependency version
   -p,     --profiles TEXT [[common]]  ... 
-  -f,     --features TEXT ... 
+                              profiles to add the dependency to
+  -f,     --features TEXT ... features to enable
 ```
 
 ### conan
@@ -99,8 +109,11 @@ catalyst add conan [OPTIONS]
 OPTIONS:
   -h,     --help              Print this help message and exit
   -n,     --name TEXT REQUIRED 
+                              dependency name
   -v,     --version TEXT REQUIRED 
+                              dependency version
   -p,     --profiles TEXT [[common]]  ... 
+                              profiles to add the dependency to
 ```
 
 ## Examples

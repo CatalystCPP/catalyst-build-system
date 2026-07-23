@@ -43,10 +43,11 @@ Result<FindRes>
 findDep(const std::string &build_dir, ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
 Result<FindRes> findLocal(ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
 Result<FindRes> findSystem(ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
-Result<FindRes> findVcpkg(ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
+Result<FindRes>
+findVcpkg(const std::string &build_dir, ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
 
 /// Parsed view of vcpkg's installed-package database
-/// ($VCPKG_ROOT/installed/vcpkg/status), which is in Debian-control format.
+/// (<build-dir>/vcpkg_installed/vcpkg/status), which is in Debian-control format.
 struct VcpkgStatusDb {
     /// Maps an installed package to its direct dependency names. The key is
     /// "<name>\x1f<triplet>"; build it with vcpkgStatusKey(). Dependencies from

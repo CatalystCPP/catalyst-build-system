@@ -23,7 +23,7 @@ auto catalyst::generate::findDep(const std::string &build_dir,
         return findSystem(dep, tc);
     }
     if (*source_type == "vcpkg") {
-        return findVcpkg(dep, tc);
+        return findVcpkg(build_dir, dep, tc);
     }
     if (*source_type == "git") {
         return findGit(build_dir, dep, tc);
