@@ -125,6 +125,86 @@ def test_init_and_build(tmp_path):
     assert run_result.returncode == 0
     assert "Hello, Catalyst!" in run_result.stdout
 
+def test_inherited_toolchain_change_regenerates_build_files(tmp_path):
+    project_dir = tmp_path / "toolchain_regeneration"
+    project_dir.mkdir()
+    (project_dir / "src").mkdir()
+
+    profile_path = project_dir / "catalyst.yaml"
+    profile_path.write_text("""meta:
+  generator: cob
+manifest:
+  name: toolchain_regeneration
+  type: BINARY
+  toolchain: child.yaml
+  dirs:
+    source: [src]
+    include: []
+    build: build
+""")
+    (project_dir / "src" / "main.cpp").write_text("int main() { return 0; }\n")
+    (project_dir / "child.yaml").write_text("""toolchain:
+  extends: base.yaml
+""")
+    base_toolchain = project_dir / "base.yaml"
+    base_toolchain.write_text("""toolchain:
+  compiler:
+    cxx:
+      flags: -DISSUE88_OLD
+""")
+
+    first_build = subprocess.run(
+        [str(CATALYST_BIN), "build"], cwd=project_dir, capture_output=True, text=True)
+    assert first_build.returncode == 0, first_build.stderr
+
+    build_file = project_dir / "build" / "common" / "catalyst.build"
+    toolchain_store = project_dir / "build" / "common" / "catalyst__tc_store"
+    assert build_file.exists()
+    assert toolchain_store.exists()
+    assert "ISSUE88_OLD" in build_file.read_text()
+    stored_toolchain = toolchain_store.read_text()
+    assert "ISSUE88_OLD" in stored_toolchain
+    assert "extends" not in stored_toolchain
+    assert 'command: "{archiver} rcs {output} {objects}"' in stored_toolchain
+
+    # Only an inherited base file changes; no manifest timestamp can trigger regeneration.
+    base_toolchain.write_text("""toolchain:
+  compiler:
+    cxx:
+      flags: -DISSUE88_NEW
+""")
+    second_build = subprocess.run(
+        [str(CATALYST_BIN), "build"], cwd=project_dir, capture_output=True, text=True)
+    assert second_build.returncode == 0, second_build.stderr
+    assert "Generating build files." in second_build.stdout + second_build.stderr
+    assert "ISSUE88_NEW" in build_file.read_text()
+    assert "ISSUE88_OLD" not in build_file.read_text()
+    assert "ISSUE88_NEW" in toolchain_store.read_text()
+
+    build_file_mtime = build_file.stat().st_mtime_ns
+    stored_toolchain = toolchain_store.read_text()
+    # Formatting and comments change, but the fully resolved definition does not.
+    base_toolchain.write_text("""# equivalent toolchain
+toolchain:
+  compiler:
+    cxx:
+      flags: "-DISSUE88_NEW"
+""")
+    third_build = subprocess.run(
+        [str(CATALYST_BIN), "build"], cwd=project_dir, capture_output=True, text=True)
+    assert third_build.returncode == 0, third_build.stderr
+    assert "Generating build files." not in third_build.stdout + third_build.stderr
+    assert build_file.stat().st_mtime_ns == build_file_mtime
+    assert toolchain_store.read_text() == stored_toolchain
+
+    # An unchanged toolchain still falls through to the existing profile timestamp check.
+    newer_profile_time = build_file_mtime + 2_000_000_000
+    os.utime(profile_path, ns=(newer_profile_time, newer_profile_time))
+    fourth_build = subprocess.run(
+        [str(CATALYST_BIN), "build"], cwd=project_dir, capture_output=True, text=True)
+    assert fourth_build.returncode == 0, fourth_build.stderr
+    assert "Generating build files." in fourth_build.stdout + fourth_build.stderr
+
 def test_invalid_yaml_handles_gracefully(tmp_path):
     project_dir = tmp_path / "bad_project"
     project_dir.mkdir()
@@ -285,4 +365,3 @@ def test_add_conan(tmp_path):
     assert "source: conan" in yaml_content
     assert "name: fmt" in yaml_content
     assert "version: 10.1.1" in yaml_content
-

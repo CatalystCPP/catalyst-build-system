@@ -2,6 +2,7 @@
 #include <format>
 #include <fstream>
 #include <iostream>
+#include <optional>
 #include <print>
 #include <string>
 #include <unordered_map>
@@ -11,6 +12,7 @@
 #include "catalyst/subcommands/lock.hpp"
 #include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/result.hpp"
+#include "catalyst/utils/vcpkg.hpp"
 #include "catalyst/utils/yaml/configuration.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
@@ -70,6 +72,8 @@ struct DependencyInfo {
     std::string hash;
     std::string triplet;
     std::string path;
+    std::vector<std::string> features;
+    int port_version = 0;
 
     bool operator==(const DependencyInfo &other) const {
         return name == other.name;
@@ -105,8 +109,9 @@ void collectDependencies(const utils::yaml::Configuration &config,
             info.url = yaml::asString(yaml::child(dep, "url")).value_or(info.source);
             info.version = yaml::asString(yaml::child(dep, "version")).value_or("latest");
         } else if (info.source == "vcpkg") {
-            info.version = yaml::asString(yaml::child(dep, "version")).value_or("");
+            info.version = yaml::asString(yaml::child(dep, "version")).value_or("latest");
             info.triplet = yaml::asString(yaml::child(dep, "triplet")).value_or("");
+            info.features = yaml::asStringVector(yaml::child(dep, "using")).value_or(std::vector<std::string>{});
         } else if (info.source == "local") {
             info.path = yaml::asString(yaml::child(dep, "path")).value_or("");
         }
@@ -122,10 +127,12 @@ Result<void> action(const Parse &parse_args) {
 
     std::unordered_map<std::string, DependencyInfo> locked_deps;
     fs::path lockfile_path = "catalyst.lock";
+    fs::path vcpkg_build_dir;
 
     if (parse_args.workspace) {
         catalyst::logger.info("Resolving dependencies for workspace...");
         lockfile_path = parse_args.workspace->getRoot() / "catalyst.lock";
+        vcpkg_build_dir = parse_args.workspace->getRoot() / "build" / "catalyst-lock";
 
         // Load configurations in parallel, then collect dependencies sequentially
         // for deterministic resolution order
@@ -164,15 +171,57 @@ Result<void> action(const Parse &parse_args) {
     } else {
         utils::yaml::Configuration config(parse_args.profiles);
         collectDependencies(config, locked_deps, std::nullopt);
+        vcpkg_build_dir = config.getBuildDir() / "catalyst-lock";
     }
 
     std::println(std::cout, "Locking {} dependencies...", locked_deps.size());
+
+    std::vector<utils::vcpkg::Dependency> vcpkg_dependencies;
+    for (const auto &[name, info] : locked_deps) {
+        if (info.source == "vcpkg") {
+            if (info.triplet.empty()) {
+                return std::unexpected(std::format("vcpkg dependency '{}' is missing triplet.", name));
+            }
+            vcpkg_dependencies.push_back({.name = name,
+                                          .version = info.version,
+                                          .triplet = info.triplet,
+                                          .features = info.features,
+                                          .port_version = std::nullopt});
+        }
+    }
+
+    std::optional<utils::vcpkg::InstallResult> vcpkg_install;
+    if (!vcpkg_dependencies.empty()) {
+        catalyst::logger.info("Resolving vcpkg dependencies in manifest mode.");
+        auto installed = utils::vcpkg::install(vcpkg_dependencies, vcpkg_build_dir);
+        if (!installed) {
+            return std::unexpected(installed.error());
+        }
+        vcpkg_install = std::move(*installed);
+        for (auto &[name, info] : locked_deps) {
+            if (info.source != "vcpkg") {
+                continue;
+            }
+            const auto resolved = vcpkg_install->packages.find(utils::vcpkg::statusKey(name, info.triplet));
+            if (resolved == vcpkg_install->packages.end()) {
+                return std::unexpected(
+                    std::format("vcpkg did not report an installed version for '{}:{}'", name, info.triplet));
+            }
+            info.version = resolved->second.version;
+            info.port_version = resolved->second.port_version;
+        }
+    }
 
     namespace yaml = utils::yaml;
     ryml::Tree lock_tree;
     ryml::NodeRef lock_root = lock_tree.rootref();
     lock_root |= ryml::MAP;
-    lock_root["lockfile_version"] = "1.0.0";
+    lock_root["lockfile_version"] = "1.1.0";
+    if (vcpkg_install) {
+        ryml::NodeRef vcpkg_node = yaml::childOrCreate(lock_root, "vcpkg");
+        vcpkg_node |= ryml::MAP;
+        vcpkg_node["builtin_baseline"] = lock_tree.to_arena(vcpkg_install->builtin_baseline);
+    }
     ryml::NodeRef deps_node = yaml::childOrCreate(lock_root, "dependencies");
     deps_node |= ryml::SEQ;
 
@@ -199,6 +248,8 @@ Result<void> action(const Parse &parse_args) {
             dep_node["hash"] = lock_tree.to_arena(info.hash);
         if (!info.triplet.empty())
             dep_node["triplet"] = lock_tree.to_arena(info.triplet);
+        if (info.source == "vcpkg")
+            dep_node["port_version"] = lock_tree.to_arena(std::to_string(info.port_version));
         if (!info.path.empty())
             dep_node["path"] = lock_tree.to_arena(info.path);
     }

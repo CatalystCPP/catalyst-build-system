@@ -26,8 +26,7 @@ OPTIONS:
                               source directories
           --build-dir TEXT [build]  
                               build directory
-          --ides ENUM:value in {clion->1,vscode->0} OR {1,0} ... 
-                              IDEs to generate project files for
+          --ides ENUM ...     IDEs to generate project files for (vscode, clion)
   -p,     --profile TEXT [common]  
                               the profile to initialize
   -f,     --force-ide [0]     force emitting IDE config even if one already exists

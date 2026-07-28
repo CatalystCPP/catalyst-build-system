@@ -21,6 +21,7 @@ struct Parse {
     std::vector<std::string> profiles;
     std::vector<std::string> enabled_features;
     std::string backend;
+    bool skip_pre_generate = false;
 };
 
 struct FindRes {
@@ -33,6 +34,7 @@ struct FindRes {
 Result<utils::yaml::Configuration> profileComposition(const std::vector<std::string> &profiles);
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);
 Result<void> action(const Parse &);
+std::string buildFilename(std::string_view generator);
 
 Result<std::string> libPath(const utils::yaml::Configuration &profile_comp,
                             const std::vector<std::string> &profiles,
@@ -41,10 +43,11 @@ Result<FindRes>
 findDep(const std::string &build_dir, ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
 Result<FindRes> findLocal(ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
 Result<FindRes> findSystem(ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
-Result<FindRes> findVcpkg(ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
+Result<FindRes>
+findVcpkg(const std::string &build_dir, ryml::ConstNodeRef dep, const catalyst::toolchain::ToolchainDef &tc);
 
 /// Parsed view of vcpkg's installed-package database
-/// ($VCPKG_ROOT/installed/vcpkg/status), which is in Debian-control format.
+/// (<build-dir>/vcpkg_installed/vcpkg/status), which is in Debian-control format.
 struct VcpkgStatusDb {
     /// Maps an installed package to its direct dependency names. The key is
     /// "<name>\x1f<triplet>"; build it with vcpkgStatusKey(). Dependencies from

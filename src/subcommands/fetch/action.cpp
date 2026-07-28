@@ -19,6 +19,7 @@
 #include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/result.hpp"
 #include "catalyst/utils/toolchain.hpp"
+#include "catalyst/utils/vcpkg.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::fetch {
@@ -165,31 +166,6 @@ Result<void> fetchConanDeps(const std::vector<ryml::ConstNodeRef> &conan_deps,
 
 namespace {
 
-Result<void> fetchVcpkg(const std::string &name,
-                        const std::string &triplet,
-                        [[maybe_unused]] const catalyst::toolchain::ToolchainDef &tc) {
-    catalyst::logger.debug("Fetching vcpkg dependency: {} with triplet: {}", name, triplet);
-    char *vcpkg_root_env = std::getenv("VCPKG_ROOT");
-    if (vcpkg_root_env == nullptr) {
-        return std::unexpected(
-            "VCPKG_ROOT environment variable not set. Please set it to your vcpkg installation directory.");
-    }
-    fs::path vcpkg_root(vcpkg_root_env);
-    fs::path vcpkg_exe = vcpkg_root / "vcpkg";
-#if defined(_WIN32)
-    std::string exe_ext = tc.extensions.executable.empty() ? ".exe" : tc.extensions.executable;
-    vcpkg_exe.replace_extension(exe_ext);
-#endif
-    std::string target = name + ":" + triplet;
-    std::string command = std::format("\"{}\" install {}", vcpkg_exe.string(), target);
-    catalyst::logger.debug("Executing command: {}", command);
-    catalyst::logger.debug("Fetching: {} from vcpkg", target);
-    if (catalyst::processExec({vcpkg_exe.string(), "install", target}).value().get() != 0) {
-        return std::unexpected(std::format("Failed to fetch dependency: {}", target));
-    }
-    return {};
-}
-
 Result<void> fetchGit(
     const std::string &build_dir, std::string name, std::string source, std::string version, std::string hash = "") {
     catalyst::logger.debug("Fetching git dependency: {}@{} (hash: {}) from {}", name, version, hash, source);
@@ -320,13 +296,13 @@ struct LockedDep {
     std::string version;
     std::string triplet;
     std::string path;
+    std::optional<int> port_version;
 };
 
 Result<void> fetchDependency(ryml::ConstNodeRef dep,
                              const std::string &build_dir,
                              const std::unordered_map<std::string, LockedDep> &lockfile_deps,
-                             const Parse &parse_args,
-                             const catalyst::toolchain::ToolchainDef &tc) {
+                             const Parse &parse_args) {
     namespace yaml = utils::yaml;
     auto name = yaml::asString(yaml::child(dep, "name")).value_or("");
     auto source = yaml::asString(yaml::child(dep, "source")).value_or("");
@@ -365,38 +341,16 @@ Result<void> fetchDependency(ryml::ConstNodeRef dep,
     std::string locked_hash;
     std::string locked_url;
     std::string locked_version;
-    std::string locked_triplet;
     std::string locked_path;
     if (lockfile_deps.contains(name)) {
         locked_hash = lockfile_deps.at(name).hash;
         locked_url = lockfile_deps.at(name).url;
         locked_version = lockfile_deps.at(name).version;
-        locked_triplet = lockfile_deps.at(name).triplet;
         locked_path = lockfile_deps.at(name).path;
         catalyst::logger.debug("Dependency '{}' is locked.", name);
     }
 
-    if (source == "vcpkg") {
-        std::string version;
-        if (!locked_version.empty())
-            version = locked_version;
-        else if (auto v = yaml::asString(yaml::child(dep, "version")))
-            version = *v;
-        else
-            return std::unexpected(std::format("vcpkg dependency '{}' is missing version.", name));
-
-        std::string triplet;
-        if (!locked_triplet.empty())
-            triplet = locked_triplet;
-        else if (auto t = yaml::asString(yaml::child(dep, "triplet")))
-            triplet = *t;
-        else
-            return std::unexpected(std::format("vcpkg dependency '{}' is missing triplet.", name));
-
-        if (auto res = fetchVcpkg(name, triplet, tc); !res)
-            return std::unexpected(res.error());
-
-    } else if (source == "system") {
+    if (source == "system") {
         if (auto res = fetchSystem(name); !res)
             return std::unexpected(res.error());
     } else if (source == "custom") {
@@ -450,14 +404,6 @@ Result<void> action(const Parse &parse_args) {
     catalyst::logger.debug("Composing profiles.");
     utils::yaml::Configuration config{parse_args.profiles};
 
-    // Resolve active toolchain to get extensions
-    catalyst::toolchain::ToolchainDef tc;
-    if (auto toolchain_path = config.getString("manifest.toolchain")) {
-        if (auto parsed = catalyst::toolchain::parseToolchain(*toolchain_path)) {
-            tc = std::move(*parsed);
-        }
-    }
-
     catalyst::logger.debug("Running pre-fetch hooks.");
     if (auto res = hooks::preFetch(config); !res) {
         return res;
@@ -465,6 +411,7 @@ Result<void> action(const Parse &parse_args) {
 
     // Load lockfile if it exists
     std::unordered_map<std::string, LockedDep> lockfile_deps;
+    std::optional<std::string> locked_vcpkg_baseline;
     fs::path lockfile_path = "catalyst.lock";
     if (parse_args.workspace) {
         lockfile_path = parse_args.workspace->getRoot() / "catalyst.lock";
@@ -478,6 +425,8 @@ Result<void> action(const Parse &parse_args) {
             catalyst::logger.warn("Failed to load lockfile: {}", lock_tree.error());
         } else if (ryml::ConstNodeRef lock_deps = yaml::child(lock_tree->crootref(), "dependencies");
                    lock_deps.readable() && lock_deps.is_seq()) {
+            locked_vcpkg_baseline =
+                yaml::asString(yaml::child(yaml::child(lock_tree->crootref(), "vcpkg"), "builtin_baseline"));
             for (ryml::ConstNodeRef dep : lock_deps.children()) {
                 auto dep_name = yaml::asString(yaml::child(dep, "name"));
                 if (!dep_name)
@@ -488,6 +437,7 @@ Result<void> action(const Parse &parse_args) {
                 ld.version = yaml::asString(yaml::child(dep, "version")).value_or("");
                 ld.triplet = yaml::asString(yaml::child(dep, "triplet")).value_or("");
                 ld.path = yaml::asString(yaml::child(dep, "path")).value_or("");
+                ld.port_version = yaml::asInt(yaml::child(dep, "port_version"));
                 lockfile_deps[*dep_name] = ld;
             }
         }
@@ -499,6 +449,7 @@ Result<void> action(const Parse &parse_args) {
         std::vector<ryml::ConstNodeRef> parallel_deps;
         std::vector<ryml::ConstNodeRef> serial_deps;
         std::vector<ryml::ConstNodeRef> conan_deps;
+        std::vector<utils::vcpkg::Dependency> vcpkg_deps;
         std::unordered_set<std::string> seen_deps;
 
         for (int ii = 0; ryml::ConstNodeRef dep : deps.children()) {
@@ -524,11 +475,32 @@ Result<void> action(const Parse &parse_args) {
             std::string source = *source_opt;
             bool is_workspace_member = parse_args.workspace && parse_args.workspace->findPackage(name).has_value();
 
+            if (source == "vcpkg") {
+                const auto locked = lockfile_deps.find(name);
+                const std::string version = locked != lockfile_deps.end() && !locked->second.version.empty()
+                                                ? locked->second.version
+                                                : yaml::asString(yaml::child(dep, "version")).value_or("latest");
+                const std::string triplet = locked != lockfile_deps.end() && !locked->second.triplet.empty()
+                                                ? locked->second.triplet
+                                                : yaml::asString(yaml::child(dep, "triplet")).value_or("");
+                if (triplet.empty()) {
+                    return std::unexpected(std::format("vcpkg dependency '{}' is missing triplet.", name));
+                }
+                vcpkg_deps.push_back(
+                    {.name = name,
+                     .version = version,
+                     .triplet = triplet,
+                     .features = yaml::asStringVector(yaml::child(dep, "using")).value_or(std::vector<std::string>{}),
+                     .port_version = locked != lockfile_deps.end() ? locked->second.port_version : std::nullopt});
+                ++ii;
+                continue;
+            }
+
             // 2. Categorize by safety
             // Workspace links, vcpkg installs, and local builds mutate shared state
             if (source == "conan") {
                 conan_deps.push_back(dep);
-            } else if (is_workspace_member || source == "vcpkg" || source == "local") {
+            } else if (is_workspace_member || source == "local") {
                 serial_deps.push_back(dep);
             } else {
                 parallel_deps.push_back(dep);
@@ -536,13 +508,21 @@ Result<void> action(const Parse &parse_args) {
             ++ii;
         }
 
+        if (!vcpkg_deps.empty()) {
+            catalyst::logger.info("Installing vcpkg dependencies in manifest mode.");
+            auto installed = utils::vcpkg::install(vcpkg_deps, build_dir, locked_vcpkg_baseline);
+            if (!installed) {
+                return std::unexpected(installed.error());
+            }
+        }
+
         // 3. Execute parallel-safe (git, system)
         if (!parallel_deps.empty()) {
             std::vector<std::future<Result<void>>> futures;
             for (auto dep : parallel_deps) {
                 // Launch fetch in parallel
-                futures.push_back(std::async(std::launch::async, [dep, build_dir, &lockfile_deps, &parse_args, tc]() {
-                    return fetchDependency(dep, build_dir, lockfile_deps, parse_args, tc);
+                futures.push_back(std::async(std::launch::async, [dep, build_dir, &lockfile_deps, &parse_args]() {
+                    return fetchDependency(dep, build_dir, lockfile_deps, parse_args);
                 }));
             }
 
@@ -566,7 +546,7 @@ Result<void> action(const Parse &parse_args) {
         // 4. Execute serial-only (vcpkg, local, workspace link)
         // Maintain fail-fast semantics for these
         for (auto dep : serial_deps) {
-            if (auto res = fetchDependency(dep, build_dir, lockfile_deps, parse_args, tc); !res) {
+            if (auto res = fetchDependency(dep, build_dir, lockfile_deps, parse_args); !res) {
                 return res; // Fail fast
             }
         }

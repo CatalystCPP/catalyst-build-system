@@ -9,11 +9,19 @@
 #include "catalyst/subcommands/fetch.hpp"
 #include "catalyst/subcommands/generate.hpp"
 #include "catalyst/utils/os/os_defs.hpp"
+#include "catalyst/utils/vcpkg.hpp"
 #include "catalyst/utils/yaml/ryml_init.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
 TEST_CASE("Basic Check", "[basic]") {
     REQUIRE(1 == 1);
+}
+
+TEST_CASE("Generator build filenames", "[generate]") {
+    REQUIRE(catalyst::generate::buildFilename("cob") == "catalyst.build");
+    REQUIRE(catalyst::generate::buildFilename("ninja") == "build.ninja");
+    REQUIRE(catalyst::generate::buildFilename("make") == "Makefile");
+    REQUIRE(catalyst::generate::buildFilename("gmake") == "Makefile");
 }
 
 class MockProcessExecutor : public catalyst::IProcessExecutor {
@@ -341,6 +349,109 @@ Status: install ok installed
 
     // not-installed stanzas are skipped entirely.
     REQUIRE_FALSE(db.depends.contains(vcpkgStatusKey("removed-pkg", "x64-linux")));
+}
+
+TEST_CASE("vcpkg manifest generation pins exact versions and preserves features", "[vcpkg][manifest]") {
+    using catalyst::utils::vcpkg::Dependency;
+    const std::vector<Dependency> dependencies = {
+        {.name = "raylib", .version = "4.5.0", .triplet = "x64-linux", .features = {"use-audio"}, .port_version = 2},
+        {.name = "zlib", .version = "latest", .triplet = "x64-linux", .features = {}, .port_version = std::nullopt},
+    };
+
+    auto manifest = catalyst::utils::vcpkg::manifestJson(dependencies, "903956eff7cb94774a9e805ff573c000afc43e3e");
+
+    REQUIRE(manifest.has_value());
+    CHECK(manifest->find("\"builtin-baseline\": \"903956eff7cb94774a9e805ff573c000afc43e3e\"") != std::string::npos);
+    CHECK(manifest->find("{\"name\": \"raylib\", \"features\": [\"use-audio\"]}") != std::string::npos);
+    CHECK(manifest->find("{\"name\": \"raylib\", \"version\": \"4.5.0\", \"port-version\": 2}") != std::string::npos);
+    CHECK(manifest->find("{\"name\": \"zlib\", \"version\"") == std::string::npos);
+}
+
+TEST_CASE("vcpkg installed status parsing records resolved versions and port revisions", "[vcpkg][manifest]") {
+    constexpr std::string_view status = R"(Package: raylib
+Version: 4.5.0
+Port-Version: 2
+Architecture: x64-linux
+Status: install ok installed
+
+Package: raylib
+Feature: use-audio
+Version: 4.5.0
+Port-Version: 2
+Architecture: x64-linux
+Status: install ok installed
+
+Package: removed
+Version: 1.0.0
+Architecture: x64-linux
+Status: purge ok not-installed
+)";
+
+    auto packages = catalyst::utils::vcpkg::parseInstalledVersions(status);
+
+    REQUIRE(packages.size() == 1);
+    const auto &raylib = packages.at(catalyst::utils::vcpkg::statusKey("raylib", "x64-linux"));
+    CHECK(raylib.version == "4.5.0");
+    CHECK(raylib.port_version == 2);
+}
+
+TEST_CASE("vcpkg manifest installation uses a profile-local install root", "[vcpkg][manifest]") {
+    namespace fs = std::filesystem;
+    using catalyst::utils::vcpkg::Dependency;
+
+    const fs::path temp_root = fs::temp_directory_path() / "catalyst_test_vcpkg_manifest_install";
+    const fs::path build_dir = temp_root / "build";
+    const fs::path status_path = build_dir / "vcpkg_installed" / "vcpkg" / "status";
+    fs::remove_all(temp_root);
+    fs::create_directories(status_path.parent_path());
+    {
+        std::ofstream status(status_path);
+        status << "Package: raylib\n"
+                  "Version: 4.5.0\n"
+                  "Port-Version: 2\n"
+                  "Architecture: x64-linux\n"
+                  "Status: install ok installed\n";
+    }
+
+    const char *original_vcpkg_root = std::getenv("VCPKG_ROOT");
+    const std::optional<std::string> saved_vcpkg_root =
+        original_vcpkg_root == nullptr ? std::nullopt : std::optional<std::string>{original_vcpkg_root};
+#ifdef _WIN32
+    _putenv_s("VCPKG_ROOT", (temp_root / "vcpkg").string().c_str());
+#else
+    setenv("VCPKG_ROOT", (temp_root / "vcpkg").string().c_str(), 1);
+#endif
+
+    auto mock_executor = std::make_shared<MockProcessExecutor>();
+    catalyst::setProcessExecutor(mock_executor);
+    const std::vector<Dependency> dependencies = {
+        {.name = "raylib", .version = "4.5.0", .triplet = "x64-linux", .features = {}, .port_version = 2},
+    };
+
+    auto installed = catalyst::utils::vcpkg::install(
+        dependencies, build_dir, std::string{"903956eff7cb94774a9e805ff573c000afc43e3e"});
+
+    REQUIRE(installed.has_value());
+    REQUIRE(mock_executor->executed_commands.size() == 1);
+    const auto &command = mock_executor->executed_commands.front();
+    CHECK(command[1] == "install");
+    CHECK(std::ranges::find(command, "--x-manifest-root=" + (build_dir / "vcpkg-manifests/x64-linux").string())
+          != command.end());
+    CHECK(std::ranges::find(command, "--x-install-root=" + (build_dir / "vcpkg_installed").string()) != command.end());
+    CHECK(std::ranges::find(command, "--triplet=x64-linux") != command.end());
+    CHECK(installed->packages.at(catalyst::utils::vcpkg::statusKey("raylib", "x64-linux")).version == "4.5.0");
+
+    catalyst::setProcessExecutor(std::make_shared<catalyst::ProcessExecutor>());
+#ifdef _WIN32
+    _putenv_s("VCPKG_ROOT", saved_vcpkg_root.value_or("").c_str());
+#else
+    if (saved_vcpkg_root) {
+        setenv("VCPKG_ROOT", saved_vcpkg_root->c_str(), 1);
+    } else {
+        unsetenv("VCPKG_ROOT");
+    }
+#endif
+    fs::remove_all(temp_root);
 }
 
 TEST_CASE("vcpkgTransitiveClosure resolves and orders dependencies", "[vcpkg]") {
