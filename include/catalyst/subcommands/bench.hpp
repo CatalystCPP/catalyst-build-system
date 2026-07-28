@@ -12,6 +12,7 @@ namespace catalyst::bench {
 struct Parse {
     std::vector<std::string> params;
     std::optional<Workspace> workspace;
+    bool rebuild;
 };
 
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);
