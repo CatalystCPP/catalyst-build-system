@@ -64,6 +64,10 @@ Refer to the `.clang-format` file in the root directory for exact rules.
 - `docs/`: Documentation (MkDocs format).
 - `tests/`: Unit and integration tests.
 
+## Release and Support Policy
+
+See the [release and support policy](README.md#release-and-support-policy) prior to contributing.
+
 ## License
 
 By contributing to Catalyst, you agree that your contributions will be licensed under the [Apache 2.0 License](LICENSE.md).

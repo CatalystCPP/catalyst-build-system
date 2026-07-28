@@ -113,6 +113,26 @@ See the full [CLI Reference](https://catalystcpp.github.io/catalyst-build-system
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and patch guidelines.
 
+## Release and Support Policy
+
+Published versions are available on [GitHub Releases](https://github.com/CatalystCPP/catalyst-build-system/releases).
+The following policy takes effect with Catalyst 2.0.0.
+
+### Release Cadence
+
+- A patch release is scheduled every week (Monday 00:00 PST). A patch may contain no functional changes.
+- A minor release is scheduled every five weeks.
+- A major release is scheduled every 25 weeks.
+- Each week, the highest applicable release is shipped. A major release on a major-release week, a minor release on a minor-release week, and a patch release otherwise.
+
+### Support Policy
+
+- Every `x.0` major release line is a long-term support (LTS) line.
+- An LTS line is supported until `x+3.0.0` is released, approximately 75 weeks later.
+- Support applies to the latest `x.0.k` patch, not the original `x.0.0` artifact.
+- Within the current major version, the latest patch of every minor line is supported until the next major version is released.
+- No support is guaranteed for other releases.
+
 ## License
 
 Apache License 2.0, see [LICENSE.md](LICENSE.md).
