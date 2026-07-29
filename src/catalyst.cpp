@@ -1,4 +1,6 @@
+#include <filesystem>
 #include <print>
+#include <utility>
 
 #include <CLI11.hpp>
 
@@ -15,6 +17,11 @@ int main(int argc, char **argv) {
     catalyst::CliContext ctx{.workspace = catalyst::Workspace::findRoot()};
     if (auto [exit_code, should_return] = catalyst::parseCli(argc, argv, ctx); should_return)
         return exit_code;
+
+    std::filesystem::path executable_path{argv[0]};
+    if (executable_path.has_parent_path())
+        executable_path = std::filesystem::absolute(executable_path);
+    ctx.build_res->executable_path = std::move(executable_path);
 
     auto assign_ws_if = [&ctx](auto *subc, auto &res) constexpr -> bool {
         return (subc && *subc) ? (res->workspace = ctx.workspace, true) : false;

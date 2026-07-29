@@ -1,5 +1,6 @@
 #pragma once
 #include <expected>
+#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -20,6 +21,7 @@ struct Parse {
     std::vector<std::string> enabled_features;
     std::string backend;
     std::optional<Workspace> workspace;
+    std::filesystem::path executable_path{"catalyst"};
 };
 
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);
