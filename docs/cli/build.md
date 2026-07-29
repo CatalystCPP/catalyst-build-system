@@ -27,7 +27,11 @@ OPTIONS:
 
 ## Details
 
-When running with `--workspace` or `--all`, Catalyst determines the correct build order based on the dependencies between workspace members. It ensures that dependencies are built before the packages that rely on them.
+When running with `--workspace` or `--all`, Catalyst determines the dependency graph between workspace members.
+Independent members build concurrently, while each dependent member waits for its workspace dependencies to finish
+successfully.
+
+Workspace builds do not support `--watch`; use watch mode from an individual workspace member instead.
 
 ### Feature flag overrides
 
