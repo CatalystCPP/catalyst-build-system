@@ -3,9 +3,11 @@
 #include <cstdlib>
 #include <expected>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <future>
 #include <optional>
+#include <random>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -57,6 +59,10 @@ Result<void> ensureEmbeddedCobExtracted() {
         if (fs::file_size(cob_path, ec) == catalyst::embedded::cob_binary_len) {
             return {};
         }
+        fs::remove(cob_path, ec);
+        if (ec) {
+            return std::unexpected("Failed to replace stale embedded cob: " + ec.message());
+        }
     }
 
     fs::create_directories(cob_path.parent_path(), ec);
@@ -64,24 +70,45 @@ Result<void> ensureEmbeddedCobExtracted() {
         return std::unexpected("Failed to create directories for embedded cob: " + ec.message());
     }
 
-    std::ofstream out(cob_path, std::ios::binary);
+    std::random_device random;
+    fs::path temporary_path = cob_path;
+    temporary_path += std::format(".tmp.{:08x}{:08x}", random(), random());
+
+    std::ofstream out(temporary_path, std::ios::binary);
     if (!out) {
-        return std::unexpected("Failed to open embedded cob destination file for writing: " + cob_path.string());
+        return std::unexpected("Failed to open embedded cob destination file for writing: " + temporary_path.string());
     }
 
     out.write(reinterpret_cast<const char *>(catalyst::embedded::cob_binary), catalyst::embedded::cob_binary_len);
     out.close();
+    if (!out) {
+        fs::remove(temporary_path, ec);
+        return std::unexpected("Failed to write embedded cob destination: " + temporary_path.string());
+    }
 
 #ifndef _WIN32
-    fs::permissions(cob_path,
+    fs::permissions(temporary_path,
                     fs::perms::owner_all | fs::perms::group_read | fs::perms::group_exec | fs::perms::others_read
                         | fs::perms::others_exec,
                     fs::perm_options::replace,
                     ec);
     if (ec) {
+        fs::remove(temporary_path, ec);
         return std::unexpected("Failed to set executable permissions on embedded cob: " + ec.message());
     }
 #endif
+
+    fs::rename(temporary_path, cob_path, ec);
+    if (ec) {
+        std::error_code inspect_ec;
+        const bool another_process_completed =
+            fs::exists(cob_path, inspect_ec)
+            && fs::file_size(cob_path, inspect_ec) == catalyst::embedded::cob_binary_len;
+        fs::remove(temporary_path, inspect_ec);
+        if (!another_process_completed) {
+            return std::unexpected("Failed to install embedded cob: " + ec.message());
+        }
+    }
 
     return {};
 }
