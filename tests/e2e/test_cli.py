@@ -1,6 +1,7 @@
 import os
 import subprocess
 import shutil
+import textwrap
 from pathlib import Path
 import pytest
 
@@ -100,6 +101,71 @@ int main() {
     run_result = subprocess.run([str(app_bin)], capture_output=True, text=True)
     assert run_result.returncode == 0
     assert "Hello from libB!" in run_result.stdout
+
+
+def test_independent_workspace_builds_run_in_parallel(tmp_path):
+    workspace_dir = tmp_path / "parallel_workspace"
+    workspace_dir.mkdir()
+    (workspace_dir / "isolated_home").mkdir()
+
+    (workspace_dir / "WORKSPACE.yaml").write_text(textwrap.dedent("""\
+        left:
+          path: left
+          profiles: [common]
+        right:
+          path: right
+          profiles: [common]
+        """))
+
+    (workspace_dir / "barrier.py").write_text(textwrap.dedent("""\
+        import sys
+        import time
+        from pathlib import Path
+
+        root = Path(__file__).parent
+        member = sys.argv[1]
+        other = "right" if member == "left" else "left"
+        (root / f"{member}.started").write_text("")
+        deadline = time.monotonic() + 5
+        while not (root / f"{other}.started").exists():
+            if time.monotonic() >= deadline:
+                raise SystemExit(f"{other} did not start concurrently")
+            time.sleep(0.01)
+        """))
+
+    for member in ("left", "right"):
+        member_dir = workspace_dir / member
+        (member_dir / "src").mkdir(parents=True)
+        (member_dir / "catalyst.yaml").write_text(textwrap.dedent(f"""\
+            meta:
+              generator: cob
+            manifest:
+              name: {member}
+              type: BINARY
+              dirs:
+                source: [src]
+                include: []
+                build: build
+            hooks:
+              pre-build:
+                - command: "python3 ../barrier.py {member}"
+            """))
+        (member_dir / "src" / "main.cpp").write_text("int main() { return 0; }\n")
+
+    env = os.environ.copy()
+    env["HOME"] = str(workspace_dir / "isolated_home")
+    result = subprocess.run(
+        [str(CATALYST_BIN), "build", "--workspace"],
+        cwd=workspace_dir,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    assert result.returncode == 0, f"Build failed:\n{result.stdout}\n{result.stderr}"
+    assert (workspace_dir / "left" / "build" / "common" / "left").exists()
+    assert (workspace_dir / "right" / "build" / "common" / "right").exists()
+
 
 def test_init_and_build(tmp_path):
     project_dir = tmp_path / "new_project"

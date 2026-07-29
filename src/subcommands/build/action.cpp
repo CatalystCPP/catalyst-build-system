@@ -1,12 +1,16 @@
 #include <algorithm>
+#include <cstdint>
 #include <expected>
 #include <filesystem>
 #include <format>
 #include <fstream>
+#include <functional>
+#include <future>
 #include <optional>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "catalyst/hooks.hpp"
@@ -51,16 +55,19 @@ struct BuildFailureGuard {
 
 struct PackageInfo {
     std::string name;
-    std::string workspace_member_key;
+    WorkspaceMember member;
     std::vector<std::string> dependencies;
 };
 
-/// Perform a topological sort on workspace members based on their dependencies
-/// will look through all the packages in the workspace, read their manifests,
-/// and then perform a topological sort to determine the correct build order.
-std::vector<WorkspaceMember> buildOrderTopSort(const Workspace &ws) {
+struct WorkspaceBuildGraph {
     std::unordered_map<std::string, PackageInfo> packages;
+    std::vector<std::string> build_order;
+};
 
+enum class VisitState : std::uint8_t { Unvisited, Visiting, Visited };
+
+Result<WorkspaceBuildGraph> workspaceBuildGraph(const Workspace &ws) {
+    WorkspaceBuildGraph graph;
     for (const auto &[key, member] : ws.getMembers()) {
         try {
             std::vector<std::string> profiles = member.profiles;
@@ -77,7 +84,7 @@ std::vector<WorkspaceMember> buildOrderTopSort(const Workspace &ws) {
 
             PackageInfo info;
             info.name = name;
-            info.workspace_member_key = key;
+            info.member = member;
 
             namespace yaml = utils::yaml;
             if (ryml::ConstNodeRef deps = yaml::child(config.rootRef(), "dependencies");
@@ -88,49 +95,202 @@ std::vector<WorkspaceMember> buildOrderTopSort(const Workspace &ws) {
                     }
                 }
             }
-            packages[name] = info;
-
+            if (!graph.packages.emplace(name, std::move(info)).second) {
+                return std::unexpected(std::format("Workspace contains multiple members named '{}'.", name));
+            }
         } catch (const std::exception &e) {
-            catalyst::logger.error("Failed to load config for member {}: {}", key, e.what());
+            return std::unexpected(std::format("Failed to load config for workspace member '{}': {}", key, e.what()));
+        } catch (...) {
+            return std::unexpected(std::format("Failed to load config for workspace member '{}'.", key));
         }
     }
 
-    std::vector<WorkspaceMember> order;
-    std::unordered_set<std::string> visited;
-    std::unordered_set<std::string> visiting;
-
-    std::function<void(const std::string &)> visit = [&](const std::string &pkg_name) {
-        if (visited.contains(pkg_name))
-            return;
-        if (visiting.contains(pkg_name)) {
-            catalyst::logger.warn("Circular dependency detected involving {}", pkg_name);
-            return;
+    std::unordered_map<std::string, VisitState> states;
+    std::vector<std::string> active_path;
+    std::function<Result<void>(const std::string &)> visit = [&](const std::string &package_name) -> Result<void> {
+        const VisitState state = states[package_name];
+        if (state == VisitState::Visited)
+            return {};
+        if (state == VisitState::Visiting) {
+            auto cycle_start = std::ranges::find(active_path, package_name);
+            std::string cycle;
+            for (auto it = cycle_start; it != active_path.end(); ++it)
+                cycle += (cycle.empty() ? "" : " -> ") + *it;
+            cycle += " -> " + package_name;
+            return std::unexpected("Circular workspace dependency detected: " + cycle);
         }
-        visiting.insert(pkg_name);
 
-        if (packages.contains(pkg_name)) {
-            const auto &info = packages[pkg_name];
-            for (const auto &dep : info.dependencies) {
-                if (packages.contains(dep)) {
-                    visit(dep);
-                }
-            }
-
-            std::string key = info.workspace_member_key;
-            auto it = ws.getMembers().find(key);
-            if (it != ws.getMembers().end()) {
-                order.push_back(it->second);
+        states[package_name] = VisitState::Visiting;
+        active_path.push_back(package_name);
+        for (const auto &dependency : graph.packages.at(package_name).dependencies) {
+            if (graph.packages.contains(dependency)) {
+                if (auto result = visit(dependency); !result)
+                    return result;
             }
         }
-        visited.insert(pkg_name);
-        visiting.erase(pkg_name);
+        active_path.pop_back();
+        states[package_name] = VisitState::Visited;
+        graph.build_order.push_back(package_name);
+        return {};
     };
 
-    for (const auto &[name, info] : packages) {
-        visit(name);
+    for (const auto &package : graph.packages) {
+        if (auto result = visit(package.first); !result)
+            return std::unexpected(result.error());
     }
 
-    return order;
+    return graph;
+}
+
+Result<std::unordered_set<std::string>> workspaceTargets(const WorkspaceBuildGraph &graph,
+                                                         const std::string &requested_package) {
+    if (requested_package.empty()) {
+        std::unordered_set<std::string> targets;
+        targets.reserve(graph.packages.size());
+        for (const auto &package : graph.packages)
+            targets.insert(package.first);
+        return targets;
+    }
+    if (!graph.packages.contains(requested_package))
+        return std::unexpected("Package " + requested_package + " not found in workspace.");
+
+    std::unordered_set<std::string> targets;
+    std::function<void(const std::string &)> add_with_dependencies = [&](const std::string &package_name) -> void {
+        if (!targets.insert(package_name).second)
+            return;
+        for (const auto &dependency : graph.packages.at(package_name).dependencies)
+            if (graph.packages.contains(dependency))
+                add_with_dependencies(dependency);
+    };
+    add_with_dependencies(requested_package);
+    return targets;
+}
+
+std::vector<std::string> workspaceMemberBuildCommand(const Parse &args) {
+    std::vector<std::string> command{args.executable_path.string(), "build"};
+    if (args.regen)
+        command.emplace_back("--regen");
+    if (args.force_rebuild)
+        command.emplace_back("--force-rebuild");
+    if (args.force_refetch)
+        command.emplace_back("--force-refetch");
+    if (!args.profiles.empty()) {
+        command.emplace_back("--profiles");
+        command.insert(command.end(), args.profiles.begin(), args.profiles.end());
+    }
+    if (!args.enabled_features.empty()) {
+        command.emplace_back("--features");
+        command.insert(command.end(), args.enabled_features.begin(), args.enabled_features.end());
+    }
+    if (!args.backend.empty()) {
+        command.emplace_back("--backend");
+        command.push_back(args.backend);
+    }
+    return command;
+}
+
+Result<void> buildWorkspaceMember(const PackageInfo &package, Parse args) {
+    if (args.profiles.size() == 1 && args.profiles.front() == "common" && !package.member.profiles.empty())
+        args.profiles = package.member.profiles;
+
+    catalyst::logger.info("Building workspace member: {}", package.name);
+    std::unordered_map<std::string, std::string> environment{{"CATALYST_MACHINE", "1"}};
+    if (catalyst::logger.getVerboseLogging())
+        environment["CATALYST_VERBOSE"] = "1";
+
+    auto process =
+        catalyst::processExec(workspaceMemberBuildCommand(args), package.member.path.string(), std::move(environment));
+    if (!process)
+        return std::unexpected(std::format("Failed to start workspace member '{}': {}", package.name, process.error()));
+
+    const int exit_code = process->get();
+    if (exit_code != 0)
+        return std::unexpected(
+            std::format("Workspace member '{}' build exited with code {}.", package.name, exit_code));
+    return {};
+}
+
+Result<void> buildWorkspace(const WorkspaceBuildGraph &graph,
+                            const std::unordered_set<std::string> &targets,
+                            const Parse &parse_args) {
+    using BuildFuture = std::shared_future<Result<void>>;
+    std::unordered_map<std::string, BuildFuture> futures;
+    std::vector<std::string> dispatched;
+    std::optional<std::string> dispatch_error;
+
+    for (const auto &package_name : graph.build_order) {
+        if (!targets.contains(package_name))
+            continue;
+
+        const PackageInfo &package = graph.packages.at(package_name);
+        std::vector<std::pair<std::string, BuildFuture>> dependency_futures;
+        for (const auto &dependency : package.dependencies) {
+            if (targets.contains(dependency) && futures.contains(dependency))
+                dependency_futures.emplace_back(dependency, futures.at(dependency));
+        }
+
+        try {
+            auto future =
+                std::async(
+                    std::launch::async,
+                    [package,
+                     args = parse_args,
+                     dependencies = std::move(dependency_futures)]() mutable -> Result<void> {
+                        try {
+                            for (const auto &[dependency_name, dependency_future] : dependencies) {
+                                const Result<void> &dependency_result = dependency_future.get();
+                                if (!dependency_result) {
+                                    return std::unexpected(std::format(
+                                        "Workspace member '{}' was not built because dependency '{}' failed: "
+                                        "{}",
+                                        package.name,
+                                        dependency_name,
+                                        dependency_result.error()));
+                                }
+                            }
+                            return buildWorkspaceMember(package, std::move(args));
+                        } catch (const std::exception &error) {
+                            return std::unexpected(std::format(
+                                "Workspace member '{}' build threw an exception: {}", package.name, error.what()));
+                        } catch (...) {
+                            return std::unexpected(
+                                std::format("Workspace member '{}' build threw an unknown exception.", package.name));
+                        }
+                    })
+                    .share();
+            futures.emplace(package_name, std::move(future));
+            dispatched.push_back(package_name);
+        } catch (const std::exception &error) {
+            dispatch_error = std::format("Failed to dispatch workspace member '{}': {}", package_name, error.what());
+            break;
+        } catch (...) {
+            dispatch_error = std::format("Failed to dispatch workspace member '{}'.", package_name);
+            break;
+        }
+    }
+
+    std::vector<std::string> errors;
+    if (dispatch_error)
+        errors.push_back(std::move(*dispatch_error));
+    for (const auto &package_name : dispatched) {
+        try {
+            const Result<void> &result = futures.at(package_name).get();
+            if (!result)
+                errors.push_back(result.error());
+        } catch (const std::exception &error) {
+            errors.push_back(std::format("Workspace member '{}' future failed: {}", package_name, error.what()));
+        } catch (...) {
+            errors.push_back(std::format("Workspace member '{}' future failed.", package_name));
+        }
+    }
+
+    if (errors.empty())
+        return {};
+
+    std::string message = "Workspace build failed:";
+    for (const auto &error : errors)
+        message += "\n - " + error;
+    return std::unexpected(std::move(message));
 }
 
 bool depMissing(const utils::yaml::Configuration &config) {
@@ -226,58 +386,25 @@ Result<void> action(const Parse &parse_args) {
     catalyst::logger.debug("Build subcommand invoked.");
 
     if (parse_args.workspace) {
-        fs::path current = fs::current_path();
         bool is_root = false;
         try {
-            is_root = fs::equivalent(parse_args.workspace->getRoot(), current);
+            is_root = fs::equivalent(parse_args.workspace->getRoot(), fs::current_path());
         } catch (...) {
             std::ignore;
         }
 
         if (parse_args.workspace_build || is_root || !parse_args.package.empty()) {
+            if (parse_args.watch)
+                return std::unexpected("Workspace builds do not support --watch.");
+
             catalyst::logger.info("Resolving workspace build order.");
-            auto order = buildOrderTopSort(*parse_args.workspace);
-
-            std::vector<WorkspaceMember> targets;
-            if (!parse_args.package.empty()) {
-                bool found = false;
-                for (const auto &m : order) {
-                    utils::yaml::Configuration c(m.profiles.empty() ? std::vector<std::string>{"common"} : m.profiles,
-                                                 m.path);
-                    if (c.getString("manifest.name").value_or("") == parse_args.package) {
-                        targets.push_back(m);
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found)
-                    return std::unexpected("Package " + parse_args.package + " not found in workspace.");
-            } else {
-                targets = order;
-            }
-
-            for (const auto &member : targets) {
-                catalyst::logger.info("Building workspace member: {}", member.name);
-                fs::current_path(member.path);
-
-                Parse member_args = parse_args;
-                member_args.workspace_build = false;
-                member_args.package = ""; // Clear package arg so we don't recurse logic
-
-                // Profile logic: if default "common", use member profiles
-                if (member_args.profiles.size() == 1 && member_args.profiles[0] == "common") {
-                    if (!member.profiles.empty()) {
-                        member_args.profiles = member.profiles;
-                    }
-                }
-
-                auto res = action(member_args);
-                fs::current_path(current); // Restore
-
-                if (!res)
-                    return res;
-            }
-            return {};
+            auto graph = workspaceBuildGraph(*parse_args.workspace);
+            if (!graph)
+                return std::unexpected(graph.error());
+            auto targets = workspaceTargets(*graph, parse_args.package);
+            if (!targets)
+                return std::unexpected(targets.error());
+            return buildWorkspace(*graph, *targets, parse_args);
         }
     }
 
