@@ -125,6 +125,8 @@ The following policy takes effect with Catalyst 2.0.0.
 - A major release is scheduled every 25 weeks.
 - Each week, the highest applicable release is shipped. A major release on a major-release week, a minor release on a minor-release week, and a patch release otherwise.
 
+This naming does not necessarily conform to semver.
+
 ### Support Policy
 
 - Every `x.0` major release line is a long-term support (LTS) line.
