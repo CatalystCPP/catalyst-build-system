@@ -45,7 +45,7 @@ Defines the metadata and command templates Catalyst will use during generation.
 | `name` | String | `gcc` | Toolchain identifier. |
 | `extends` | String | - | Optional path to a base toolchain file to inherit settings from. |
 | `extensions` | Object | - | Output file extensions and library prefixes. |
-| `flags` | Object | - | Templates for include paths, library paths, library names, and preprocessor defines. |
+| `flags` | Object | - | Templates for include paths, library paths, library names, runtime library paths, and preprocessor defines. |
 | `compiler` | Object | - | C and C++ compiler executables, base flags, and command templates. |
 | `linker` | Object | - | Executable and shared library linker executable, base flags, and templates. |
 | `archiver` | Object | - | Static library archive template. |
@@ -83,6 +83,7 @@ Defines the metadata and command templates Catalyst will use during generation.
 | `include_dir` | String | `-I{path}` | Template for an include directory flag. |
 | `lib_dir` | String | `-L{path}` | Template for a library search path flag. |
 | `lib` | String | `-l{name}` | Template for a library token. |
+| `rpath` | String | `-Wl,-rpath,{path}` | Template for one runtime library search path. Catalyst expands it once per unique resolved library directory. |
 | `define` | String | `-D{name}={value}` | Template for a preprocessor define with a value. |
 | `define_empty` | String | `-D{name}` | Template for a value-less preprocessor define. |
 
@@ -130,13 +131,17 @@ Defines the metadata and command templates Catalyst will use during generation.
 | `flags` | String or List | `""` | Base linker flags, interpolated as `{ldflags}`. |
 | `flags_append` | String or List | `""` | Appends flags to the inherited linker flags. |
 | `flags_remove` | String or List | `""` | Removes matching flag tokens from the inherited linker flags. |
-| `executable_command` | String | `{linker} {objects} -o {output} {ldflags} {lib_dirs} {libs}` | Command template for building executables. |
-| `shared_lib_command` | String | `{linker} -shared {objects} -o {output} {ldflags} {lib_dirs} {libs}` | Command template for building shared libraries. |
+| `executable_command` | String | `{linker} {objects} -o {output} {ldflags} {lib_dirs} {rpaths} {libs}` | Command template for building executables. |
+| `shared_lib_command` | String | `{linker} -shared {objects} -o {output} {ldflags} {lib_dirs} {rpaths} {libs}` | Command template for building shared libraries. |
 
 !!! note
 
     Linker command templates interpolate `{linker}`, `{objects}`,
-    `{output}`, `{ldflags}`, `{lib_dirs}`, and `{libs}`.
+    `{output}`, `{ldflags}`, `{lib_dirs}`, `{rpaths}`, and `{libs}`.
+
+    `{rpaths}` is the concatenation of `flags.rpath` expanded for every unique
+    library directory reported by resolved dependencies. Set `flags.rpath` to an
+    empty string to disable automatic runtime paths.
 
 ### `toolchain.archiver`
 

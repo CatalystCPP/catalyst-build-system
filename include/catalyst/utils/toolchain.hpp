@@ -40,6 +40,7 @@ struct ToolchainDef {
         std::string include_dir = "-I{path}";
         std::string lib_dir = "-L{path}";
         std::string lib = "-l{name}";
+        std::string rpath = "-Wl,-rpath,{path}";
         std::string define = "-D{name}={value}";
         std::string define_empty = "-D{name}";
 
@@ -69,8 +70,8 @@ struct ToolchainDef {
     struct Linker {
         std::string executable = "c++";
         std::string flags; // base linker flags, interpolated as {ldflags}
-        std::string executable_command = "{linker} {objects} -o {output} {ldflags} {lib_dirs} {libs}";
-        std::string shared_lib_command = "{linker} -shared {objects} -o {output} {ldflags} {lib_dirs} {libs}";
+        std::string executable_command = "{linker} {objects} -o {output} {ldflags} {lib_dirs} {rpaths} {libs}";
+        std::string shared_lib_command = "{linker} -shared {objects} -o {output} {ldflags} {lib_dirs} {rpaths} {libs}";
 
         bool operator==(const Linker &) const = default;
     } linker;
