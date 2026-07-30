@@ -63,14 +63,14 @@ Result<void> action(const Parse &parse_args) {
     add_dir_seq("source", parse_args.dirs.source);
     dirs["build"] = tree.to_arena(parse_args.dirs.build);
 
-    for (auto dir : parse_args.dirs.include) {
+    for (const auto &dir : parse_args.dirs.include) {
         if (!fs::exists(parse_args.path / dir)) {
             catalyst::logger.info("Creating include directory: {}", (parse_args.path / dir).string());
             fs::create_directories(parse_args.path / dir);
         }
     }
 
-    for (auto dir : parse_args.dirs.source) {
+    for (const auto &dir : parse_args.dirs.source) {
         if (!fs::exists(parse_args.path / dir)) {
             catalyst::logger.info("Creating source directory: {}", (parse_args.path / dir).string());
             fs::create_directories(parse_args.path / dir);
