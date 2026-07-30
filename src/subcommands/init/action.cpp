@@ -143,6 +143,7 @@ toolchain:
     include_dir: "-I{path}"
     lib_dir: "-L{path}"
     lib: "-l{name}"
+    rpath: "-Wl,-rpath,{path}"
     define: "-D{name}={value}"
     define_empty: "-D{name}"
   compiler:
@@ -157,8 +158,8 @@ toolchain:
   linker:
     executable: "c++"
     flags: ""
-    executable_command: "{linker} {objects} -o {output} {ldflags} {lib_dirs} {libs}"
-    shared_lib_command: "{linker} -shared {objects} -o {output} {ldflags} {lib_dirs} {libs}"
+    executable_command: "{linker} {objects} -o {output} {ldflags} {lib_dirs} {rpaths} {libs}"
+    shared_lib_command: "{linker} -shared {objects} -o {output} {ldflags} {lib_dirs} {rpaths} {libs}"
   archiver:
     executable: "ar"
     command: "{archiver} rcs {output} {objects}"

@@ -230,6 +230,7 @@ parseToolchainImpl(const std::filesystem::path &path, ToolchainDef &tc, std::vec
     set(flags, "include_dir", tc.flags.include_dir);
     set(flags, "lib_dir", tc.flags.lib_dir);
     set(flags, "lib", tc.flags.lib);
+    set(flags, "rpath", tc.flags.rpath);
     set(flags, "define", tc.flags.define);
     set(flags, "define_empty", tc.flags.define_empty);
 
@@ -335,6 +336,7 @@ std::string serializeToolchain(const ToolchainDef &toolchain) {
     writeScalar(out, 4, "include_dir", toolchain.flags.include_dir);
     writeScalar(out, 4, "lib_dir", toolchain.flags.lib_dir);
     writeScalar(out, 4, "lib", toolchain.flags.lib);
+    writeScalar(out, 4, "rpath", toolchain.flags.rpath);
     writeScalar(out, 4, "define", toolchain.flags.define);
     writeScalar(out, 4, "define_empty", toolchain.flags.define_empty);
 

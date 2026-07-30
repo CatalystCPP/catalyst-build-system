@@ -57,6 +57,7 @@ toolchain:
     object: ".obj"
   flags:
     include_dir: "/I\"{path}\""
+    rpath: "/RPATH:\"{path}\""
   compiler:
     cxx:
       executable: "cl.exe"
@@ -71,6 +72,7 @@ toolchain:
     REQUIRE(tc.name == "msvc");
     REQUIRE(tc.extensions.object == ".obj");
     REQUIRE(tc.flags.include_dir == "/I\"{path}\"");
+    REQUIRE(tc.flags.rpath == "/RPATH:\"{path}\"");
     REQUIRE(tc.compiler.cxx.executable == "cl.exe");
     REQUIRE(tc.compiler.cxx.command == "cl.exe /c {source}");
     // Check that defaults were kept for unspecified fields
@@ -178,6 +180,7 @@ TEST_CASE("Resolved toolchain serialization is deterministic and complete", "[to
     tc.flags.include_dir = "include {path}";
     tc.flags.lib_dir = "lib-dir {path}";
     tc.flags.lib = "lib {name}";
+    tc.flags.rpath = "rpath {path}";
     tc.flags.define = "define {name} {value}";
     tc.flags.define_empty = "define {name}";
     tc.compiler.c = {.executable = "custom-cc", .flags = "custom-c-flags", .command = "custom\tc command"};

@@ -271,6 +271,67 @@ toolchain:
     assert fourth_build.returncode == 0, fourth_build.stderr
     assert "Generating build files." in fourth_build.stdout + fourth_build.stderr
 
+
+def test_generate_embeds_deduplicated_rpaths_for_linker_backends(tmp_path):
+    project_dir = tmp_path / "embedded_rpaths"
+    project_dir.mkdir()
+    (project_dir / "src").mkdir()
+
+    (project_dir / "catalyst.yaml").write_text("""meta:
+  generator: ninja
+manifest:
+  name: embedded_rpaths
+  type: BINARY
+  toolchain: toolchain.yaml
+  dirs:
+    source: [src]
+    include: []
+    build: build
+dependencies:
+  - name: first
+    source: system
+    include: /opt/catalyst/include
+    lib: /opt/catalyst/lib
+  - name: second
+    source: system
+    include: /opt/catalyst/include
+    lib: /opt/catalyst/lib
+""")
+    (project_dir / "src" / "main.cpp").write_text("int main() { return 0; }\n")
+    (project_dir / "toolchain.yaml").write_text("""toolchain:
+  flags:
+    rpath: "RPATH={path}"
+  linker:
+    executable_command: "{linker} {objects} -o {output} {rpaths} {ldflags} {libs}"
+    shared_lib_command: "{linker} -shared {objects} -o {output} {rpaths} {ldflags} {libs}"
+""")
+
+    ninja_result = subprocess.run(
+        [str(CATALYST_BIN), "generate", "--backend", "ninja"],
+        cwd=project_dir,
+        capture_output=True,
+        text=True,
+    )
+    assert ninja_result.returncode == 0, ninja_result.stderr
+    ninja_file = (project_dir / "build" / "common" / "build.ninja").read_text()
+    assert "rpaths = RPATH=/opt/catalyst/lib" in ninja_file
+    assert ninja_file.count("RPATH=/opt/catalyst/lib") == 1
+    assert "command = $linker $in -o $out $rpaths $ldflags $ldlibs" in ninja_file
+    assert "command = $linker -shared $in -o $out $rpaths $ldflags $ldlibs" in ninja_file
+
+    cob_result = subprocess.run(
+        [str(CATALYST_BIN), "generate", "--backend", "cob"],
+        cwd=project_dir,
+        capture_output=True,
+        text=True,
+    )
+    assert cob_result.returncode == 0, cob_result.stderr
+    cob_file = (project_dir / "build" / "common" / "catalyst.build").read_text()
+    ldflags_line = next(line for line in cob_file.splitlines() if line.startswith("DEF|ldflags|"))
+    assert "RPATH=/opt/catalyst/lib" not in ldflags_line
+    assert "ld|" in cob_file
+    assert "|extra = RPATH=/opt/catalyst/lib" in cob_file
+
 def test_invalid_yaml_handles_gracefully(tmp_path):
     project_dir = tmp_path / "bad_project"
     project_dir.mkdir()
