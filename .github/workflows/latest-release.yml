@@ -74,8 +74,9 @@ jobs:
     name: Build and Release (Rolling)
     needs: [changes, publish-docker]
     # Run once the image step has settled: whether it rebuilt the image (success)
-    # or was skipped because the Dockerfile was unchanged. Skip only if it failed.
-    if: ${{ !cancelled() && needs.publish-docker.result != 'failure' }}
+    # or was skipped because the Dockerfile was unchanged. Skip if it failed or
+    # if a push's commit message is exactly "bump version".
+    if: ${{ !cancelled() && needs.publish-docker.result != 'failure' && (github.event_name != 'push' || github.event.head_commit.message != 'bump version') }}
     runs-on: blacksmith-32vcpu-ubuntu-2404
     permissions:
       contents: write
