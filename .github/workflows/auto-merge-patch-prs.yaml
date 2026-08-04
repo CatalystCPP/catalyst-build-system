@@ -1,0 +1,25 @@
+name: Auto-Merge PATCH PRs
+
+on:
+  schedule:
+    # 00:00 Monday America/Los_Angeles:
+    - cron: '0 0 * * 1'
+      timezone: "America/Los_Angeles"
+
+jobs:
+  merge-patch-prs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Auto-merge open dev/* PRs to master if checks pass
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          prs=$(gh pr list --base master --json number,headRefName --jq '.[] | select(.headRefName | startsWith("dev/")) | .number')
+
+          for pr in $prs; do
+            echo "Enabling auto-merge for PR #$pr..."
+            gh pr merge "$pr" --auto --merge
+          done
