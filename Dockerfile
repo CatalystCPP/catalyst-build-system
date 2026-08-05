@@ -14,7 +14,7 @@ RUN rm -f /etc/apt/apt.conf.d/docker-clean && \
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && apt-get install -y --no-install-recommends \
-        wget curl git unzip zip file gnupg \
+        wget curl git unzip zip file gnupg ccache \
         cmake mold pkg-config dpkg-dev rpm \
         lsb-release software-properties-common \
         g++-15 ca-certificates

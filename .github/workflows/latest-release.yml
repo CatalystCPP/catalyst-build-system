@@ -22,7 +22,7 @@ concurrency:
 jobs:
   changes:
     name: Detect changes
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     outputs:
       dockerfile: ${{ steps.filter.outputs.dockerfile }}
     steps:
@@ -91,11 +91,19 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ccache-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ runner.os }}-
+          dir: .ccache
+
       - name: Fetch dependencies
-        run: catalyst fetch --profiles common release
+        run: catalyst fetch --profiles common ccache release
 
       - name: Build Catalyst
-        run: catalyst build --profiles common release
+        run: catalyst build --profiles common ccache release
 
       - name: Recreate & Upload Rolling Release
         env:
