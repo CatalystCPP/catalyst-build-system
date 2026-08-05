@@ -86,5 +86,5 @@ debug:
 release:
   hooks:
     post-build:
-      - catalyst: pack -q -p common release -a
+      - catalyst: pack -q -p common ccache release -a
       - script: "scripts/generate_cli_docs.sh"
