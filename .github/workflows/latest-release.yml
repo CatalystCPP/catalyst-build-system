@@ -93,11 +93,13 @@ jobs:
 
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1.2
+        env:
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
+          CCACHE_BASEDIR: ${{ github.workspace }}
         with:
-          key: ccache-${{ runner.os }}-${{ github.sha }}
+          key: ${{ github.job }}
           restore-keys: |
-            ccache-${{ runner.os }}-
-          dir: .ccache
+            ${{ github.job }}-
 
       - name: Fetch dependencies
         run: catalyst fetch --profiles common ccache release
