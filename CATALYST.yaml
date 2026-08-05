@@ -40,7 +40,9 @@ common:
     pre-build:
       - codegen:
           cmd: "python3 $IN[0]"
-          input: "scripts/embed_cob.py"
+          input:
+            - "scripts/embed_cob.py"
+            - "../cob/build/common-ccache-release/cob"
           output:
             - "include/catalyst/cob_embedded.hpp"
             - "src/utils/cob_embedded.cpp"
