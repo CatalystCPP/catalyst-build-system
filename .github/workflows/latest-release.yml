@@ -9,6 +9,7 @@ on:
       - 'src/**'
       - 'include/**'
       - 'CATALYST.yaml'
+      - 'Dockerfile'
   workflow_dispatch:
 
 permissions:
