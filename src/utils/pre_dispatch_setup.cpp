@@ -1,8 +1,10 @@
 #include <algorithm>
 #include <format>
 #include <functional>
+#include <optional>
 #include <print>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -16,6 +18,22 @@
 #include "catalyst/utils/log/log.hpp"
 
 namespace {
+auto passthroughSeparator(int argc, char **argv) -> std::optional<int> {
+    bool supports_passthrough = false;
+    bool found_subcommand = false;
+    for (int index = 1; index < argc; ++index) {
+        const std::string_view argument{argv[index]};
+        if (argument == "--") {
+            return supports_passthrough ? std::optional<int>{index} : std::nullopt;
+        }
+        if (!found_subcommand && !argument.starts_with('-')) {
+            found_subcommand = true;
+            supports_passthrough = argument == "run" || argument == "test" || argument == "bench";
+        }
+    }
+    return std::nullopt;
+}
+
 void setupCli(catalyst::CliContext &ctx) {
     using std::tie;
 
@@ -63,9 +81,11 @@ namespace catalyst {
 std::pair<int, bool> parseCli(int argc, char **argv, catalyst::CliContext &ctx) {
     using std::string_view;
     setupCli(ctx);
+    const std::optional<int> passthrough_separator = passthroughSeparator(argc, argv);
+    const int parse_argc = passthrough_separator.value_or(argc);
 
     try {
-        ctx.app.parse(argc, argv);
+        ctx.app.parse(parse_argc, argv);
     } catch (const CLI::ParseError &e) {
         if (std::none_of(argv, argv + argc, [](const char *arg) {
                 return string_view{arg} == "--help" || string_view{arg} == "-h";
@@ -74,6 +94,22 @@ std::pair<int, bool> parseCli(int argc, char **argv, catalyst::CliContext &ctx) 
             return {ctx.app.exit(e), true};
         }
         return {ctx.app.exit(e), true};
+    }
+
+    if (passthrough_separator) {
+        auto append_passthrough =
+            [argc, argv, separator = *passthrough_separator](std::vector<std::string> &params) -> void {
+            for (int index = separator + 1; index < argc; ++index) {
+                params.emplace_back(argv[index]);
+            }
+        };
+        if (*ctx.run_subc) {
+            append_passthrough(ctx.run_res->params);
+        } else if (*ctx.test_subc) {
+            append_passthrough(ctx.test_res->params);
+        } else if (*ctx.bench_subc) {
+            append_passthrough(ctx.bench_res->params);
+        }
     }
 
     catalyst::logger.getVerboseLogging() = catalyst::logger.getVerboseLogging() || std::getenv("CATALYST_VERBOSE");
