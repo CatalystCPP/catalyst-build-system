@@ -23,5 +23,9 @@ catalyst run
 
 **Run the debug build with arguments:**
 ```bash
-catalyst run --profiles debug --params "--verbose --input data.txt"
+catalyst run --profiles debug -- --verbose --input data.txt
 ```
+
+Arguments after `--` are forwarded to the built executable exactly as received
+from the shell. Use this form for options or any argument that Catalyst must not
+interpret.
