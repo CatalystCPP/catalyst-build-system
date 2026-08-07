@@ -8,7 +8,7 @@ on:
     paths:
       - 'src/**'
       - 'include/**'
-      - '.github/workflows/latest-release.yaml'
+      - '.github/workflows/latest-release.yml'
       - 'CATALYST.yaml'
       - 'Dockerfile'
   workflow_dispatch:
