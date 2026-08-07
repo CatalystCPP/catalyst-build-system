@@ -203,6 +203,11 @@ Result<void> action(const Parse &args) {
             .workspace =
                 std::nullopt, // Prevent build from recursing into workspace members, we'll handle that in test logic
         });
+        if (!res) {
+            logger.warn("Error in rebuilding before test execution: {}\n"
+                        "Continuing to test execution despite rebuild failure",
+                        res.error());
+        }
     }
 
     if (int res = catalyst::processExec(std::move(exec_args)).value().get(); res) {
