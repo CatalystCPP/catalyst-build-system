@@ -101,7 +101,7 @@ jobs:
         with:
           key: ${{ github.job }}
           restore-keys: |
-            ${{ github.job }}-
+            ${{ github.job }}
 
       - name: Fetch dependencies
         run: catalyst fetch --profiles common ccache release
