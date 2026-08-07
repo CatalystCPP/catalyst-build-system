@@ -8,6 +8,7 @@ on:
     paths:
       - 'src/**'
       - 'include/**'
+      - '.github/workflows/latest-release.yaml'
       - 'CATALYST.yaml'
       - 'Dockerfile'
   workflow_dispatch:
@@ -81,6 +82,9 @@ jobs:
     permissions:
       contents: write
       packages: read
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_BASEDIR: ${{ github.workspace }}
     container:
       image: ghcr.io/catalystcpp/catalyst-build-env:latest
       credentials:
@@ -94,9 +98,6 @@ jobs:
 
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1.2
-        env:
-          CCACHE_DIR: ${{ github.workspace }}/.ccache
-          CCACHE_BASEDIR: ${{ github.workspace }}
         with:
           key: ${{ github.job }}
           restore-keys: |
