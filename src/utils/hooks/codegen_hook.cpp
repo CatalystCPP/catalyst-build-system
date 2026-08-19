@@ -34,18 +34,19 @@ std::vector<std::string> collectPathList(ryml::ConstNodeRef node) {
 
 } // namespace
 
-Result<void> executeCodegenHook(ryml::ConstNodeRef codegen_node, std::string_view hook_name) {
+Result<void>
+executeCodegenHook(ryml::ConstNodeRef item, std::string_view hook_name, const HookEnvironment &environment) {
     using utils::yaml::asString;
     using utils::yaml::child;
 
-    auto cmd_opt = asString(child(codegen_node, "cmd"));
+    auto cmd_opt = asString(child(item, "cmd"));
     if (!cmd_opt) {
         return std::unexpected(std::format("Hook '{}' codegen missing required 'cmd' field", hook_name));
     }
     std::string cmd = *cmd_opt;
 
-    std::vector<std::string> inputs = collectPathList(child(codegen_node, "input"));
-    std::vector<std::string> outputs = collectPathList(child(codegen_node, "output"));
+    std::vector<std::string> inputs = collectPathList(child(item, "input"));
+    std::vector<std::string> outputs = collectPathList(child(item, "output"));
 
     auto sub_res = substituteCmdArgs(cmd, inputs, outputs, hook_name);
     if (!sub_res) {
@@ -85,7 +86,10 @@ Result<void> executeCodegenHook(ryml::ConstNodeRef codegen_node, std::string_vie
 
     if (should_run) {
         catalyst::logger.debug("[Catalyst Hook: {}] Running codegen: {}", hook_name, cmd);
-        if (catalyst::processExec(shellCmd(cmd)).value().get() != 0) {
+        auto process = catalyst::processExec(shellCmd(cmd), std::nullopt, environment);
+        if (!process)
+            return std::unexpected(std::format("Hook '{}' codegen execution failed: {}", hook_name, process.error()));
+        if (process->get() != 0) {
             return std::unexpected(std::format("Hook '{}' codegen failed: {}", hook_name, cmd));
         }
     } else {
@@ -135,7 +139,7 @@ Result<std::string> substituteCmdArgs(std::string cmd,
 
     size_t last_pos = 0;
     for (; it != end; ++it) {
-        const std::smatch& match = *it;
+        const std::smatch &match = *it;
         size_t match_pos = match.position();
 
         new_cmd.append(cmd.begin() + static_cast<ssize_t>(last_pos), cmd.begin() + static_cast<ssize_t>(match_pos));

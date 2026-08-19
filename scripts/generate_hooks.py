@@ -32,7 +32,7 @@ functions = [
 def generate_content():
     hook_type_headers = [
         f"Result<void> execute{
-            hook_type}(ryml::ConstNodeRef item, std::string_view hook_name);"
+            hook_type}(ryml::ConstNodeRef item, std::string_view hook_name, const HookEnvironment &environment);"
         for hook_type in hook_types
     ]
 
@@ -45,6 +45,7 @@ def generate_content():
 #include <expected>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 #include <ryml/ryml.hpp>
@@ -53,6 +54,8 @@ def generate_content():
 #include "catalyst/utils/yaml/configuration.hpp"
 
 namespace catalyst::hooks {{
+
+using HookEnvironment = std::unordered_map<std::string, std::string>;
 
 {"\n".join(hook_type_headers)}
 std::vector<std::string> shellCmd(std::string_view cmd);

@@ -1,6 +1,8 @@
 #include <filesystem>
 #include <print>
+#include <string>
 #include <utility>
+#include <vector>
 
 #include <CLI11.hpp>
 
@@ -8,11 +10,18 @@
 #include "catalyst/globals.hpp"
 #include "catalyst/utils/concat_argv.hpp"
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/runtime_context.hpp"
 #include "catalyst/utils/yaml/ryml_init.hpp"
 
 int main(int argc, char **argv) {
     catalyst::utils::yaml::installRymlErrorHandler();
     catalyst::logger.debug("{}", catalyst::concatArgv(argc, argv));
+
+    std::vector<std::string> command_line;
+    command_line.reserve(static_cast<std::size_t>(argc));
+    for (int index = 0; index < argc; ++index)
+        command_line.emplace_back(argv[index]);
+    catalyst::utils::runtime::setCommandLine(command_line);
 
     catalyst::CliContext ctx{.workspace = catalyst::Workspace::findRoot()};
     if (auto [exit_code, should_return] = catalyst::parseCli(argc, argv, ctx); should_return)

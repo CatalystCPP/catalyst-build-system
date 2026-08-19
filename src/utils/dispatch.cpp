@@ -9,6 +9,7 @@
 
 #include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/os/os_defs.hpp"
+#include "catalyst/utils/runtime_context.hpp"
 
 static constexpr size_t TUNABLE_MAX_HOOK_DEPTH = 8Z;
 
@@ -56,16 +57,26 @@ int dispatchSubcommand(const std::string_view &&subc_name, const ParseRes_T &par
     }
 
     struct Guard {
+        std::vector<std::string> previous_features;
+
         Guard() = default;
         Guard(const Guard &) = delete;
         Guard(Guard &&) = delete;
         Guard &operator=(const Guard &) = delete;
         Guard &operator=(Guard &&) = delete;
         ~Guard() {
+            catalyst::utils::runtime::setEnabledFeatures(previous_features);
             g_call_chain.pop_back();
         }
     } guard;
+    guard.previous_features = catalyst::utils::runtime::enabledFeatures();
     g_call_chain.emplace_back(subc_name);
+
+    if constexpr (requires { parse_res.enabled_features; }) {
+        catalyst::utils::runtime::setEnabledFeatures(parse_res.enabled_features);
+    } else {
+        catalyst::utils::runtime::setEnabledFeatures({});
+    }
 
     catalyst::logger.debug("Executing {} subcommand", subc_name);
     try {
@@ -139,6 +150,9 @@ int dispatch(const catalyst::CliContext &ctx) {
         checkRequiredTools();
         injectCommon(ctx.install_res->profiles);
         return dispatchSubcommand("install", *ctx.install_res, catalyst::install::action);
+    }
+    if (*ctx.introspect_subc) {
+        return dispatchSubcommand("introspect", *ctx.introspect_res, catalyst::introspect::action);
     }
     if (*ctx.lock_subc) {
         checkRequiredTools();

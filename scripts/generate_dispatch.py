@@ -32,6 +32,7 @@ subcommands: List[Subcommand] = [
     Subcommand("ide_sync", "ide_sync", "ide_sync.hpp", brief="ide-sync"),
     Subcommand("init", "init", "init.hpp", brief="init"),
     Subcommand("install", "install", "install.hpp", brief="install"),
+    Subcommand("introspect", "introspect", "introspect.hpp", brief="introspect"),
     Subcommand("lock", "lock", "lock.hpp", brief="lock"),
     Subcommand("run", "run", "run.hpp", brief="run"),
     Subcommand("test", "test", "test.hpp", brief="test"),
