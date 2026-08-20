@@ -45,7 +45,7 @@ Result<FindRes> findLocal(ryml::ConstNodeRef dep, const catalyst::toolchain::Too
     std::string include_path;
     if (auto includes = profile.getStringVector("manifest.dirs.include")) {
         for (const auto &dir : *includes) {
-            auto curr = fs::absolute(dep_path / dir);
+            auto curr = fs::absolute(dir);
             catalyst::logger.debug("Adding include path: {}", curr.string());
             include_path += " " + catalyst::toolchain::expandTemplate(tc.flags.include_dir, {{"path", curr.string()}});
         }
@@ -56,7 +56,7 @@ Result<FindRes> findLocal(ryml::ConstNodeRef dep, const catalyst::toolchain::Too
     std::vector<std::string> lib_dirs;
     if (auto build_dir_str = profile.getString("manifest.dirs.build")) {
         fs::path build_dir = catalyst::utils::yaml::multiplexedBuildDir(*build_dir_str, profiles);
-        auto lib_path = fs::absolute(dep_path / build_dir);
+        auto lib_path = fs::absolute(build_dir);
         catalyst::logger.debug("Adding library path: {}", lib_path.string());
         library_path += " " + catalyst::toolchain::expandTemplate(tc.flags.lib_dir, {{"path", lib_path.string()}});
         lib_dirs.push_back(lib_path.string());
