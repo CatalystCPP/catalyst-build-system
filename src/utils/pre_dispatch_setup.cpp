@@ -47,6 +47,7 @@ void setupCli(catalyst::CliContext &ctx) {
     tie(ctx.ide_sync_subc, ctx.ide_sync_res) = catalyst::ide_sync::parse(ctx.app);
     tie(ctx.init_subc, ctx.init_res) = catalyst::init::parse(ctx.app);
     tie(ctx.install_subc, ctx.install_res) = catalyst::install::parse(ctx.app);
+    tie(ctx.introspect_subc, ctx.introspect_res) = catalyst::introspect::parse(ctx.app);
     tie(ctx.lock_subc, ctx.lock_res) = catalyst::lock::parse(ctx.app);
     tie(ctx.run_subc, ctx.run_res) = catalyst::run::parse(ctx.app);
     tie(ctx.test_subc, ctx.test_res) = catalyst::test::parse(ctx.app);

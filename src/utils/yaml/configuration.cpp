@@ -2,18 +2,31 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <filesystem>
 #include <format>
+#include <fstream>
 #include <functional>
 #include <optional>
+#include <random>
+#include <ranges>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
+#if defined(_WIN32)
+#include <process.h>
+#else
+#include <unistd.h>
+#endif
+
 #include "catalyst/utils/log/log.hpp"
+#include "catalyst/utils/runtime_context.hpp"
+#include "catalyst/utils/toolchain.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
 using catalyst::utils::yaml::appendContentCopy;
@@ -29,6 +42,25 @@ using catalyst::utils::yaml::emitYaml;
 using catalyst::utils::yaml::removeChild;
 using catalyst::utils::yaml::toSubstr;
 namespace fs = std::filesystem;
+
+struct catalyst::utils::yaml::Configuration::SnapshotFile {
+    fs::path path;
+
+    SnapshotFile() = default;
+    SnapshotFile(const SnapshotFile &) = delete;
+    SnapshotFile(SnapshotFile &&) = delete;
+    SnapshotFile &operator=(const SnapshotFile &) = delete;
+    SnapshotFile &operator=(SnapshotFile &&) = delete;
+
+    ~SnapshotFile() {
+        if (path.empty())
+            return;
+        std::error_code error;
+        fs::permissions(path, fs::perms::owner_write, fs::perm_options::add, error);
+        error.clear();
+        fs::remove(path, error);
+    }
+};
 
 namespace {
 
@@ -58,6 +90,134 @@ manifest:
 dependencies: []
 features: {}
 )";
+
+std::string jsonQuote(std::string_view value) {
+    constexpr unsigned char ASCII_CONTROL_LIMIT = 0x20;
+    std::string quoted;
+    quoted.reserve(value.size() + 2);
+    quoted.push_back('"');
+    for (const unsigned char character : value) {
+        switch (character) {
+            case '"':
+                quoted += "\\\"";
+                break;
+            case '\\':
+                quoted += "\\\\";
+                break;
+            case '\b':
+                quoted += "\\b";
+                break;
+            case '\f':
+                quoted += "\\f";
+                break;
+            case '\n':
+                quoted += "\\n";
+                break;
+            case '\r':
+                quoted += "\\r";
+                break;
+            case '\t':
+                quoted += "\\t";
+                break;
+            default:
+                if (character < ASCII_CONTROL_LIMIT) {
+                    quoted += std::format("\\u{:04x}", character);
+                } else {
+                    quoted.push_back(static_cast<char>(character));
+                }
+        }
+    }
+    quoted.push_back('"');
+    return quoted;
+}
+
+std::string jsonStringSequence(const std::vector<std::string> &values) {
+    std::string output{"["};
+    for (std::size_t index = 0; index < values.size(); ++index) {
+        if (index != 0)
+            output.push_back(',');
+        output += jsonQuote(values[index]);
+    }
+    output.push_back(']');
+    return output;
+}
+
+std::string joinCsv(const std::vector<std::string> &values) {
+    std::string output;
+    for (const auto &value : values) {
+        if (!output.empty())
+            output.push_back(',');
+        output += value;
+    }
+    return output;
+}
+
+std::uint64_t processId() {
+#if defined(_WIN32)
+    return static_cast<std::uint64_t>(_getpid());
+#else
+    return static_cast<std::uint64_t>(getpid());
+#endif
+}
+
+fs::path makeSnapshotPath() {
+    constexpr std::size_t SNAPSHOT_PATH_ATTEMPTS = 16;
+    std::random_device random;
+    for (std::size_t attempt = 0; attempt < SNAPSHOT_PATH_ATTEMPTS; ++attempt) {
+        fs::path candidate =
+            fs::temp_directory_path() / std::format("catalyst_{}_{:08x}{:08x}.json", processId(), random(), random());
+        std::error_code error;
+        if (!fs::exists(candidate, error))
+            return candidate;
+    }
+    throw std::runtime_error("Unable to allocate a unique Catalyst hook introspection file");
+}
+
+std::vector<std::string> enabledFeatureNames(ryml::ConstNodeRef composition) {
+    std::unordered_map<std::string, std::string> overrides;
+    for (const auto &argument : catalyst::utils::runtime::enabledFeatures()) {
+        if (argument.empty() || argument == "{}")
+            continue;
+        if (argument.starts_with("no-")) {
+            overrides[argument.substr(3)] = "false";
+            continue;
+        }
+        const std::size_t separator = argument.find('=');
+        const std::string name = argument.substr(0, separator);
+        if (!name.empty())
+            overrides[name] = separator == std::string::npos ? "true" : argument.substr(separator + 1);
+    }
+
+    constexpr auto IS_ACTIVE = [](std::string_view value) -> bool {
+        return !value.empty() && value != "false" && value != "0" && value != "off" && value != "none";
+    };
+    std::vector<std::string> enabled;
+    ryml::ConstNodeRef features = child(composition, "features");
+    if (features.readable() && features.is_map()) {
+        for (ryml::ConstNodeRef feature : features.children()) {
+            if (!feature.has_key())
+                continue;
+            std::string name{feature.key().str, feature.key().len};
+            ryml::ConstNodeRef default_value = feature.is_map() ? child(feature, "default") : feature;
+            std::string value = asString(default_value).value_or("");
+            bool is_active = asBool(default_value).value_or(IS_ACTIVE(value));
+            if (auto override = overrides.find(name); override != overrides.end()) {
+                value = override->second;
+                is_active = IS_ACTIVE(value);
+            }
+            if (is_active)
+                enabled.push_back(std::move(name));
+        }
+    }
+
+    for (const auto &[name, value] : overrides) {
+        if (IS_ACTIVE(value) && !std::ranges::contains(enabled, name)
+            && (!features.readable() || !child(features, name).readable())) {
+            enabled.push_back(name);
+        }
+    }
+    return enabled;
+}
 
 const ryml::Tree &getDefaultConfiguration() {
     static const ryml::Tree default_tree = []() {
@@ -467,8 +627,12 @@ void merge(ryml::Tree &composite, const std::string &profile_name, const fs::pat
 
 } // namespace
 
+Configuration::Configuration() : snapshot_file(std::make_unique<SnapshotFile>()) {
+}
+
 Configuration::Configuration(const std::vector<std::string> &profiles, const std::filesystem::path &root_dir)
-    : composition(getDefaultConfiguration()) {
+    : composition(getDefaultConfiguration()), root_dir(fs::absolute(root_dir)),
+      snapshot_file(std::make_unique<SnapshotFile>()) {
     std::vector<std::string> profile_names;
     profile_names.reserve(profiles.size());
     for (const auto &p : profiles) {
@@ -487,6 +651,12 @@ Configuration::Configuration(const std::vector<std::string> &profiles, const std
     this->profile_names = profile_names;
     catalyst::logger.debug("Profile composition finished.");
 }
+
+Configuration::Configuration(Configuration &&) noexcept = default;
+
+Configuration &Configuration::operator=(Configuration &&) noexcept = default;
+
+Configuration::~Configuration() = default;
 
 bool Configuration::has(const std::string &key) const {
     return traverse(key, composition.crootref()).has_value();
@@ -529,4 +699,124 @@ std::filesystem::path Configuration::getBuildDir() const {
     if (base.empty())
         base = "build";
     return multiplexedBuildDir(base, profile_names);
+}
+
+catalyst::Result<void> Configuration::syncHookState(std::string_view hook_name) const {
+    if (!snapshot_file)
+        return std::unexpected("Hook introspection state is unavailable on a moved-from configuration");
+
+    try {
+        std::optional<fs::path> toolchain_path;
+        if (auto configured_path = getString("manifest.toolchain"); configured_path && !configured_path->empty()) {
+            fs::path path{*configured_path};
+            toolchain_path = path.is_absolute() ? std::move(path) : root_dir / path;
+        }
+        auto resolved_toolchain = catalyst::toolchain::resolveToolchain(toolchain_path);
+        if (!resolved_toolchain)
+            return std::unexpected(resolved_toolchain.error());
+
+        const auto toolchain_tree =
+            parseYaml(catalyst::toolchain::serializeToolchain(*resolved_toolchain), "<resolved hook toolchain>");
+        if (!toolchain_tree)
+            return std::unexpected(toolchain_tree.error());
+
+        std::vector<std::string> command_line = catalyst::utils::runtime::commandLine();
+        if (command_line.empty())
+            command_line.emplace_back("catalyst");
+
+        const std::string metadata_json = std::format(
+            R"({{"_catalyst":{{"command_line":{},"hook":{},"profiles":{},"features":{{}},"workspace_root":{},"build_dir":{}}}}})",
+            jsonStringSequence(command_line),
+            jsonQuote(hook_name),
+            jsonStringSequence(profile_names),
+            jsonQuote(root_dir.string()),
+            jsonQuote(getBuildDir().string()));
+        auto metadata_tree = parseYaml(metadata_json, "<hook metadata>");
+        if (!metadata_tree)
+            return std::unexpected(metadata_tree.error());
+
+        ryml::NodeRef metadata_features =
+            childOrCreate(childOrCreate(metadata_tree->rootref(), "_catalyst"), "features");
+        metadata_features |= ryml::MAP;
+        if (ryml::ConstNodeRef features = child(composition.crootref(), "features");
+            features.readable() && features.is_map()) {
+            for (ryml::ConstNodeRef feature : features.children())
+                appendCopy(metadata_features, feature);
+        }
+        for (const auto &argument : catalyst::utils::runtime::enabledFeatures()) {
+            if (argument.empty() || argument == "{}")
+                continue;
+            const bool disabled = argument.starts_with("no-");
+            const std::size_t separator = argument.find('=');
+            const std::string name = disabled ? argument.substr(3) : argument.substr(0, separator);
+            std::string value;
+            if (disabled)
+                value = "false";
+            else if (separator == std::string::npos)
+                value = "true";
+            else
+                value = argument.substr(separator + 1);
+            if (!name.empty())
+                setScalarChild(metadata_features, name, value);
+        }
+
+        ryml::Tree snapshot;
+        snapshot.rootref() |= ryml::MAP;
+        appendCopy(snapshot.rootref(), child(metadata_tree->crootref(), "_catalyst"));
+
+        ryml::NodeRef snapshot_toolchain = childOrCreate(snapshot.rootref(), "_toolchain");
+        snapshot_toolchain |= ryml::MAP;
+        ryml::ConstNodeRef resolved_toolchain_node = child(toolchain_tree->crootref(), "toolchain");
+        for (ryml::ConstNodeRef field : resolved_toolchain_node.children())
+            appendCopy(snapshot_toolchain, field);
+
+        for (ryml::ConstNodeRef field : composition.crootref().children())
+            appendCopy(snapshot.rootref(), field);
+
+        if (snapshot_file->path.empty())
+            snapshot_file->path = makeSnapshotPath();
+
+        std::error_code permission_error;
+        if (fs::exists(snapshot_file->path)) {
+            fs::permissions(snapshot_file->path,
+                            fs::perms::owner_read | fs::perms::owner_write,
+                            fs::perm_options::replace,
+                            permission_error);
+            if (permission_error)
+                return std::unexpected(std::format("Failed to make hook introspection snapshot writable at '{}': {}",
+                                                   snapshot_file->path.string(),
+                                                   permission_error.message()));
+        }
+
+        std::ofstream output{snapshot_file->path, std::ios::binary | std::ios::trunc};
+        if (!output)
+            return std::unexpected(
+                std::format("Failed to open hook introspection snapshot at '{}'", snapshot_file->path.string()));
+        output << ryml::emitrs_json<std::string>(snapshot);
+        output.close();
+        if (!output)
+            return std::unexpected(
+                std::format("Failed to write hook introspection snapshot at '{}'", snapshot_file->path.string()));
+        fs::permissions(snapshot_file->path, fs::perms::owner_read, fs::perm_options::replace, permission_error);
+        if (permission_error)
+            return std::unexpected(std::format("Failed to make hook introspection snapshot read-only at '{}': {}",
+                                               snapshot_file->path.string(),
+                                               permission_error.message()));
+    } catch (const std::exception &error) {
+        return std::unexpected(error.what());
+    }
+    return {};
+}
+
+std::unordered_map<std::string, std::string> Configuration::hookEnvironment(std::string_view hook_name) const {
+    const std::vector<std::string> enabled_features = enabledFeatureNames(composition.crootref());
+    return {
+        {"CATALYST_HOOK", "1"},
+        {"CATALYST_HOOK_NAME", std::string{hook_name}},
+        {"CATALYST_WORKSPACE_ROOT", root_dir.string()},
+        {"CATALYST_PROFILES", joinCsv(profile_names)},
+        {"CATALYST_FEATURES", joinCsv(enabled_features)},
+        {"CATALYST_BUILD_DIR", getBuildDir().string()},
+        {"CATALYST_INTROSPECT_FILE", snapshot_file ? snapshot_file->path.string() : std::string{}},
+    };
 }
