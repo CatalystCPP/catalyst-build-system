@@ -18,6 +18,7 @@ Catalyst provides a suite of subcommands to manage the entire project lifecycle.
 | [`ide-sync`](ide-sync.md) | Sync IDE configuration files for an existing project. |
 | [`init`](init.md) | Initialize a new project or profile. |
 | [`install`](install.md) | Install build artifacts. |
+| [`introspect`](introspect.md) | Query resolved build state from a lifecycle hook. |
 | [`lock`](lock.md) | Pin dependency versions to a lockfile. |
 | [`pack`](pack.md) | Assemble the local package for distribution. |
 | [`profile-ls`](profile_ls.md) | List all available profiles in the current workspace. |

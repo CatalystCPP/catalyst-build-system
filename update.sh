@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 set -e
 
-VERSION="2.0.1" # Replace or pass as an argument
+VERSION="2.0.2"
 BRANCH_NAME="dev/$VERSION"
 
 # 1. Create and checkout the dev branch
-git checkout -b "$BRANCH_NAME"
+git switch -c $BRANCH_NAME
 
 # 2. Update CATALYST.yaml line 8 to match MAJOR.MINOR.PATCH
 # (Example using sed for macOS/Linux)
-sed -i '' "8s/.*/version: $VERSION/" CATALYST.yaml
+sed -i "8s/.*/    version: $VERSION/" CATALYST.yaml
 
 # 3. Commit with EXACT message and push
 git add CATALYST.yaml

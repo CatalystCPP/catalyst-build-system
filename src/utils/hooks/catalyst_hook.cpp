@@ -8,7 +8,9 @@
 #include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
-auto catalyst::hooks::executeCatalystHook(ryml::ConstNodeRef item, std::string_view hook_name) -> Result<void> {
+auto catalyst::hooks::executeCatalystHook(ryml::ConstNodeRef item,
+                                          std::string_view hook_name,
+                                          [[maybe_unused]] const HookEnvironment &environment) -> Result<void> {
     using utils::yaml::asString;
     using utils::yaml::child;
 
