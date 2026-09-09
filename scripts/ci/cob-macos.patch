@@ -1,0 +1,13 @@
+diff --git a/include/cob/file_handle.hpp b/include/cob/file_handle.hpp
+--- a/include/cob/file_handle.hpp
++++ b/include/cob/file_handle.hpp
+@@ -85,7 +85,9 @@ public:
+             return;
+         }
+ 
++#ifdef __linux__
+         posix_fadvise(file_descriptor, 0, 0, POSIX_FADV_SEQUENTIAL);
++#endif
+ 
+ #ifdef __linux__
+         int flags = populate ? (MAP_POPULATE | MAP_PRIVATE) : MAP_PRIVATE;

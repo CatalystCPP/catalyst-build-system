@@ -1,0 +1,135 @@
+name: macOS Build
+
+on:
+  push:
+    branches:
+      - master
+      - 'dev/*'
+    paths:
+      - 'src/**'
+      - 'include/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - 'CATALYST.yaml'
+      - '.github/workflows/macos.yml'
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'include/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - 'CATALYST.yaml'
+      - '.github/workflows/macos.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: macos-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and Test (${{ matrix.triplet }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            triplet: arm64-osx
+          - runner: macos-15-intel
+            triplet: x64-osx
+    defaults:
+      run:
+        shell: bash
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      VCPKG_ROOT: ${{ github.workspace }}/build/vcpkg
+      VCPKG_DEFAULT_TRIPLET: ${{ matrix.triplet }}
+      VCPKG_DISABLE_METRICS: '1'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install build tools
+        run: |
+          brew install llvm@21 cmake ninja ccache pkg-config wget
+          llvm_prefix="$(brew --prefix llvm@21)"
+          echo "$llvm_prefix/bin" >> "$GITHUB_PATH"
+          echo "CC=$llvm_prefix/bin/clang" >> "$GITHUB_ENV"
+          echo "CXX=$llvm_prefix/bin/clang++" >> "$GITHUB_ENV"
+          echo "LLVM_PREFIX=$llvm_prefix" >> "$GITHUB_ENV"
+          # Use LLVM's matching libc++, including its runtime, for C++23 ranges.
+          echo "CXXFLAGS=-stdlib=libc++ -D_LIBCPP_DISABLE_AVAILABILITY" >> "$GITHUB_ENV"
+          echo "LDFLAGS=-L$llvm_prefix/lib/c++ -Wl,-rpath,$llvm_prefix/lib/c++" >> "$GITHUB_ENV"
+
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: macos-${{ matrix.triplet }}-llvm21
+
+      - name: Setup vcpkg
+        run: |
+          git clone --depth 1 --branch 2025.07.25 https://github.com/microsoft/vcpkg.git "$VCPKG_ROOT"
+          "$VCPKG_ROOT/bootstrap-vcpkg.sh" -disableMetrics
+          echo "$VCPKG_ROOT" >> "$GITHUB_PATH"
+
+      - name: Fetch dependencies
+        run: |
+          vcpkg install reproc ryml efsw catch2 yaml-cpp --triplet "$VCPKG_DEFAULT_TRIPLET"
+          bash scripts/fetch_cli_11.sh
+
+      # Linux CI installs .deb bootstrap packages. Build from source on macOS.
+      - name: Checkout COB bootstrap source
+        uses: actions/checkout@v4
+        with:
+          repository: CatalystCPP/catalyst-orchestrated-builder
+          ref: 58f8338e668608de890b3c24de97a531ffb631f8 # 0.7.0
+          path: build/cob-source
+          persist-credentials: false
+
+      - name: Apply COB macOS compatibility patch
+        run: git -C build/cob-source apply "$GITHUB_WORKSPACE/scripts/ci/cob-macos.patch"
+
+      - name: Configure native bootstrap
+        run: |
+          cmake -S scripts/ci -B build/macos -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
+            -DVCPKG_TARGET_TRIPLET="$VCPKG_DEFAULT_TRIPLET" \
+            -DCOB_SOURCE_DIR="$GITHUB_WORKSPACE/build/cob-source"
+
+      - name: Build Catalyst
+        run: cmake --build build/macos --parallel 3
+
+      - name: Run unit tests
+        run: ctest --test-dir build/macos --output-on-failure
+
+      - name: Smoke test generated projects
+        run: |
+          catalyst_bin="$GITHUB_WORKSPACE/build/macos/catalyst"
+          "$catalyst_bin" --version
+          for backend in ninja cob; do
+            smoke_dir="$RUNNER_TEMP/catalyst-smoke-$backend"
+            "$catalyst_bin" init --name smoke --path "$smoke_dir"
+            (
+              cd "$smoke_dir"
+              "$catalyst_bin" build --backend "$backend"
+              "$catalyst_bin" run
+            )
+          done
+
+      - name: Print build diagnostics
+        if: failure()
+        run: |
+          clang++ --version
+          sw_vers
+          find build/macos -name '*.log' -type f -exec tail -n 100 {} \;
