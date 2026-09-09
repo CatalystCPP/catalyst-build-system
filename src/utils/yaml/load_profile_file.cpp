@@ -1,5 +1,6 @@
 #include "catalyst/utils/yaml/load_profile_file.hpp"
 
+#include <algorithm>
 #include <expected>
 #include <filesystem>
 #include <format>
@@ -15,6 +16,17 @@ namespace catalyst::utils::yaml {
 namespace {
 
 namespace fs = std::filesystem;
+
+// The two manifest formats differ only in filename case. exists() alone cannot
+// distinguish them on the default macOS filesystem.
+bool existsWithExactFilename(const fs::path &path) {
+    if (!fs::exists(path))
+        return false;
+    const fs::path parent = path.has_parent_path() ? path.parent_path() : fs::path{"."};
+    return std::ranges::any_of(fs::directory_iterator(parent), [&path](const fs::directory_entry &entry) {
+        return entry.path().filename() == path.filename();
+    });
+}
 
 // An empty or null document root (e.g. an empty file) becomes an empty map so
 // callers can add keys to it, like yaml-cpp's auto-vivification allowed.
@@ -39,7 +51,7 @@ auto loadFromCombined(const std::string &profile, const fs::path &combined_path,
     ryml::NodeRef root = tree.rootref();
 
     ryml::id_type profile_id = ryml::NONE;
-    if (fs::exists(profile_path)) {
+    if (existsWithExactFilename(profile_path)) {
         catalyst::logger.warn("Profile: {} was moved into CATALYST.yaml", profile);
         auto legacy = loadFile(profile_path);
         if (!legacy)
@@ -70,7 +82,7 @@ auto loadFromCombined(const std::string &profile, const fs::path &combined_path,
 }
 
 auto loadFromIsolate(const std::string &profile, const fs::path &profile_path) -> Result<ProfileFile> {
-    if (!fs::exists(profile_path))
+    if (!existsWithExactFilename(profile_path))
         return std::unexpected(std::format("Profile file: {} for {} not found", profile_path.string(), profile));
 
     auto parsed = loadFile(profile_path);
@@ -98,7 +110,7 @@ auto loadProfileFile(const std::string &profile, const fs::path &root_dir) -> Re
 
     catalyst::logger.debug("Profile path: {}", profile_path.string());
 
-    if (fs::exists(combined_path))
+    if (existsWithExactFilename(combined_path))
         return loadFromCombined(profile, combined_path, profile_path);
 
     return loadFromIsolate(profile, profile_path);
