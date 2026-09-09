@@ -7,7 +7,7 @@ because the Linux job's preinstalled Catalyst and COB packages are `.deb` files.
 
 The bootstrap compiles the current Catalyst sources and unit suite, generates
 headers with the existing scripts, and embeds a native COB executable. COB is
-pinned to 0.7.1, which includes the macOS compatibility fixes. The bootstrap
+pinned to 0.7.1 plus an upstream libc++ header fix. The bootstrap
 excludes its Linux process implementation and supplies its project name and
 version from its manifest. No downstream source patch is needed.
 
