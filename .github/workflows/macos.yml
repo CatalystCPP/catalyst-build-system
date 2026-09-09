@@ -91,12 +91,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: CatalystCPP/catalyst-orchestrated-builder
-          ref: 58f8338e668608de890b3c24de97a531ffb631f8 # 0.7.0
+          ref: 1a47977d2d36c4a661faa26414a7c7626c80bb05 # 0.7.1
           path: build/cob-source
           persist-credentials: false
-
-      - name: Apply COB macOS compatibility patch
-        run: git -C build/cob-source apply "$GITHUB_WORKSPACE/scripts/ci/cob-macos.patch"
 
       - name: Configure native bootstrap
         run: |

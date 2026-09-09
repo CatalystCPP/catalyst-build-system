@@ -24,7 +24,11 @@ list(FILTER COB_SOURCES EXCLUDE REGEX "/process_exec_linux\\.cpp$")
 add_executable(cob ${COB_SOURCES})
 target_include_directories(cob PRIVATE "${COB_SOURCE_DIR}/include")
 target_link_libraries(cob PRIVATE reproc++ Threads::Threads)
+file(STRINGS "${COB_SOURCE_DIR}/CATALYST.yaml" COB_VERSION_LINE
+     REGEX "^    version: " LIMIT_COUNT 1)
+string(REGEX REPLACE "^    version: *" "" COB_VERSION "${COB_VERSION_LINE}")
 target_compile_definitions(cob PRIVATE
+    CATALYST_BUILD_SYS=1 CATALYST_PROJ_NAME="cob" CATALYST_PROJ_VER="${COB_VERSION}"
     FF_cob__binary=1
     FF_cob__progress_queue_size=8192
     FF_cob__buffer_initial_capacity=2097152

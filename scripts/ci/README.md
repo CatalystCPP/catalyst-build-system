@@ -7,9 +7,9 @@ because the Linux job's preinstalled Catalyst and COB packages are `.deb` files.
 
 The bootstrap compiles the current Catalyst sources and unit suite, generates
 headers with the existing scripts, and embeds a native COB executable. COB is
-pinned to 0.7.0; `cob-macos.patch` guards its Linux-only file-access hint, and the
-bootstrap excludes its Linux process implementation. Remove the patch when a
-compatible upstream revision includes the fix.
+pinned to 0.7.1, which includes the macOS compatibility fixes. The bootstrap
+excludes its Linux process implementation and supplies its project name and
+version from its manifest. No downstream source patch is needed.
 
 The workflow runs unit tests and `init`, `build`, and `run` smoke tests with both
 Ninja and COB. It does not yet validate Catalyst self-hosting through the root
