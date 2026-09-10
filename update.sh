@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-VERSION="2.0.2"
+VERSION="2.0.3"
 BRANCH_NAME="dev/$VERSION"
 
 # 1. Create and checkout the dev branch

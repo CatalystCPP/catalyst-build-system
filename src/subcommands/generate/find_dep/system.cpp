@@ -86,7 +86,7 @@ Result<FindRes> findSystem(ryml::ConstNodeRef dep, const catalyst::toolchain::To
     if (!has_explicit_include) {
 #if defined(_WIN32)
 #elif defined(__APPLE__)
-        inc_path += " " + catalyst::toolchain::expand_template(tc.flags.include_dir, {{"path", "/usr/local/include"}});
+        inc_path += " " + catalyst::toolchain::expandTemplate(tc.flags.include_dir, {{"path", "/usr/local/include"}});
 #else
         inc_path += " " + catalyst::toolchain::expandTemplate(tc.flags.include_dir, {{"path", "/usr/include"}});
 #endif
@@ -95,7 +95,7 @@ Result<FindRes> findSystem(ryml::ConstNodeRef dep, const catalyst::toolchain::To
     if (!has_explicit_lib) {
 #if defined(_WIN32)
 #elif defined(__APPLE__)
-        lib_path += " " + catalyst::toolchain::expand_template(tc.flags.lib_dir, {{"path", "/usr/local/lib"}});
+        lib_path += " " + catalyst::toolchain::expandTemplate(tc.flags.lib_dir, {{"path", "/usr/local/lib"}});
         lib_dirs.push_back("/usr/local/lib");
 #else
         lib_path += " " + catalyst::toolchain::expandTemplate(tc.flags.lib_dir, {{"path", "/usr/lib"}});
