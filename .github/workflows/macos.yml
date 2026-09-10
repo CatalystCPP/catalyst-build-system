@@ -32,16 +32,16 @@ concurrency:
 jobs:
   build:
     name: Build and Test (${{ matrix.triplet }})
+    # Skip if a push's commit message is exactly "bump version".
+    if: ${{ github.event_name != 'push' || github.event.head_commit.message != 'bump version' }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
         include:
-          - runner: macos-15
+          - runner: blacksmith-12vcpu-macos-latest
             triplet: arm64-osx
-          - runner: macos-15-intel
-            triplet: x64-osx
     defaults:
       run:
         shell: bash
