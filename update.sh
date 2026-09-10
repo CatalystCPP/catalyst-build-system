@@ -1,15 +1,40 @@
 #!/usr/bin/env bash
 set -e
 
-VERSION="2.0.3"
+if [ -n "$1" ]; then
+  VERSION="$1"
+  echo "Using specified version: $VERSION"
+else
+  CURRENT_VERSION=$(awk '/^[[:space:]]*manifest:/ {in_manifest=1} in_manifest && /^[[:space:]]*version:/ {print $2; exit}' CATALYST.yaml | tr -d '"' | tr -d "'") # pull version from CATALYST.yaml
+
+  if [ -z "$CURRENT_VERSION" ]; then
+    echo "Error: Could not determine current version from CATALYST.yaml" >&2
+    exit 1
+  fi
+
+  IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION" # split CURRENT_VERSION into MAJOR, MINOR, PATCH
+
+  if [ -z "$MAJOR" ] || [ -z "$MINOR" ] || [ -z "$PATCH" ]; then
+    echo "Error: Version '$CURRENT_VERSION' is not in MAJOR.MINOR.PATCH format" >&2
+    exit 1
+  fi
+
+  PATCH=$((PATCH + 1))
+  VERSION="${MAJOR}.${MINOR}.${PATCH}"
+  echo "Auto-incrementing version: $CURRENT_VERSION -> $VERSION"
+fi
+
 BRANCH_NAME="dev/$VERSION"
 
 # 1. Create and checkout the dev branch
-git switch -c $BRANCH_NAME
+git switch -c "$BRANCH_NAME"
 
-# 2. Update CATALYST.yaml line 8 to match MAJOR.MINOR.PATCH
-# (Example using sed for macOS/Linux)
-sed -i "8s/.*/    version: $VERSION/" CATALYST.yaml
+# 2. Update CATALYST.yaml to match MAJOR.MINOR.PATCH (macOS/Linux compatible)
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  sed -i '' -E "s/^(    version:).*/\1 $VERSION/" CATALYST.yaml
+else
+  sed -i -E "s/^(    version:).*/\1 $VERSION/" CATALYST.yaml
+fi
 
 # 3. Commit with EXACT message and push
 git add CATALYST.yaml
