@@ -1,0 +1,36 @@
+toolchain:
+  name: "catalyst macos release"
+  extensions:
+    object: ".o"
+    executable: ""
+    static_lib: ".a"
+    shared_lib: ".dylib"
+    static_lib_prefix: "lib"
+    shared_lib_prefix: "lib"
+    library_scan:
+      - ".a"
+      - ".dylib"
+  flags:
+    include_dir: "-I{path}"
+    lib_dir: "-L{path}"
+    lib: "-l{name}"
+    rpath: "-Wl,-rpath,{path}"
+    define: "-D{name}={value}"
+    define_empty: "-D{name}"
+  compiler:
+    c:
+      executable: "clang"
+      flags: -std=c23 -O3 -Wall -Wextra -Wpedantic -DNDEBUG -mmacosx-version-min=14.0
+      command: "{cc} {cflags} -MMD -MF {object}.d -c {source} -o {object} {includes} {defines}"
+    cxx:
+      executable: "clang++"
+      flags: -std=c++23 -stdlib=libc++ -D_LIBCPP_DISABLE_AVAILABILITY -O3 -Wall -Wextra -Wpedantic -DNDEBUG -mmacosx-version-min=14.0
+      command: "{cxx} {cxxflags} -MMD -MF {object}.d -c {source} -o {object} {includes} {defines}"
+  linker:
+    executable: "clang++"
+    executable_command: "{linker} {objects} -o {output} {ldflags} {lib_dirs} {rpaths} {libs}"
+    shared_lib_command: "{linker} -dynamiclib {objects} -o {output} {ldflags} {lib_dirs} {rpaths} {libs}"
+    flags: -stdlib=libc++ -mmacosx-version-min=14.0 -Wl,-dead_strip -L/opt/homebrew/opt/llvm@21/lib/c++ -Wl,-rpath,/opt/homebrew/opt/llvm@21/lib/c++ -L/opt/homebrew/opt/llvm/lib/c++ -Wl,-rpath,/opt/homebrew/opt/llvm/lib/c++
+  archiver:
+    executable: "ar"
+    command: "{archiver} rcs {output} {objects}"
