@@ -38,11 +38,12 @@ common:
     pre-fetch:
       - script: "scripts/fetch_cli_11.sh"
     pre-build:
+      - script: "python3 scripts/resolve_cob.py"
       - codegen:
-          cmd: "python3 $IN[0]"
+          cmd: "python3 $IN[0] --cob-path $IN[1]"
           input:
             - "scripts/embed_cob.py"
-            - "../cob/build/common-ccache-release/cob"
+            - "build/tools/cob"
           output:
             - "include/catalyst/cob_embedded.hpp"
             - "src/utils/cob_embedded.cpp"
