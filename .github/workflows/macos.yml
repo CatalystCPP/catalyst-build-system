@@ -40,10 +40,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: macos-15
+          - runner: blacksmith-12vcpu-macos-latest
             triplet: arm64-osx
-          - runner: macos-15-intel
-            triplet: x64-osx
     defaults:
       run:
         shell: bash
