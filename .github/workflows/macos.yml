@@ -11,6 +11,7 @@ on:
       - 'tests/**'
       - 'scripts/**'
       - 'CATALYST.yaml'
+      - 'tc_catalyst*.yaml'
       - '.github/workflows/macos.yml'
   pull_request:
     paths:
@@ -19,6 +20,7 @@ on:
       - 'tests/**'
       - 'scripts/**'
       - 'CATALYST.yaml'
+      - 'tc_catalyst*.yaml'
       - '.github/workflows/macos.yml'
   workflow_dispatch:
 
@@ -62,6 +64,9 @@ jobs:
         run: |
           brew install llvm@21 cmake ninja ccache pkg-config wget
           llvm_prefix="$(brew --prefix llvm@21)"
+          sdk_root="$(xcrun --sdk macosx --show-sdk-path)"
+          test -f "$sdk_root/usr/include/time.h"
+          echo "SDKROOT=$sdk_root" >> "$GITHUB_ENV"
           echo "$llvm_prefix/bin" >> "$GITHUB_PATH"
           echo "CC=$llvm_prefix/bin/clang" >> "$GITHUB_ENV"
           echo "CXX=$llvm_prefix/bin/clang++" >> "$GITHUB_ENV"
@@ -99,6 +104,7 @@ jobs:
         run: |
           cmake -S scripts/ci -B build/macos -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_SYSROOT="$SDKROOT" \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
             -DVCPKG_TARGET_TRIPLET="$VCPKG_DEFAULT_TRIPLET" \
@@ -110,35 +116,44 @@ jobs:
       - name: Run bootstrap unit tests
         run: ctest --test-dir build/macos --output-on-failure
 
-      - name: Self-host: fetch dependencies with native profiles
+      - name: "Self-host: fetch dependencies with native profiles"
         run: |
           bootstrap_bin="$GITHUB_WORKSPACE/build/macos/catalyst"
           export COB_PATH="$GITHUB_WORKSPACE/build/macos/cob"
           "$bootstrap_bin" fetch --profiles common ccache macos
-          "$bootstrap_bin" fetch --profiles common ccache macos test macos-test
+          "$bootstrap_bin" fetch --profiles=common --profiles=ccache --profiles=macos --profiles=test --profiles=macos-test
 
-      - name: Self-host: build Catalyst with COB and Ninja
+      - name: "Self-host: build Catalyst with COB"
         run: |
           bootstrap_bin="$GITHUB_WORKSPACE/build/macos/catalyst"
           export COB_PATH="$GITHUB_WORKSPACE/build/macos/cob"
           echo "=== Self-host build with COB backend ==="
           "$bootstrap_bin" build --backend cob --profiles common ccache macos
-          echo "=== Self-host build with Ninja backend ==="
-          "$bootstrap_bin" build --backend ninja --regen --profiles common ccache macos
 
-      - name: Self-host: verify idempotent second build
+      - name: "Self-host: verify idempotent second build"
         run: |
           catalyst_bin="$GITHUB_WORKSPACE/build/common-ccache-macos/catalyst"
           export COB_PATH="$GITHUB_WORKSPACE/build/macos/cob"
+          # Establish the baseline with the self-hosted binary and the same backend.
+          "$catalyst_bin" build --backend cob --profiles common ccache macos
           echo "=== Verifying unchanged second build performs no unnecessary work ==="
-          output=$("$catalyst_bin" build --backend cob --profiles common ccache macos 2>&1)
-          echo "$output"
+          if output=$("$catalyst_bin" build --backend cob --profiles common ccache macos 2>&1); then
+            echo "$output"
+          else
+            echo "$output"
+            exit 1
+          fi
           if echo "$output" | grep -E "(Running codegen:|Compiling)"; then
             echo "Error: Unchanged second build performed unnecessary compilation or code generation"
             exit 1
           fi
 
-      - name: Self-host: verify debug and release coexist
+      - name: "Self-host: build Catalyst with Ninja"
+        run: |
+          export COB_PATH="$GITHUB_WORKSPACE/build/macos/cob"
+          "$GITHUB_WORKSPACE/build/macos/catalyst" build --backend ninja --regen --profiles common ccache macos
+
+      - name: "Self-host: verify debug and release coexist"
         run: |
           catalyst_bin="$GITHUB_WORKSPACE/build/common-ccache-macos/catalyst"
           export COB_PATH="$GITHUB_WORKSPACE/build/macos/cob"
@@ -148,12 +163,12 @@ jobs:
           test -f "$GITHUB_WORKSPACE/build/common-ccache-macos-debug/catalyst"
           echo "Debug and release builds coexist successfully."
 
-      - name: Self-host: build and run unit tests
+      - name: "Self-host: build and run unit tests"
         run: |
           catalyst_bin="$GITHUB_WORKSPACE/build/common-ccache-macos/catalyst"
           export COB_PATH="$GITHUB_WORKSPACE/build/macos/cob"
           echo "=== Building and running unit tests ==="
-          "$catalyst_bin" build --backend cob --profiles common ccache macos test macos-test
+          "$catalyst_bin" build --backend cob --profiles=common --profiles=ccache --profiles=macos --profiles=test --profiles=macos-test
           "$GITHUB_WORKSPACE/build/test/common-ccache-macos-test-macos-test/catalyst_tests"
 
       - name: Smoke test generated projects with self-hosted Catalyst
@@ -170,9 +185,27 @@ jobs:
             )
           done
 
+      - name: Test native shared-library projects with COB and Ninja
+        run: |
+          python3 scripts/ci/test_macos_shared_library.py \
+            --catalyst "$GITHUB_WORKSPACE/build/common-ccache-macos/catalyst"
+
       - name: Print build diagnostics
         if: failure()
         run: |
           clang++ --version
           sw_vers
+          xcrun --sdk macosx --show-sdk-path
           find build/macos -name '*.log' -type f -exec tail -n 100 {} \;
+          if [[ -f build/macos/CMakeFiles/CMakeConfigureLog.yaml ]]; then
+            echo '=== CMake configure diagnostics ==='
+            cat build/macos/CMakeFiles/CMakeConfigureLog.yaml
+          fi
+
+      - name: Upload CMake configure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-configure-diagnostics-${{ matrix.triplet }}
+          path: build/macos/CMakeFiles/CMakeConfigureLog.yaml
+          if-no-files-found: ignore

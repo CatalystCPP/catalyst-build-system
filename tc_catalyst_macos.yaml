@@ -30,7 +30,8 @@ toolchain:
     executable: "clang++"
     executable_command: "{linker} {objects} -o {output} {ldflags} {lib_dirs} {rpaths} {libs}"
     shared_lib_command: "{linker} -dynamiclib {objects} -o {output} {ldflags} {lib_dirs} {rpaths} {libs}"
-    flags: -stdlib=libc++ -mmacosx-version-min=14.0 -Wl,-dead_strip -L/opt/homebrew/opt/llvm@21/lib/c++ -Wl,-rpath,/opt/homebrew/opt/llvm@21/lib/c++ -L/opt/homebrew/opt/llvm/lib/c++ -Wl,-rpath,/opt/homebrew/opt/llvm/lib/c++
+    # efsw's static archive requires the CoreFoundation and FSEvents APIs.
+    flags: -stdlib=libc++ -mmacosx-version-min=14.0 -Wl,-dead_strip -framework CoreFoundation -framework CoreServices -L/opt/homebrew/opt/llvm@21/lib/c++ -Wl,-rpath,/opt/homebrew/opt/llvm@21/lib/c++ -L/opt/homebrew/opt/llvm/lib/c++ -Wl,-rpath,/opt/homebrew/opt/llvm/lib/c++
   archiver:
     executable: "ar"
     command: "{archiver} rcs {output} {objects}"

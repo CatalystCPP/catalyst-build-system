@@ -51,7 +51,7 @@ These features are verified at configure time by `scripts/ci/CMakeLists.txt`.
    export COB_PATH="$PWD/build/macos/cob"
    # Fetch dependencies for release and tests
    build/macos/catalyst fetch --profiles common ccache macos
-   build/macos/catalyst fetch --profiles common ccache macos test macos-test
+   build/macos/catalyst fetch --profiles=common --profiles=ccache --profiles=macos --profiles=test --profiles=macos-test
 
    # Build with COB backend
    build/macos/catalyst build --backend cob --profiles common ccache macos
@@ -64,12 +64,37 @@ These features are verified at configure time by `scripts/ci/CMakeLists.txt`.
    The newly built self-hosted binary runs the unit test suite and smoke-tests sample projects:
    ```bash
    # Build and run unit test suite
-   build/common-ccache-macos/catalyst build --backend cob --profiles common ccache macos test macos-test
+   build/common-ccache-macos/catalyst build --backend cob --profiles=common --profiles=ccache --profiles=macos --profiles=test --profiles=macos-test
    build/test/common-ccache-macos-test-macos-test/catalyst_tests
 
    # Verify debug and release build coexistence
    build/common-ccache-macos/catalyst build --backend cob --profiles common ccache macos-debug
    ```
+
+## Shared-Library Integration Test
+
+The macOS workflow runs this test with the self-hosted Catalyst binary:
+
+```bash
+python3 scripts/ci/test_macos_shared_library.py \
+  --catalyst build/common-ccache-macos/catalyst
+```
+
+For both COB and Ninja, it scaffolds a shared library and a consumer without
+editing either generated toolchain, checks the Mach-O `.dylib`, and builds and
+runs the consumer through a local dependency. It then installs the library,
+header, and executable, deletes the source/build trees, and verifies installed
+and relocated execution from an unrelated working directory. Removing the
+installed dylib must cause a loader failure (the negative control).
+
+**Loader contract:** `catalyst run` supplies the build-tree library search path.
+Installed and relocated execution explicitly sets `DYLD_LIBRARY_PATH` to the
+prefix's `lib` directory. This verifies installation and relocation with an
+explicit loader search path; it does **not** claim automatic relocatability.
+Package-relative `@rpath`/install-name handling remains a separate integration
+milestone. Inherited loader environment variables are cleared before testing.
+
+Changes to `tc_catalyst*.yaml` also trigger macOS CI.
 
 ## Native Toolchains and Profiles
 
