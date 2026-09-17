@@ -51,7 +51,7 @@ These features are verified at configure time by `scripts/ci/CMakeLists.txt`.
    export COB_PATH="$PWD/build/macos/cob"
    # Fetch dependencies for release and tests
    build/macos/catalyst fetch --profiles common ccache macos
-   build/macos/catalyst fetch --profiles common ccache macos test macos-test
+   build/macos/catalyst fetch --profiles=common --profiles=ccache --profiles=macos --profiles=test --profiles=macos-test
 
    # Build with COB backend
    build/macos/catalyst build --backend cob --profiles common ccache macos
@@ -64,7 +64,7 @@ These features are verified at configure time by `scripts/ci/CMakeLists.txt`.
    The newly built self-hosted binary runs the unit test suite and smoke-tests sample projects:
    ```bash
    # Build and run unit test suite
-   build/common-ccache-macos/catalyst build --backend cob --profiles common ccache macos test macos-test
+   build/common-ccache-macos/catalyst build --backend cob --profiles=common --profiles=ccache --profiles=macos --profiles=test --profiles=macos-test
    build/test/common-ccache-macos-test-macos-test/catalyst_tests
 
    # Verify debug and release build coexistence
