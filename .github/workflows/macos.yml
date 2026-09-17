@@ -64,6 +64,9 @@ jobs:
         run: |
           brew install llvm@21 cmake ninja ccache pkg-config wget
           llvm_prefix="$(brew --prefix llvm@21)"
+          sdk_root="$(xcrun --sdk macosx --show-sdk-path)"
+          test -f "$sdk_root/usr/include/time.h"
+          echo "SDKROOT=$sdk_root" >> "$GITHUB_ENV"
           echo "$llvm_prefix/bin" >> "$GITHUB_PATH"
           echo "CC=$llvm_prefix/bin/clang" >> "$GITHUB_ENV"
           echo "CXX=$llvm_prefix/bin/clang++" >> "$GITHUB_ENV"
@@ -101,6 +104,7 @@ jobs:
         run: |
           cmake -S scripts/ci -B build/macos -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_SYSROOT="$SDKROOT" \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
             -DVCPKG_TARGET_TRIPLET="$VCPKG_DEFAULT_TRIPLET" \
@@ -182,6 +186,7 @@ jobs:
         run: |
           clang++ --version
           sw_vers
+          xcrun --sdk macosx --show-sdk-path
           find build/macos -name '*.log' -type f -exec tail -n 100 {} \;
           if [[ -f build/macos/CMakeFiles/CMakeConfigureLog.yaml ]]; then
             echo '=== CMake configure diagnostics ==='
