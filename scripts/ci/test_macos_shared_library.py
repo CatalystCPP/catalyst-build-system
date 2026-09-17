@@ -112,6 +112,8 @@ def main():
     catalyst = args.catalyst.resolve(strict=True)
     env = {key: value for key, value in os.environ.items()
            if not key.startswith("DYLD_") and key != "LD_LIBRARY_PATH"}
+    # Local dependency builds invoke `catalyst` by name, not the parent's argv[0].
+    env["PATH"] = str(catalyst.parent) + os.pathsep + env.get("PATH", os.defpath)
     for backend in ("cob", "ninja"):
         with tempfile.TemporaryDirectory(prefix=f"catalyst-dylib-{backend}-") as tmp:
             exercise(catalyst, Path(tmp), backend, env)
