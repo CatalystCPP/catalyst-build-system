@@ -38,11 +38,12 @@ common:
     pre-fetch:
       - script: "scripts/fetch_cli_11.sh"
     pre-build:
+      - script: "python3 scripts/resolve_cob.py"
       - codegen:
-          cmd: "python3 $IN[0]"
+          cmd: "python3 $IN[0] --cob-path $IN[1]"
           input:
             - "scripts/embed_cob.py"
-            - "../cob/build/common-ccache-release/cob"
+            - "build/tools/cob"
           output:
             - "include/catalyst/cob_embedded.hpp"
             - "src/utils/cob_embedded.cpp"
@@ -90,3 +91,46 @@ release:
     post-build:
       - catalyst: pack -q -p common ccache release -a
       - script: "scripts/generate_cli_docs.sh"
+macos:
+  manifest:
+    toolchain: tc_catalyst_macos.yaml
+  dependencies:
+    - name: reproc
+      source: vcpkg
+      triplet: arm64-osx
+      version: latest
+    - name: ryml
+      source: vcpkg
+      triplet: arm64-osx
+      version: latest
+    - name: efsw
+      source: vcpkg
+      triplet: arm64-osx
+      version: latest
+macos-debug:
+  manifest:
+    toolchain: tc_catalyst_macos_debug.yaml
+  dependencies:
+    - name: reproc
+      source: vcpkg
+      triplet: arm64-osx
+      version: latest
+    - name: ryml
+      source: vcpkg
+      triplet: arm64-osx
+      version: latest
+    - name: efsw
+      source: vcpkg
+      triplet: arm64-osx
+      version: latest
+macos-test:
+  dependencies:
+    - name: catch2
+      source: vcpkg
+      triplet: arm64-osx
+      version: latest
+    - name: yaml-cpp
+      source: vcpkg
+      triplet: arm64-osx
+      version: latest
+

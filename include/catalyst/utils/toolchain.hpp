@@ -21,7 +21,11 @@ struct ToolchainDef {
         std::string object = ".o";
         std::string executable = "";
         std::string static_lib = ".a";
+#if defined(__APPLE__)
+        std::string shared_lib = ".dylib";
+#else
         std::string shared_lib = ".so";
+#endif
         std::string static_lib_prefix = "lib";
         std::string shared_lib_prefix = "lib";
         std::vector<std::string> cpp_sources = {".cpp", ".cxx", ".cc", ".cupp"};
@@ -71,7 +75,12 @@ struct ToolchainDef {
         std::string executable = "c++";
         std::string flags; // base linker flags, interpolated as {ldflags}
         std::string executable_command = "{linker} {objects} -o {output} {ldflags} {lib_dirs} {rpaths} {libs}";
+#if defined(__APPLE__)
+        std::string shared_lib_command =
+            "{linker} -dynamiclib {objects} -o {output} {ldflags} {lib_dirs} {rpaths} {libs}";
+#else
         std::string shared_lib_command = "{linker} -shared {objects} -o {output} {ldflags} {lib_dirs} {rpaths} {libs}";
+#endif
 
         bool operator==(const Linker &) const = default;
     } linker;
