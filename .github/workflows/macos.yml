@@ -123,26 +123,35 @@ jobs:
           "$bootstrap_bin" fetch --profiles common ccache macos
           "$bootstrap_bin" fetch --profiles=common --profiles=ccache --profiles=macos --profiles=test --profiles=macos-test
 
-      - name: "Self-host: build Catalyst with COB and Ninja"
+      - name: "Self-host: build Catalyst with COB"
         run: |
           bootstrap_bin="$GITHUB_WORKSPACE/build/macos/catalyst"
           export COB_PATH="$GITHUB_WORKSPACE/build/macos/cob"
           echo "=== Self-host build with COB backend ==="
           "$bootstrap_bin" build --backend cob --profiles common ccache macos
-          echo "=== Self-host build with Ninja backend ==="
-          "$bootstrap_bin" build --backend ninja --regen --profiles common ccache macos
 
       - name: "Self-host: verify idempotent second build"
         run: |
           catalyst_bin="$GITHUB_WORKSPACE/build/common-ccache-macos/catalyst"
           export COB_PATH="$GITHUB_WORKSPACE/build/macos/cob"
+          # Establish the baseline with the self-hosted binary and the same backend.
+          "$catalyst_bin" build --backend cob --profiles common ccache macos
           echo "=== Verifying unchanged second build performs no unnecessary work ==="
-          output=$("$catalyst_bin" build --backend cob --profiles common ccache macos 2>&1)
-          echo "$output"
+          if output=$("$catalyst_bin" build --backend cob --profiles common ccache macos 2>&1); then
+            echo "$output"
+          else
+            echo "$output"
+            exit 1
+          fi
           if echo "$output" | grep -E "(Running codegen:|Compiling)"; then
             echo "Error: Unchanged second build performed unnecessary compilation or code generation"
             exit 1
           fi
+
+      - name: "Self-host: build Catalyst with Ninja"
+        run: |
+          export COB_PATH="$GITHUB_WORKSPACE/build/macos/cob"
+          "$GITHUB_WORKSPACE/build/macos/catalyst" build --backend ninja --regen --profiles common ccache macos
 
       - name: "Self-host: verify debug and release coexist"
         run: |
