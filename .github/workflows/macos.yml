@@ -183,3 +183,15 @@ jobs:
           clang++ --version
           sw_vers
           find build/macos -name '*.log' -type f -exec tail -n 100 {} \;
+          if [[ -f build/macos/CMakeFiles/CMakeConfigureLog.yaml ]]; then
+            echo '=== CMake configure diagnostics ==='
+            cat build/macos/CMakeFiles/CMakeConfigureLog.yaml
+          fi
+
+      - name: Upload CMake configure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-configure-diagnostics-${{ matrix.triplet }}
+          path: build/macos/CMakeFiles/CMakeConfigureLog.yaml
+          if-no-files-found: ignore
