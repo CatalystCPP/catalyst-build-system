@@ -112,14 +112,14 @@ jobs:
       - name: Run bootstrap unit tests
         run: ctest --test-dir build/macos --output-on-failure
 
-      - name: Self-host: fetch dependencies with native profiles
+      - name: "Self-host: fetch dependencies with native profiles"
         run: |
           bootstrap_bin="$GITHUB_WORKSPACE/build/macos/catalyst"
           export COB_PATH="$GITHUB_WORKSPACE/build/macos/cob"
           "$bootstrap_bin" fetch --profiles common ccache macos
-          "$bootstrap_bin" fetch --profiles common ccache macos test macos-test
+          "$bootstrap_bin" fetch --profiles=common --profiles=ccache --profiles=macos --profiles=test --profiles=macos-test
 
-      - name: Self-host: build Catalyst with COB and Ninja
+      - name: "Self-host: build Catalyst with COB and Ninja"
         run: |
           bootstrap_bin="$GITHUB_WORKSPACE/build/macos/catalyst"
           export COB_PATH="$GITHUB_WORKSPACE/build/macos/cob"
@@ -128,7 +128,7 @@ jobs:
           echo "=== Self-host build with Ninja backend ==="
           "$bootstrap_bin" build --backend ninja --regen --profiles common ccache macos
 
-      - name: Self-host: verify idempotent second build
+      - name: "Self-host: verify idempotent second build"
         run: |
           catalyst_bin="$GITHUB_WORKSPACE/build/common-ccache-macos/catalyst"
           export COB_PATH="$GITHUB_WORKSPACE/build/macos/cob"
@@ -140,7 +140,7 @@ jobs:
             exit 1
           fi
 
-      - name: Self-host: verify debug and release coexist
+      - name: "Self-host: verify debug and release coexist"
         run: |
           catalyst_bin="$GITHUB_WORKSPACE/build/common-ccache-macos/catalyst"
           export COB_PATH="$GITHUB_WORKSPACE/build/macos/cob"
@@ -150,12 +150,12 @@ jobs:
           test -f "$GITHUB_WORKSPACE/build/common-ccache-macos-debug/catalyst"
           echo "Debug and release builds coexist successfully."
 
-      - name: Self-host: build and run unit tests
+      - name: "Self-host: build and run unit tests"
         run: |
           catalyst_bin="$GITHUB_WORKSPACE/build/common-ccache-macos/catalyst"
           export COB_PATH="$GITHUB_WORKSPACE/build/macos/cob"
           echo "=== Building and running unit tests ==="
-          "$catalyst_bin" build --backend cob --profiles common ccache macos test macos-test
+          "$catalyst_bin" build --backend cob --profiles=common --profiles=ccache --profiles=macos --profiles=test --profiles=macos-test
           "$GITHUB_WORKSPACE/build/test/common-ccache-macos-test-macos-test/catalyst_tests"
 
       - name: Smoke test generated projects with self-hosted Catalyst
