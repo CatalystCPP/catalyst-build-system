@@ -11,6 +11,7 @@ on:
       - 'tests/**'
       - 'scripts/**'
       - 'CATALYST.yaml'
+      - 'tc_catalyst*.yaml'
       - '.github/workflows/macos.yml'
   pull_request:
     paths:
@@ -19,6 +20,7 @@ on:
       - 'tests/**'
       - 'scripts/**'
       - 'CATALYST.yaml'
+      - 'tc_catalyst*.yaml'
       - '.github/workflows/macos.yml'
   workflow_dispatch:
 
@@ -169,6 +171,11 @@ jobs:
               "$catalyst_bin" run
             )
           done
+
+      - name: Test native shared-library projects with COB and Ninja
+        run: |
+          python3 scripts/ci/test_macos_shared_library.py \
+            --catalyst "$GITHUB_WORKSPACE/build/common-ccache-macos/catalyst"
 
       - name: Print build diagnostics
         if: failure()

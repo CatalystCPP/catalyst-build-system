@@ -71,6 +71,31 @@ These features are verified at configure time by `scripts/ci/CMakeLists.txt`.
    build/common-ccache-macos/catalyst build --backend cob --profiles common ccache macos-debug
    ```
 
+## Shared-Library Integration Test
+
+The macOS workflow runs this test with the self-hosted Catalyst binary:
+
+```bash
+python3 scripts/ci/test_macos_shared_library.py \
+  --catalyst build/common-ccache-macos/catalyst
+```
+
+For both COB and Ninja, it scaffolds a shared library and a consumer without
+editing either generated toolchain, checks the Mach-O `.dylib`, and builds and
+runs the consumer through a local dependency. It then installs the library,
+header, and executable, deletes the source/build trees, and verifies installed
+and relocated execution from an unrelated working directory. Removing the
+installed dylib must cause a loader failure (the negative control).
+
+**Loader contract:** `catalyst run` supplies the build-tree library search path.
+Installed and relocated execution explicitly sets `DYLD_LIBRARY_PATH` to the
+prefix's `lib` directory. This verifies installation and relocation with an
+explicit loader search path; it does **not** claim automatic relocatability.
+Package-relative `@rpath`/install-name handling remains a separate integration
+milestone. Inherited loader environment variables are cleared before testing.
+
+Changes to `tc_catalyst*.yaml` also trigger macOS CI.
+
 ## Native Toolchains and Profiles
 
 - `tc_catalyst_macos.yaml`: Native Apple Silicon release toolchain with Mach-O linker flags (`-Wl,-dead_strip`, `-dynamiclib`), `.dylib` extensions, and no ELF/mold/static flags.
