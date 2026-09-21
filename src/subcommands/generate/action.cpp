@@ -41,6 +41,7 @@ bool featureDefault(ryml::ConstNodeRef feature_node) = delete;
 struct GeneratedVariables {
     std::string cxxflags;
     std::vector<std::string> rpaths;
+    std::vector<std::string> link_inputs;
 };
 
 /// Writes the variable block and returns values needed by later build edges.
@@ -57,7 +58,8 @@ void finalTarget(const utils::yaml::Configuration &config,
                  const auto &object_files,
                  catalyst::generate::buildwriters::BaseWriter &writer,
                  const catalyst::toolchain::ToolchainDef &tc,
-                 const std::vector<std::string> &extra_link_args);
+                 const std::vector<std::string> &extra_link_args,
+                 const std::vector<std::string> &link_inputs);
 
 void featureFilter(
     std::unordered_set<fs::path> &source_set,
@@ -164,7 +166,7 @@ Result<void> action(const Parse &parse_args) {
         }
         const std::vector<std::string> extra_link_args =
             uses_cob_writer ? std::move(variables->rpaths) : std::vector<std::string>{};
-        finalTarget(config, *object_files, writer, tc, extra_link_args);
+        finalTarget(config, *object_files, writer, tc, extra_link_args, variables->link_inputs);
         return {};
     };
 
@@ -289,7 +291,8 @@ void finalTarget(const utils::yaml::Configuration &config,
                  const auto &object_files,
                  catalyst::generate::buildwriters::BaseWriter &writer,
                  const catalyst::toolchain::ToolchainDef &tc,
-                 const std::vector<std::string> &extra_link_args) {
+                 const std::vector<std::string> &extra_link_args,
+                 const std::vector<std::string> &link_inputs) {
     std::string type = config.getString("manifest.type").value_or("BINARY");
     if (type == "INTERFACE") {
         catalyst::logger.debug("Interface library target, skipping final target build edge.");
@@ -321,7 +324,7 @@ void finalTarget(const utils::yaml::Configuration &config,
     void(writer.addBuild({target_path.string()},
                          link_rule,
                          object_files,
-                         {},
+                         link_rule == "static_link" ? std::vector<std::string>{} : link_inputs,
                          link_rule == "static_link" ? std::vector<std::string>{} : extra_link_args));
 
     // Default target
@@ -370,6 +373,7 @@ Result<GeneratedVariables> writeVariables(const catalyst::utils::yaml::Configura
     std::string rpaths;
     std::vector<std::string> rpath_flags;
     std::unordered_set<std::string> rpath_dirs;
+    std::vector<std::string> link_inputs;
     if (ryml::ConstNodeRef deps = utils::yaml::child(config.rootRef(), "dependencies");
         deps.readable() && deps.is_seq()) {
         for (ryml::ConstNodeRef dep : deps.children()) {
@@ -382,6 +386,10 @@ Result<GeneratedVariables> writeVariables(const catalyst::utils::yaml::Configura
             if (!merged)
                 return std::unexpected(merged.error());
             definitions = std::move(*merged);
+            for (const auto &input : dep_res.link_inputs) {
+                if (!std::ranges::contains(link_inputs, input))
+                    link_inputs.push_back(input);
+            }
             ldflags += " " + dep_res.lib_path;
             ldlibs += " " + dep_res.libs;
             ccflags += " " + dep_res.inc_path;
@@ -425,7 +433,8 @@ Result<GeneratedVariables> writeVariables(const catalyst::utils::yaml::Configura
     void(writer.addVariable("ldflags", ldflags));
     void(writer.addVariable("rpaths", rpaths));
     void(writer.addVariable("ldlibs", ldlibs)); // place compiled libraries here
-    return GeneratedVariables{.cxxflags = std::move(cxxflags), .rpaths = std::move(rpath_flags)};
+    return GeneratedVariables{
+        .cxxflags = std::move(cxxflags), .rpaths = std::move(rpath_flags), .link_inputs = std::move(link_inputs)};
 }
 
 void writeRules(catalyst::generate::buildwriters::BaseWriter &writer, const catalyst::toolchain::ToolchainDef &tc) {

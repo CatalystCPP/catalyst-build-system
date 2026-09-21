@@ -36,6 +36,7 @@ struct FindRes {
     std::vector<std::string> lib_dirs;
     FeatureDefinitions definitions{};
     std::string configuration_state{};
+    std::vector<std::string> link_inputs{}; ///< Local library artifacts that invalidate consumers' link steps.
 };
 
 /// Snapshot composed configuration, CLI overrides and transitive local manifests for regeneration.

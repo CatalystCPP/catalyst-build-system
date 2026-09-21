@@ -99,6 +99,11 @@ Result<FindRes> resolveLocal(ryml::ConstNodeRef dep,
         auto dependency_tc = catalyst::toolchain::resolveToolchain(toolchain_path);
         if (!dependency_tc)
             return std::unexpected(dependency_tc.error());
+        const auto &extensions = dependency_tc->extensions;
+        const auto name = profile.getString("manifest.name").value_or("name");
+        const auto filename = type == "STATICLIB" ? extensions.static_lib_prefix + name + extensions.static_lib
+                                                  : extensions.shared_lib_prefix + name + extensions.shared_lib;
+        result.link_inputs.push_back(fs::absolute(profile.getBuildDir() / filename).string());
         result.configuration_state += "\n" + catalyst::toolchain::serializeToolchain(*dependency_tc);
     }
     if (auto deps = yaml::child(profile.rootRef(), "dependencies"); deps.readable() && deps.is_seq()) {
@@ -117,6 +122,8 @@ Result<FindRes> resolveLocal(ryml::ConstNodeRef dep,
             result.lib_path += " " + resolved->lib_path;
             result.libs += " " + resolved->libs;
             result.lib_dirs.insert(result.lib_dirs.end(), resolved->lib_dirs.begin(), resolved->lib_dirs.end());
+            result.link_inputs.insert(
+                result.link_inputs.end(), resolved->link_inputs.begin(), resolved->link_inputs.end());
         }
     }
     return result;
