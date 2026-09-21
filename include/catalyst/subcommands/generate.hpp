@@ -1,7 +1,9 @@
 #pragma once
 #include <expected>
 #include <functional>
+#include <map>
 #include <ostream>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -24,11 +26,15 @@ struct Parse {
     bool skip_pre_generate = false;
 };
 
+/// Preprocessor names and literal values, independent of compiler flag syntax.
+using FeatureDefinitions = std::map<std::string, std::string>;
+
 struct FindRes {
     std::string lib_path;
     std::string inc_path;
     std::string libs;
     std::vector<std::string> lib_dirs;
+    FeatureDefinitions definitions{};
 };
 
 Result<utils::yaml::Configuration> profileComposition(const std::vector<std::string> &profiles);
@@ -107,6 +113,13 @@ struct FeatureFlag {
     std::string resolved_val;
     bool is_enabled = false;
 };
+
+/// Convert resolved features to namespaced macro definitions (including enum constants).
+[[nodiscard]] FeatureDefinitions featureDefinitions(std::string_view project, std::span<const FeatureFlag> features);
+
+/// Merge compile requirements, rejecting inconsistent macro values across dependency paths.
+[[nodiscard]] Result<FeatureDefinitions> mergeFeatureDefinitions(const FeatureDefinitions &left,
+                                                                 const FeatureDefinitions &right);
 
 Result<std::vector<FeatureFlag>> resolveFeatureFlags(const utils::yaml::Configuration &config,
                                                      const std::vector<std::string> &enabled_features);
