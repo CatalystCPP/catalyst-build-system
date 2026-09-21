@@ -405,9 +405,10 @@ Result<void> action(const Parse &parse_args) {
     catalyst::logger.debug("Composing profiles.");
     utils::yaml::Configuration config{parse_args.profiles};
 
-    catalyst::logger.debug("Running pre-fetch hooks.");
-    if (auto res = hooks::preFetch(config); !res) {
-        return res;
+    if (!parse_args.local_only) {
+        catalyst::logger.debug("Running pre-fetch hooks.");
+        if (auto res = hooks::preFetch(config); !res)
+            return res;
     }
 
     // Load lockfile if it exists
@@ -463,6 +464,11 @@ Result<void> action(const Parse &parse_args) {
             if (!source_opt) {
                 catalyst::logger.error("Dependency: {} does not define field: source", name);
                 return std::unexpected(std::format("Dependency: {} does not define field: source", name));
+            }
+
+            if (parse_args.local_only && *source_opt != "local") {
+                ++ii;
+                continue;
             }
 
             // 1. Deduplicate by logical target name
@@ -560,9 +566,10 @@ Result<void> action(const Parse &parse_args) {
         }
     }
 
-    catalyst::logger.debug("Running post-fetch hooks.");
-    if (auto res = hooks::postFetch(config); !res) {
-        return res;
+    if (!parse_args.local_only) {
+        catalyst::logger.debug("Running post-fetch hooks.");
+        if (auto res = hooks::postFetch(config); !res)
+            return res;
     }
 
     catalyst::logger.debug("Fetch subcommand finished successfully.");

@@ -35,7 +35,13 @@ struct FindRes {
     std::string libs;
     std::vector<std::string> lib_dirs;
     FeatureDefinitions definitions{};
+    std::string configuration_state{};
 };
+
+/// Snapshot composed configuration, CLI overrides and transitive local manifests for regeneration.
+[[nodiscard]] Result<std::string> generationState(const utils::yaml::Configuration &config,
+                                                  std::span<const std::string> enabled_features);
+inline constexpr std::string_view GENERATION_STATE_FILENAME = ".catalyst_generation_state";
 
 Result<utils::yaml::Configuration> profileComposition(const std::vector<std::string> &profiles);
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);

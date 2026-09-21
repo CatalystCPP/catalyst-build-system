@@ -6,6 +6,7 @@
 #include <fstream>
 #include <functional>
 #include <future>
+#include <iterator>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -414,6 +415,8 @@ Result<void> action(const Parse &parse_args) {
     Result<void> result;
 
     auto run_build = [&]() -> void {
+        // Watch-mode iterations must not reuse stale composed feature values.
+        config = utils::yaml::Configuration{parse_args.profiles};
         BuildFailureGuard guard{config, result};
 
         catalyst::logger.info("Running pre-build hooks.");
@@ -435,7 +438,34 @@ Result<void> action(const Parse &parse_args) {
             parse_args.backend.empty() ? config.getString("meta.generator").value_or("cob") : parse_args.backend;
         std::string build_filename = catalyst::generate::buildFilename(generator);
 
-        bool needs_regen = !fs::exists(build_dir / build_filename) || parse_args.regen;
+        // Local dependencies need an incremental build check on every invocation.
+        // Fetch first so generation never consumes missing/stale dependency metadata.
+        const auto fetch_sentinel = build_dir / ".catalyst_fetched";
+        const bool needs_fetch = !fs::exists(fetch_sentinel) || parse_args.force_refetch || depMissing(config);
+        if (parse_args.force_refetch) {
+            fs::remove_all(build_dir / "catalyst-libs");
+            fs::remove(fetch_sentinel);
+        }
+        if (auto res = catalyst::fetch::action(
+                {.profiles = parse_args.profiles, .workspace = parse_args.workspace, .local_only = !needs_fetch});
+            !res) {
+            result = std::unexpected(res.error());
+            return;
+        }
+        if (needs_fetch) {
+            fs::create_directories(build_dir);
+            std::ofstream{fetch_sentinel};
+        }
+
+        auto state = catalyst::generate::generationState(config, parse_args.enabled_features);
+        if (!state) {
+            result = std::unexpected(state.error());
+            return;
+        }
+        std::ifstream state_file{build_dir / catalyst::generate::GENERATION_STATE_FILENAME, std::ios::binary};
+        const std::string stored_state{std::istreambuf_iterator<char>{state_file}, std::istreambuf_iterator<char>{}};
+        bool needs_regen =
+            !fs::exists(build_dir / build_filename) || parse_args.regen || !state_file || stored_state != *state;
         if (!needs_regen) {
             const fs::path toolchain_store = build_dir / catalyst::toolchain::RESOLVED_TOOLCHAIN_STORE_FILENAME;
             auto toolchain_changed = toolchainChanged(config, toolchain_store, generator);
@@ -475,28 +505,6 @@ Result<void> action(const Parse &parse_args) {
                 result = std::unexpected(res.error());
                 return;
             }
-        }
-
-        const auto fetch_sentinel = build_dir / ".catalyst_fetched";
-        bool needs_fetch = !fs::exists(fetch_sentinel) || parse_args.force_refetch || depMissing(config);
-        if (needs_fetch) {
-            if (parse_args.force_refetch) {
-                catalyst::logger.info("Forcefully refetching dependencies.");
-                fs::remove_all(fs::path{build_dir / "catalyst-libs"}); // cleanup
-                std::error_code ec;
-                fs::remove(build_dir / ".catalyst_fetched", ec);
-            }
-            catalyst::logger.info("Fetching dependencies.");
-            if (auto res =
-                    catalyst::fetch::action({.profiles = parse_args.profiles, .workspace = parse_args.workspace});
-                !res) {
-                catalyst::logger.error("Failed to fetch dependencies: {}", res.error());
-                result = std::unexpected(res.error());
-                return;
-            }
-            std::error_code ec;
-            fs::create_directories(build_dir, ec);
-            std::ofstream{fetch_sentinel}; // create sentinel file and close it via RAII
         }
 
         catalyst::logger.info("Building project.");

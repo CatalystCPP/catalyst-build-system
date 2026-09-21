@@ -90,7 +90,17 @@ Result<FindRes> resolveLocal(ryml::ConstNodeRef dep,
                    .inc_path = include_path,
                    .libs = libs,
                    .lib_dirs = lib_dirs,
-                   .definitions = std::move(definitions)};
+                   .definitions = std::move(definitions),
+                   .configuration_state = dep_path.string() + "\n" + yaml::emitYaml(profile.rootRef())};
+    if (type == "STATICLIB" || type == "SHAREDLIB") {
+        std::optional<fs::path> toolchain_path;
+        if (auto path = profile.getString("manifest.toolchain"))
+            toolchain_path = *path;
+        auto dependency_tc = catalyst::toolchain::resolveToolchain(toolchain_path);
+        if (!dependency_tc)
+            return std::unexpected(dependency_tc.error());
+        result.configuration_state += "\n" + catalyst::toolchain::serializeToolchain(*dependency_tc);
+    }
     if (auto deps = yaml::child(profile.rootRef(), "dependencies"); deps.readable() && deps.is_seq()) {
         for (auto child : deps.children()) {
             auto resolved = yaml::asString(yaml::child(child, "source")) == "local"
@@ -102,6 +112,7 @@ Result<FindRes> resolveLocal(ryml::ConstNodeRef dep,
             if (!merged)
                 return std::unexpected(merged.error());
             result.definitions = std::move(*merged);
+            result.configuration_state += "\n" + resolved->configuration_state;
             result.inc_path += " " + resolved->inc_path;
             result.lib_path += " " + resolved->lib_path;
             result.libs += " " + resolved->libs;
@@ -118,5 +129,23 @@ Result<FindRes> findLocal(ryml::ConstNodeRef dep, const catalyst::toolchain::Too
     } catch (const std::exception &error) {
         return std::unexpected(error.what());
     }
+}
+Result<std::string> generationState(const utils::yaml::Configuration &config,
+                                    std::span<const std::string> enabled_features) {
+    namespace yaml = utils::yaml;
+    std::string state = yaml::emitYaml(config.rootRef());
+    for (const auto &feature : enabled_features)
+        state += std::format("\n{}:{}", feature.size(), feature);
+    if (auto deps = yaml::child(config.rootRef(), "dependencies"); deps.readable() && deps.is_seq()) {
+        for (auto dep : deps.children()) {
+            if (yaml::asString(yaml::child(dep, "source")) != "local")
+                continue;
+            auto resolved = findLocal(dep, catalyst::toolchain::ToolchainDef{});
+            if (!resolved)
+                return std::unexpected(resolved.error());
+            state += "\n" + resolved->configuration_state;
+        }
+    }
+    return state;
 }
 } // namespace catalyst::generate

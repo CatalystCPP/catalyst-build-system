@@ -135,6 +135,12 @@ Result<void> action(const Parse &parse_args) {
         return std::unexpected(resolved_toolchain.error());
     catalyst::toolchain::ToolchainDef tc = std::move(*resolved_toolchain);
 
+    auto state = generationState(config, parse_args.enabled_features);
+    if (!state)
+        return std::unexpected(state.error());
+    // Never treat a partially written build file as current after a failed generation.
+    fs::remove(build_dir / GENERATION_STATE_FILENAME);
+
     catalyst::logger.debug("Writing build file to: {}", buildfile_path.string());
     std::ofstream buildfile{buildfile_path};
     if (!buildfile) {
@@ -204,6 +210,11 @@ Result<void> action(const Parse &parse_args) {
     if (!toolchain_store) {
         return std::unexpected(std::format("Failed to write {}", toolchain_store_path.string()));
     }
+    std::ofstream state_file{build_dir / GENERATION_STATE_FILENAME, std::ios::binary | std::ios::trunc};
+    state_file << *state;
+    state_file.close();
+    if (!state_file)
+        return std::unexpected("Failed to write generation state in " + build_dir.string());
     catalyst::logger.debug("Generate subcommand finished successfully.");
     return {};
 }
