@@ -226,6 +226,7 @@ struct FetchLocalArgs {
     std::string name;
     std::string path;
     std::vector<std::string> profiles;
+    std::vector<std::string> features;
 };
 
 Result<void> fetchLocal(const FetchLocalArgs &fn_args) {
@@ -265,12 +266,11 @@ Result<void> fetchLocal(const FetchLocalArgs &fn_args) {
     std::println(std::cout, "Building local dependency: {} at {}", name, local_path.string());
 
     std::vector<std::string> args = {"catalyst", "build"};
-    if (profiles.size() != 0) {
-        args.emplace_back("--profiles");
-        for (const auto &p : profiles) {
-            args.push_back(p);
-        }
-    }
+    // Bind each value to its option: names such as "test" are also CLI subcommands.
+    for (const auto &profile : profiles)
+        args.push_back("--profiles=" + profile);
+    for (const auto &feature : fn_args.features)
+        args.push_back("--features=" + feature);
 
     std::unordered_map<std::string, std::string> env_map;
     env_map["CATALYST_VISITED"] = new_visited;
@@ -367,7 +367,8 @@ Result<void> fetchDependency(ryml::ConstNodeRef dep,
 
         std::vector<std::string> profiles_vec =
             yaml::asStringVector(yaml::child(dep, "profiles")).value_or(std::vector<std::string>{});
-        if (auto res = fetchLocal({.name = name, .path = path, .profiles = profiles_vec}); !res)
+        auto features = yaml::asStringVector(yaml::child(dep, "using")).value_or(std::vector<std::string>{});
+        if (auto res = fetchLocal({.name = name, .path = path, .profiles = profiles_vec, .features = features}); !res)
             return std::unexpected(res.error());
     } else {
         fs::path dep_path = fs::path(build_dir) / "catalyst-libs" / name;
