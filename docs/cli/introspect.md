@@ -1,16 +1,18 @@
 # catalyst introspect
 
-```text
+```
 Query resolved state from a Catalyst lifecycle hook.
 
+
 catalyst introspect [OPTIONS] [path]
+
 
 POSITIONALS:
   path TEXT                   Dot-notation or indexed path into the hook state.
 
 OPTIONS:
-  -h, --help                  Print this help message and exit
-  -p, --pretty                Pretty-print object and array values.
+  -h,     --help              Print this help message and exit
+  -p,     --pretty            Pretty-print object and array values.
 ```
 
 ## Details
