@@ -3,6 +3,8 @@
 auto catalyst::test::parse(CLI::App &app) -> std::pair<CLI::App *, std::unique_ptr<Parse>> {
     CLI::App *test = app.add_subcommand("test", "Run the test executable.");
     auto ret = std::make_unique<Parse>();
+    test->add_option("-p,--profiles", ret->profiles, "Profile composition to test.")
+        ->default_val(std::vector<std::string>{"common", "test"});
     test->add_option("-P,--params", ret->params, "Params to pass to the test executable.");
     test->add_flag("-r,--rebuild", ret->rebuild, "Rebuild before testing.")->default_val(false);
     test->prefix_command(CLI::PrefixCommandMode::SeparatorOnly);

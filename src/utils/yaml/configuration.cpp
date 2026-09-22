@@ -484,6 +484,31 @@ void mergeHelper(ryml::Tree &composite, const std::string &new_profile_name, rym
         }
     };
 
+    auto merge_dependencies = [&](ryml::NodeRef dst_parent, ryml::ConstNodeRef src_parent) {
+        ryml::ConstNodeRef src_child = child(src_parent, "dependencies");
+        if (!src_child.readable())
+            return;
+        if (isNullValue(src_child)) {
+            removeChild(dst_parent, "dependencies");
+        } else if (src_child.is_seq()) {
+            ryml::NodeRef dst_seq = childOrCreate(dst_parent, "dependencies");
+            dst_seq |= ryml::SEQ;
+            for (ryml::ConstNodeRef item : src_child.children()) {
+                auto name = asString(child(item, "name"));
+                if (name && !name->empty()) {
+                    for (ryml::ConstNodeRef existing_item : dst_seq.children()) {
+                        auto existing_name = asString(child(existing_item, "name"));
+                        if (existing_name && *existing_name == *name) {
+                            dst_seq.tree()->remove(existing_item.id());
+                            break;
+                        }
+                    }
+                }
+                appendCopy(dst_seq, item);
+            }
+        }
+    };
+
     auto merge_section = [&](ryml::NodeRef dst_parent,
                              std::string_view key,
                              ryml::ConstNodeRef src_parent,
@@ -570,7 +595,7 @@ void mergeHelper(ryml::Tree &composite, const std::string &new_profile_name, rym
             }
         }
     });
-    merge_sequence(composite_root, "dependencies", new_profile);
+    merge_dependencies(composite_root, new_profile);
 
     merge_section(composite_root, "hooks", new_profile, [&](ryml::NodeRef dst, ryml::ConstNodeRef src) {
         for (ryml::ConstNodeRef hook : src.children()) {
