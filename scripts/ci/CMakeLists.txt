@@ -5,6 +5,39 @@ project(catalyst_macos_ci LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Verify compiler and C++23 standard library feature compatibility
+include(CheckCXXSourceCompiles)
+set(CMAKE_REQUIRED_FLAGS "${CMAKE_CXX_FLAGS} -std=c++23")
+check_cxx_source_compiles("
+#include <expected>
+#include <format>
+#include <print>
+#include <ranges>
+#include <span>
+#include <vector>
+#include <string>
+
+int main() {
+    std::expected<int, std::string> e = 42;
+    auto s = std::format(\"{}\", *e);
+    std::println(\"{}\", s);
+    std::vector<std::string> words{\"hello\", \"world\"};
+    auto joined = words | std::views::join_with(' ');
+    (void)joined;
+    return 0;
+}
+" CATALYST_CXX23_FEATURES_SUPPORTED)
+
+if(NOT CATALYST_CXX23_FEATURES_SUPPORTED)
+    message(FATAL_ERROR
+        "The selected compiler and C++ standard library do not support required C++23 features "
+        "(std::expected, std::format, std::println, std::views::join_with). "
+        "On macOS, LLVM 21+ with libc++ (e.g. Homebrew llvm@21) is required: set "
+        "CC=$(brew --prefix llvm@21)/bin/clang, CXX=$(brew --prefix llvm@21)/bin/clang++, and "
+        "CXXFLAGS=\"-stdlib=libc++ -D_LIBCPP_DISABLE_AVAILABILITY\".")
+endif()
+
 get_filename_component(CATALYST_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
 if(NOT IS_DIRECTORY "${COB_SOURCE_DIR}/src")
     message(FATAL_ERROR "COB_SOURCE_DIR must point to the pinned COB checkout")

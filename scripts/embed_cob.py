@@ -30,6 +30,8 @@ def main():
         fallback = os.path.expanduser("~/.local/bin/cob")
         if os.path.exists(fallback):
             cob_path = fallback
+        elif os.path.exists("build/tools/cob"):
+            cob_path = os.path.abspath("build/tools/cob")
 
     # 2. Fallback to catalyst download if not found locally
     if not cob_path:
@@ -91,31 +93,47 @@ extern const std::size_t cob_binary_len;
 } // namespace catalyst::embedded
 """
 
-    with open(header_path, "w") as f:
-        f.write(header_content)
-    print(f"Generated {header_path}")
+    # Only write header if different
+    header_needs_write = True
+    if os.path.exists(header_path):
+        with open(header_path, "r") as f:
+            if f.read() == header_content:
+                header_needs_write = False
+    if header_needs_write:
+        with open(header_path, "w") as f:
+            f.write(header_content)
+        print(f"Generated {header_path}")
+    else:
+        print(f"Up to date: {header_path}")
 
-    # Generate cpp file.
-    # We will write in chunks to avoid memory issues with huge strings.
+    # Generate cpp file in memory and check if different
     print(f"Generating {cpp_path}...")
-    with open(cpp_path, "w") as f:
-        f.write('#include "catalyst/cob_embedded.hpp"\n\n')
-        f.write('namespace catalyst::embedded {\n')
-        f.write('alignas(16) const unsigned char cob_binary[] = {\n')
+    cpp_lines = ['#include "catalyst/cob_embedded.hpp"\n\n',
+                 'namespace catalyst::embedded {\n',
+                 'alignas(16) const unsigned char cob_binary[] = {\n']
+    for i in range(0, len(data), 16):
+        chunk = data[i:i+16]
+        hex_str = ", ".join(f"0x{b:02x}" for b in chunk)
+        if i + 16 < len(data):
+            cpp_lines.append(f"    {hex_str},\n")
+        else:
+            cpp_lines.append(f"    {hex_str}\n")
+    cpp_lines.append('};\n')
+    cpp_lines.append(f'const std::size_t cob_binary_len = {len(data)};\n')
+    cpp_lines.append('} // namespace catalyst::embedded\n')
+    cpp_content = "".join(cpp_lines)
 
-        # Write bytes in chunks of 16 per line
-        for i in range(0, len(data), 16):
-            chunk = data[i:i+16]
-            hex_str = ", ".join(f"0x{b:02x}" for b in chunk)
-            if i + 16 < len(data):
-                f.write(f"    {hex_str},\n")
-            else:
-                f.write(f"    {hex_str}\n")
-
-        f.write('};\n')
-        f.write(f'const std::size_t cob_binary_len = {len(data)};\n')
-        f.write('} // namespace catalyst::embedded\n')
-    print(f"Generated {cpp_path}")
+    cpp_needs_write = True
+    if os.path.exists(cpp_path):
+        with open(cpp_path, "r") as f:
+            if f.read() == cpp_content:
+                cpp_needs_write = False
+    if cpp_needs_write:
+        with open(cpp_path, "w") as f:
+            f.write(cpp_content)
+        print(f"Generated {cpp_path}")
+    else:
+        print(f"Up to date: {cpp_path}")
 
 if __name__ == "__main__":
     main()
