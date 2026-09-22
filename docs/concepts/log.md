@@ -21,7 +21,18 @@ Each log level has a corresponding color to make scanning the console output eas
 ## File Output (`.catalyst.log`)
 
 In addition to the console, all log messages—including `DEBUG` level messages regardless of verbose settings are
-appended to a `.catalyst.log` file in the directory where Catalyst is run.
+written to an invocation-specific file under `.catalyst.logs/`. `.catalyst.log` is a hard link to the latest invocation's file.
+
+Each call without `CATALYST_MACHINE` starts a new generation. At startup, Catalyst retains the
+50 most recent completed generations plus all active invocations, deleting older completed logs.
+A pre-existing, unbounded `.catalyst.log` is preserved as the oldest generation during migration.
+Retention is by invocation, not bytes; a single invocation can still produce a large file.
+
+Calls with `CATALYST_MACHINE` set do not rotate logs. They inherit the absolute internal
+`CATALYST_LOG_PATH` and append to their parent's generation, even from a different working
+directory or while another top-level build runs. A standalone machine call without an inherited
+path appends to the latest local log. Each process still writes its own session markers.
+OS locks protect active generations and serialize rotation; crashes release these locks automatically.
 
 This file is structured using JSON lines (JSONL), making it easy to parse and analyze with standard log management tools.
 
