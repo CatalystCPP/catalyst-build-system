@@ -1,7 +1,9 @@
 #pragma once
 #include <expected>
 #include <functional>
+#include <map>
 #include <ostream>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -24,12 +26,23 @@ struct Parse {
     bool skip_pre_generate = false;
 };
 
+/// Preprocessor names and literal values, independent of compiler flag syntax.
+using FeatureDefinitions = std::map<std::string, std::string>;
+
 struct FindRes {
     std::string lib_path;
     std::string inc_path;
     std::string libs;
     std::vector<std::string> lib_dirs;
+    FeatureDefinitions definitions{};
+    std::string configuration_state{};
+    std::vector<std::string> link_inputs{}; ///< Local library artifacts that invalidate consumers' link steps.
 };
+
+/// Snapshot composed configuration, CLI overrides and transitive local manifests for regeneration.
+[[nodiscard]] Result<std::string> generationState(const utils::yaml::Configuration &config,
+                                                  std::span<const std::string> enabled_features);
+inline constexpr std::string_view GENERATION_STATE_FILENAME = ".catalyst_generation_state";
 
 Result<utils::yaml::Configuration> profileComposition(const std::vector<std::string> &profiles);
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);
@@ -107,6 +120,13 @@ struct FeatureFlag {
     std::string resolved_val;
     bool is_enabled = false;
 };
+
+/// Convert resolved features to namespaced macro definitions (including enum constants).
+[[nodiscard]] FeatureDefinitions featureDefinitions(std::string_view project, std::span<const FeatureFlag> features);
+
+/// Merge compile requirements, rejecting inconsistent macro values across dependency paths.
+[[nodiscard]] Result<FeatureDefinitions> mergeFeatureDefinitions(const FeatureDefinitions &left,
+                                                                 const FeatureDefinitions &right);
 
 Result<std::vector<FeatureFlag>> resolveFeatureFlags(const utils::yaml::Configuration &config,
                                                      const std::vector<std::string> &enabled_features);

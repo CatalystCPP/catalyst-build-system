@@ -55,9 +55,9 @@ features:
 
 !!! tip
 
-    Toggling a `files:` flag changes which sources are in the build graph, so it requires a regenerate
-    (`catalyst build -r`). Toggling a flag that only changes a define does not require a regenerate; the value is
-    part of each affected step's command hash and is picked up automatically.
+    `catalyst build` tracks the composed configuration and feature overrides, regenerating when they change.
+    This includes `files:` source gating and removing a previously supplied CLI override. Unchanged commands
+    remain eligible for incremental compilation.
 
 ### Valued Flags (`enum` / `int` / `string`)
 
@@ -127,6 +127,31 @@ catalyst build -f no-logging -f log_level=debug -f flush_threshold=2097152
 ```
 
 See the [build subcommand](../cli/build.md#feature-flag-overrides) for the full grammar and validation rules.
+
+### Features exported by local dependencies
+
+Local Catalyst dependencies export their resolved features to both C and C++ consumers, including through
+transitive local dependencies and `INTERFACE` libraries. Macros use the dependency's `manifest.name`, not its
+alias in the consumer's dependency list, and are formatted using the consumer's toolchain.
+
+```yaml
+dependencies:
+  - name: ripc
+    source: local
+    path: ../../ripc
+    profiles: [common, release]
+    using: [max_payload=2048, max_capacity=128]
+```
+
+`using` accepts the same overrides as `--features`. Catalyst passes them to the dependency build and exports
+those same resolved values, so the example supplies `FF_ripc__max_payload=2048` and
+`FF_ripc__max_capacity=128` to the library and its consumers. Without `using`, the selected profiles' defaults
+are exported. Source gating remains local to the project declaring the feature.
+
+Every build checks local dependencies incrementally, even after the initial fetch. Changes to their composed
+manifests or feature overrides invalidate the consumer's generated configuration; unchanged builds do not
+regenerate. Identical macro definitions are emitted once. Conflicting values across dependency paths, cycles,
+and feature-resolution errors fail generation instead of producing ambiguous or incomplete compiler flags.
 
 ## Custom Flags
 
