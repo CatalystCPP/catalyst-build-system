@@ -342,4 +342,58 @@ TEST_CASE("Workspace watch mode is rejected before dispatch", "[build][workspace
     REQUIRE(executor->workingDirectories().empty());
 }
 
+TEST_CASE("Workspace feature requirements are validated before dispatch", "[build][workspace][features]") {
+    TemporaryWorkspace temporary_workspace;
+    auto workspace = writeWorkspace(temporary_workspace.root(), {{"library", {}}, {"application", {"library"}}});
+    REQUIRE(workspace.has_value());
+    const auto append = [](const fs::path &path, const std::string &text) {
+        std::ofstream stream(path, std::ios::app);
+        stream << text;
+        REQUIRE(stream.good());
+    };
+    append(temporary_workspace.root() / "library/CATALYST.yaml",
+           "  features:\n    capacity:\n      type: int\n      default: 64\n");
+    auto args = buildArgs(*workspace);
+    bool compatible = false;
+    std::string expected = "workspace build=64, dependency request=128";
+    SECTION("Conflicting dependency override") {
+        append(temporary_workspace.root() / "application/CATALYST.yaml", "      using: [capacity=128]\n");
+    }
+    SECTION("Explicit matching default is compatible") {
+        append(temporary_workspace.root() / "application/CATALYST.yaml", "      using: [capacity=64]\n");
+        compatible = true;
+    }
+    SECTION("Workspace CLI overrides change the scheduled value") {
+        args.enabled_features = {"capacity=128"};
+        expected = "workspace build=128, dependency request=64";
+    }
+    SECTION("Different profiles must not silently link different artifacts") {
+        append(temporary_workspace.root() / "library/CATALYST.yaml", "alternate: {}\n");
+        append(temporary_workspace.root() / "application/CATALYST.yaml", "      profiles: [common, alternate]\n");
+        expected = "Dependency request profiles:";
+    }
+    SECTION("Invalid requested feature values fail before dispatch") {
+        append(temporary_workspace.root() / "application/CATALYST.yaml", "      using: [capacity=invalid]\n");
+        expected = "not a valid integer";
+    }
+    SECTION("Unselected consumers do not block a package-only build") {
+        append(temporary_workspace.root() / "application/CATALYST.yaml", "      using: [capacity=128]\n");
+        args.package = "library";
+        compatible = true;
+    }
+    auto executor = std::make_shared<WorkspaceProcessExecutor>(WorkspaceProcessExecutor::Behavior::DependencyOrder);
+    ProcessExecutorGuard executor_guard{executor};
+    auto result = catalyst::build::action(args);
+    if (compatible) {
+        REQUIRE(result.has_value());
+        REQUIRE_FALSE(executor->workingDirectories().empty());
+    } else {
+        REQUIRE_FALSE(result.has_value());
+        CHECK(result.error().find("library") != std::string::npos);
+        CHECK(result.error().find("application -> library") != std::string::npos);
+        CHECK(result.error().find(expected) != std::string::npos);
+        REQUIRE(executor->workingDirectories().empty());
+    }
+}
+
 // NOLINTEND(cppcoreguidelines-avoid-do-while, readability-function-cognitive-complexity)

@@ -534,3 +534,57 @@ TEST_CASE("resolveFeatureFlags parses and validates feature flags", "[features][
         CHECK_FALSE(res.has_value());
     }
 }
+
+TEST_CASE("Profile composition: dependencies override by name without duplicate entries", "[yaml][characterization]") {
+    TempDir dir{"catalyst_char_deps_override"};
+    constexpr const char *kDepsYaml = R"(common:
+  meta:
+    min_ver: 1.0.0
+  manifest:
+    name: proj
+    type: BINARY
+    version: 1.0.0
+    dirs:
+      include: [include]
+      source: [src]
+      build: build
+  dependencies:
+    - name: reproc
+      source: vcpkg
+      triplet: x64-linux
+      version: latest
+    - name: ryml
+      source: vcpkg
+      triplet: x64-linux
+      version: latest
+macos:
+  dependencies:
+    - name: reproc
+      source: vcpkg
+      triplet: arm64-osx
+      version: latest
+    - name: catch2
+      source: vcpkg
+      triplet: arm64-osx
+      version: latest
+)";
+    writeFile(dir.path / "CATALYST.yaml", kDepsYaml);
+
+    Configuration config({"common", "macos"}, dir.path);
+    auto deps = catalyst::utils::yaml::child(config.rootRef(), "dependencies");
+    REQUIRE(deps.readable());
+    REQUIRE(deps.is_seq());
+
+    std::vector<std::pair<std::string, std::string>> result_deps;
+    for (ryml::ConstNodeRef dep : deps.children()) {
+        auto name = catalyst::utils::yaml::asString(catalyst::utils::yaml::child(dep, "name")).value_or("");
+        auto triplet = catalyst::utils::yaml::asString(catalyst::utils::yaml::child(dep, "triplet")).value_or("");
+        result_deps.emplace_back(name, triplet);
+    }
+
+    REQUIRE(result_deps.size() == 3);
+    CHECK(result_deps[0] == std::pair<std::string, std::string>{"ryml", "x64-linux"});
+    CHECK(result_deps[1] == std::pair<std::string, std::string>{"reproc", "arm64-osx"});
+    CHECK(result_deps[2] == std::pair<std::string, std::string>{"catch2", "arm64-osx"});
+}
+

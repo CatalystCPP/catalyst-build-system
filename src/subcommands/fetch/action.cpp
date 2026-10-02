@@ -226,6 +226,7 @@ struct FetchLocalArgs {
     std::string name;
     std::string path;
     std::vector<std::string> profiles;
+    std::vector<std::string> features;
 };
 
 Result<void> fetchLocal(const FetchLocalArgs &fn_args) {
@@ -265,12 +266,11 @@ Result<void> fetchLocal(const FetchLocalArgs &fn_args) {
     std::println(std::cout, "Building local dependency: {} at {}", name, local_path.string());
 
     std::vector<std::string> args = {"catalyst", "build"};
-    if (profiles.size() != 0) {
-        args.emplace_back("--profiles");
-        for (const auto &p : profiles) {
-            args.push_back(p);
-        }
-    }
+    // Bind each value to its option: names such as "test" are also CLI subcommands.
+    for (const auto &profile : profiles)
+        args.push_back("--profiles=" + profile);
+    for (const auto &feature : fn_args.features)
+        args.push_back("--features=" + feature);
 
     std::unordered_map<std::string, std::string> env_map;
     env_map["CATALYST_VISITED"] = new_visited;
@@ -367,7 +367,8 @@ Result<void> fetchDependency(ryml::ConstNodeRef dep,
 
         std::vector<std::string> profiles_vec =
             yaml::asStringVector(yaml::child(dep, "profiles")).value_or(std::vector<std::string>{});
-        if (auto res = fetchLocal({.name = name, .path = path, .profiles = profiles_vec}); !res)
+        auto features = yaml::asStringVector(yaml::child(dep, "using")).value_or(std::vector<std::string>{});
+        if (auto res = fetchLocal({.name = name, .path = path, .profiles = profiles_vec, .features = features}); !res)
             return std::unexpected(res.error());
     } else {
         fs::path dep_path = fs::path(build_dir) / "catalyst-libs" / name;
@@ -404,9 +405,10 @@ Result<void> action(const Parse &parse_args) {
     catalyst::logger.debug("Composing profiles.");
     utils::yaml::Configuration config{parse_args.profiles};
 
-    catalyst::logger.debug("Running pre-fetch hooks.");
-    if (auto res = hooks::preFetch(config); !res) {
-        return res;
+    if (!parse_args.local_only) {
+        catalyst::logger.debug("Running pre-fetch hooks.");
+        if (auto res = hooks::preFetch(config); !res)
+            return res;
     }
 
     // Load lockfile if it exists
@@ -462,6 +464,11 @@ Result<void> action(const Parse &parse_args) {
             if (!source_opt) {
                 catalyst::logger.error("Dependency: {} does not define field: source", name);
                 return std::unexpected(std::format("Dependency: {} does not define field: source", name));
+            }
+
+            if (parse_args.local_only && *source_opt != "local") {
+                ++ii;
+                continue;
             }
 
             // 1. Deduplicate by logical target name
@@ -559,9 +566,10 @@ Result<void> action(const Parse &parse_args) {
         }
     }
 
-    catalyst::logger.debug("Running post-fetch hooks.");
-    if (auto res = hooks::postFetch(config); !res) {
-        return res;
+    if (!parse_args.local_only) {
+        catalyst::logger.debug("Running post-fetch hooks.");
+        if (auto res = hooks::postFetch(config); !res)
+            return res;
     }
 
     catalyst::logger.debug("Fetch subcommand finished successfully.");

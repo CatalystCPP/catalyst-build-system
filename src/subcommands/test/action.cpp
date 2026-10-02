@@ -134,7 +134,8 @@ Result<void> action(const Parse &args) {
         }
     }
 
-    const std::vector<std::string> profiles{"common", "test"};
+    const std::vector<std::string> profiles =
+        args.profiles.empty() ? std::vector<std::string>{"common", "test"} : args.profiles;
 
     catalyst::logger.debug("Composing profiles.");
     auto res = generate::profileComposition(profiles);

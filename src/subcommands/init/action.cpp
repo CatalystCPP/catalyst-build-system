@@ -2,12 +2,14 @@
 #include <filesystem>
 #include <format>
 #include <fstream>
+#include <optional>
 #include <string>
 
 #include "catalyst/globals.hpp"
 #include "catalyst/subcommands/init.hpp"
 #include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/result.hpp"
+#include "catalyst/utils/toolchain.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::init {
@@ -120,50 +122,15 @@ int main(int argc, char **argv) {
 
     catalyst::logger.debug("Creating toolchain file: {}", (parse_args.path / "tc_catalyst.yaml").string());
     std::ofstream toolchain_file{parse_args.path / "tc_catalyst.yaml"};
-    toolchain_file <<
-        R"(# Catalyst Default Toolchain Files; Feel free to modify this file to suit your needs.
-toolchain:
-  name: "Catalyst Default Toolchain"
-  extensions:
-    object: ".o"
-    executable: ""
-    static_lib: ".a"
-    shared_lib: ".so"
-    static_lib_prefix: "lib"
-    shared_lib_prefix: "lib"
-    c_sources: [".c", ".cu"]
-    cpp_sources: [".cpp", ".cxx", ".cc", ".cupp"]
-    headers: [".h", ".hpp", ".hxx", ".hh", ".ipp", ".inl", ".tpp", ".cuh", ".tcc"]
-    module_interfaces: [".cppm", ".ixx", ".mpp", ".cxxm"]
-    clang_modules: [".cppm", ".cxxm"]
-    bmi: ".pcm"
-    library_scan: [".a", ".so"]
-    shell_scripts: [".sh"]
-  flags:
-    include_dir: "-I{path}"
-    lib_dir: "-L{path}"
-    lib: "-l{name}"
-    rpath: "-Wl,-rpath,{path}"
-    define: "-D{name}={value}"
-    define_empty: "-D{name}"
-  compiler:
-    c:
-      executable: "cc"
-      flags: ""
-      command: "{cc} {cflags} -MMD -MF {object}.d -c {source} -o {object} {includes} {defines}"
-    cxx:
-      executable: "c++"
-      flags: ""
-      command: "{cxx} {cxxflags} -MMD -MF {object}.d -c {source} -o {object} {includes} {defines}"
-  linker:
-    executable: "c++"
-    flags: ""
-    executable_command: "{linker} {objects} -o {output} {ldflags} {lib_dirs} {rpaths} {libs}"
-    shared_lib_command: "{linker} -shared {objects} -o {output} {ldflags} {lib_dirs} {rpaths} {libs}"
-  archiver:
-    executable: "ar"
-    command: "{archiver} rcs {output} {objects}"
-)";
+    auto defaults = catalyst::toolchain::resolveToolchain(std::nullopt);
+    if (!defaults)
+        return std::unexpected(defaults.error());
+    defaults->name = "Catalyst Default Toolchain";
+    defaults->extensions.shell_scripts = {".sh"};
+    toolchain_file << "# Catalyst Default Toolchain; feel free to modify this file to suit your needs.\n"
+                   << catalyst::toolchain::serializeToolchain(*defaults);
+    if (!toolchain_file)
+        return std::unexpected("Failed to write default toolchain file.");
 
     if (auto res = invokeIDEConfigEmitters(parse_args); !res) {
         return std::unexpected(res.error());

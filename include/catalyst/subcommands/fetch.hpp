@@ -15,6 +15,7 @@ namespace catalyst::fetch {
 struct Parse {
     std::vector<std::string> profiles;
     std::optional<Workspace> workspace;
+    bool local_only = false; ///< Incrementally check local builds without refetching external packages.
 };
 
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);

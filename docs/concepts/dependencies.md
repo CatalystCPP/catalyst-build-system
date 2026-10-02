@@ -78,13 +78,18 @@ Builds a dependency found on the local filesystem.
 | `name` | Yes | Name of the dependency. |
 | `source` | Yes | Must be `local`. |
 | `path` | Yes | Path to the dependency root. |
-| `profiles`| No | Profiles to build the dependency with. |
+| `profiles`| No | Profiles to build the dependency with (default: `[common]`). |
+| `using` | No | Feature overrides, using the same syntax as `build --features` (e.g. `[logging, capacity=128]`). |
 
 ```yaml
 - name: my-lib
   source: local
   path: ../libs/my-lib
 ```
+
+Local dependencies export their resolved [feature macros](preprocessor.md#features-exported-by-local-dependencies)
+to consumers, including transitively. The selected profiles and `using` overrides apply both to the dependency's
+own build and to those exported definitions. Local builds are checked incrementally on every `catalyst build`.
 
 ### 4. `system`
 Uses `pkg-config` to find a system-installed library.

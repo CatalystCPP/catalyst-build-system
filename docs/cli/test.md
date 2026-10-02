@@ -9,6 +9,7 @@ catalyst test [OPTIONS]
 
 OPTIONS:
   -h,     --help              Print this help message and exit
+  -p,     --profiles TEXT ... Profile composition to test. [default: common test]
   -P,     --params TEXT ...   Params to pass to the test executable.
   -r,     --rebuild [0]       Rebuild before testing.
 ```

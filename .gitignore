@@ -10,6 +10,8 @@ catalyst-libs/
 .todos.sm
 GEMINI.md
 .catalyst.log
+.catalyst.log.lock
+.catalyst.logs/
 
 # OS-specific files
 .DS_Store

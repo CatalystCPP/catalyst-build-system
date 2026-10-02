@@ -47,6 +47,42 @@ TEST_CASE("Template Expansion", "[toolchain]") {
     }
 }
 
+TEST_CASE("Native toolchain shared-library defaults", "[toolchain]") {
+    auto defaults = resolveToolchain(std::nullopt);
+    REQUIRE(defaults.has_value());
+    const ToolchainDef direct;
+#if defined(__APPLE__)
+    CHECK(defaults->extensions.shared_lib == ".dylib");
+    CHECK(defaults->extensions.library_scan == std::vector<std::string>{".a", ".dylib"});
+    CHECK(defaults->linker.shared_lib_command.find("-dynamiclib") != std::string::npos);
+#else
+    CHECK(defaults->extensions.shared_lib == ".so");
+    CHECK(defaults->linker.shared_lib_command.find("-shared") != std::string::npos);
+#endif
+    CHECK(direct.extensions.shared_lib == defaults->extensions.shared_lib);
+    CHECK(direct.linker.shared_lib_command == defaults->linker.shared_lib_command);
+}
+
+TEST_CASE("Explicit shared-library settings override native defaults", "[toolchain]") {
+    const auto path = std::filesystem::temp_directory_path() / "catalyst_explicit_shared_toolchain.yaml";
+    {
+        std::ofstream out(path);
+        out << R"(toolchain:
+  extensions:
+    shared_lib: ".custom"
+    library_scan: [".custom"]
+  linker:
+    shared_lib_command: "custom-link {objects} {output}"
+)";
+    }
+    auto tc = parseToolchain(path);
+    std::filesystem::remove(path);
+    REQUIRE(tc.has_value());
+    CHECK(tc->extensions.shared_lib == ".custom");
+    CHECK(tc->extensions.library_scan == std::vector<std::string>{".custom"});
+    CHECK(tc->linker.shared_lib_command == "custom-link {objects} {output}");
+}
+
 TEST_CASE("YAML Parsing", "[toolchain]") {
     std::filesystem::path temp_yaml = std::filesystem::temp_directory_path() / "test_toolchain.yaml";
     std::ofstream out(temp_yaml);

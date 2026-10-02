@@ -58,7 +58,7 @@ meta: null  # Removes 'meta' section entirely
 ## Reserved Profiles
 
 - **`common`**: The base profile (`catalyst.yaml`).
-- **`test`**: Automatically used by `catalyst test` (`catalyst_test.yaml`).
+- **`test`**: Default test profile used by `catalyst test` (`catalyst_test.yaml`). Composed by default as `common test`, but can be customized or overridden via `catalyst test -p, --profiles <profiles...>`.
 - **`bench`**: Automatically used by `catalyst bench` (`catalyst_bench.yaml`).
 
 ## Centralized Definition

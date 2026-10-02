@@ -1,0 +1,12 @@
+toolchain:
+  extends: ./tc_catalyst_macos.yaml
+  name: "catalyst macos debug"
+  compiler:
+    c:
+      flags_remove: -O3 -DNDEBUG
+      flags_append: -O0 -g -Wshadow -DDEBUG
+    cxx:
+      flags_remove: -O3 -DNDEBUG
+      flags_append: -O0 -g -Wshadow -DDEBUG
+  linker:
+    flags_remove: -Wl,-dead_strip

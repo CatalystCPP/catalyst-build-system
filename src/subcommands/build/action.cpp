@@ -6,6 +6,7 @@
 #include <fstream>
 #include <functional>
 #include <future>
+#include <iterator>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -66,13 +67,17 @@ struct WorkspaceBuildGraph {
 
 enum class VisitState : std::uint8_t { Unvisited, Visiting, Visited };
 
-Result<WorkspaceBuildGraph> workspaceBuildGraph(const Workspace &ws) {
+std::vector<std::string> workspaceProfiles(const WorkspaceMember &member, const Parse &args) {
+    if (args.profiles.empty() || (args.profiles.size() == 1 && args.profiles.front() == "common"))
+        return member.profiles.empty() ? std::vector<std::string>{"common"} : member.profiles;
+    return args.profiles;
+}
+
+Result<WorkspaceBuildGraph> workspaceBuildGraph(const Workspace &ws, const Parse &args) {
     WorkspaceBuildGraph graph;
     for (const auto &[key, member] : ws.getMembers()) {
         try {
-            std::vector<std::string> profiles = member.profiles;
-            if (profiles.empty())
-                profiles.emplace_back("common");
+            const auto profiles = workspaceProfiles(member, args);
 
             utils::yaml::Configuration config(profiles, member.path);
             auto name_opt = config.getString("manifest.name");
@@ -174,14 +179,10 @@ std::vector<std::string> workspaceMemberBuildCommand(const Parse &args) {
         command.emplace_back("--force-rebuild");
     if (args.force_refetch)
         command.emplace_back("--force-refetch");
-    if (!args.profiles.empty()) {
-        command.emplace_back("--profiles");
-        command.insert(command.end(), args.profiles.begin(), args.profiles.end());
-    }
-    if (!args.enabled_features.empty()) {
-        command.emplace_back("--features");
-        command.insert(command.end(), args.enabled_features.begin(), args.enabled_features.end());
-    }
+    for (const auto &profile : args.profiles)
+        command.push_back("--profiles=" + profile);
+    for (const auto &feature : args.enabled_features)
+        command.push_back("--features=" + feature);
     if (!args.backend.empty()) {
         command.emplace_back("--backend");
         command.push_back(args.backend);
@@ -190,8 +191,7 @@ std::vector<std::string> workspaceMemberBuildCommand(const Parse &args) {
 }
 
 Result<void> buildWorkspaceMember(const PackageInfo &package, Parse args) {
-    if (args.profiles.size() == 1 && args.profiles.front() == "common" && !package.member.profiles.empty())
-        args.profiles = package.member.profiles;
+    args.profiles = workspaceProfiles(package.member, args);
 
     catalyst::logger.info("Building workspace member: {}", package.name);
     std::unordered_map<std::string, std::string> environment{{"CATALYST_MACHINE", "1"}};
@@ -207,6 +207,75 @@ Result<void> buildWorkspaceMember(const PackageInfo &package, Parse args) {
     if (exit_code != 0)
         return std::unexpected(
             std::format("Workspace member '{}' build exited with code {}.", package.name, exit_code));
+    return {};
+}
+
+/// Validate consumer requirements against the configurations actually scheduled for workspace builds.
+[[nodiscard]] Result<void> validateWorkspaceRequirements(const WorkspaceBuildGraph &graph,
+                                                         const std::unordered_set<std::string> &targets,
+                                                         const Parse &args) {
+    namespace yaml = utils::yaml;
+    try {
+        for (const auto &name : graph.build_order) {
+            if (!targets.contains(name))
+                continue;
+            const auto &package = graph.packages.at(name);
+            yaml::Configuration config(workspaceProfiles(package.member, args), package.member.path);
+            auto deps = yaml::child(config.rootRef(), "dependencies");
+            if (!deps.readable() || !deps.is_seq())
+                continue;
+            for (auto dep : deps.children()) {
+                const auto dependency_name = yaml::asString(yaml::child(dep, "name")).value_or("");
+                if (yaml::asString(yaml::child(dep, "source")) != "local" || !graph.packages.contains(dependency_name))
+                    continue;
+                const auto &member = graph.packages.at(dependency_name).member;
+                const auto scheduled_profiles = workspaceProfiles(member, args);
+                auto requested_profiles =
+                    yaml::asStringVector(yaml::child(dep, "profiles")).value_or(std::vector<std::string>{});
+                if (requested_profiles.empty())
+                    requested_profiles.emplace_back("common");
+                yaml::Configuration scheduled(scheduled_profiles, member.path);
+                yaml::Configuration requested(requested_profiles, member.path);
+                auto actual_features = generate::resolveFeatureFlags(scheduled, args.enabled_features);
+                auto wanted_features = generate::resolveFeatureFlags(
+                    requested, yaml::asStringVector(yaml::child(dep, "using")).value_or(std::vector<std::string>{}));
+                if (!actual_features || !wanted_features)
+                    return std::unexpected(
+                        std::format("Cannot validate workspace dependency '{} -> {}': {}",
+                                    name,
+                                    dependency_name,
+                                    !actual_features ? actual_features.error() : wanted_features.error()));
+                const auto actual = generate::featureDefinitions(
+                    scheduled.getString("manifest.name").value_or(dependency_name), *actual_features);
+                const auto wanted = generate::featureDefinitions(
+                    requested.getString("manifest.name").value_or(dependency_name), *wanted_features);
+                if (actual == wanted && scheduled_profiles == requested_profiles)
+                    continue;
+                std::string message =
+                    std::format("Configuration mismatch for workspace member '{}', requested by '{} -> {}':\n"
+                                "  Workspace build profiles: {}\n  Dependency request profiles: {}\n",
+                                dependency_name,
+                                name,
+                                dependency_name,
+                                scheduled_profiles,
+                                requested_profiles);
+                auto names = actual;
+                names.insert(wanted.begin(), wanted.end());
+                for (const auto &[macro, ignored] : names) {
+                    const auto built_value = actual.contains(macro) ? actual.at(macro) : "<undefined>";
+                    const auto requested_value = wanted.contains(macro) ? wanted.at(macro) : "<undefined>";
+                    if (built_value != requested_value)
+                        message += std::format(
+                            "  {}: workspace build={}, dependency request={}\n", macro, built_value, requested_value);
+                }
+                message += "Align WORKSPACE.yaml profiles and dependency profiles/using overrides. "
+                           "Catalyst cannot link one workspace build with incompatible consumer requirements.";
+                return std::unexpected(std::move(message));
+            }
+        }
+    } catch (const std::exception &error) {
+        return std::unexpected(std::format("Failed to validate workspace dependency configurations: {}", error.what()));
+    }
     return {};
 }
 
@@ -398,12 +467,14 @@ Result<void> action(const Parse &parse_args) {
                 return std::unexpected("Workspace builds do not support --watch.");
 
             catalyst::logger.info("Resolving workspace build order.");
-            auto graph = workspaceBuildGraph(*parse_args.workspace);
+            auto graph = workspaceBuildGraph(*parse_args.workspace, parse_args);
             if (!graph)
                 return std::unexpected(graph.error());
             auto targets = workspaceTargets(*graph, parse_args.package);
             if (!targets)
                 return std::unexpected(targets.error());
+            if (auto validation = validateWorkspaceRequirements(*graph, *targets, parse_args); !validation)
+                return validation;
             return buildWorkspace(*graph, *targets, parse_args);
         }
     }
@@ -414,6 +485,8 @@ Result<void> action(const Parse &parse_args) {
     Result<void> result;
 
     auto run_build = [&]() -> void {
+        // Watch-mode iterations must not reuse stale composed feature values.
+        config = utils::yaml::Configuration{parse_args.profiles};
         BuildFailureGuard guard{config, result};
 
         catalyst::logger.info("Running pre-build hooks.");
@@ -435,7 +508,34 @@ Result<void> action(const Parse &parse_args) {
             parse_args.backend.empty() ? config.getString("meta.generator").value_or("cob") : parse_args.backend;
         std::string build_filename = catalyst::generate::buildFilename(generator);
 
-        bool needs_regen = !fs::exists(build_dir / build_filename) || parse_args.regen;
+        // Local dependencies need an incremental build check on every invocation.
+        // Fetch first so generation never consumes missing/stale dependency metadata.
+        const auto fetch_sentinel = build_dir / ".catalyst_fetched";
+        const bool needs_fetch = !fs::exists(fetch_sentinel) || parse_args.force_refetch || depMissing(config);
+        if (parse_args.force_refetch) {
+            fs::remove_all(build_dir / "catalyst-libs");
+            fs::remove(fetch_sentinel);
+        }
+        if (auto res = catalyst::fetch::action(
+                {.profiles = parse_args.profiles, .workspace = parse_args.workspace, .local_only = !needs_fetch});
+            !res) {
+            result = std::unexpected(res.error());
+            return;
+        }
+        if (needs_fetch) {
+            fs::create_directories(build_dir);
+            std::ofstream{fetch_sentinel};
+        }
+
+        auto state = catalyst::generate::generationState(config, parse_args.enabled_features);
+        if (!state) {
+            result = std::unexpected(state.error());
+            return;
+        }
+        std::ifstream state_file{build_dir / catalyst::generate::GENERATION_STATE_FILENAME, std::ios::binary};
+        const std::string stored_state{std::istreambuf_iterator<char>{state_file}, std::istreambuf_iterator<char>{}};
+        bool needs_regen =
+            !fs::exists(build_dir / build_filename) || parse_args.regen || !state_file || stored_state != *state;
         if (!needs_regen) {
             const fs::path toolchain_store = build_dir / catalyst::toolchain::RESOLVED_TOOLCHAIN_STORE_FILENAME;
             auto toolchain_changed = toolchainChanged(config, toolchain_store, generator);
@@ -475,28 +575,6 @@ Result<void> action(const Parse &parse_args) {
                 result = std::unexpected(res.error());
                 return;
             }
-        }
-
-        const auto fetch_sentinel = build_dir / ".catalyst_fetched";
-        bool needs_fetch = !fs::exists(fetch_sentinel) || parse_args.force_refetch || depMissing(config);
-        if (needs_fetch) {
-            if (parse_args.force_refetch) {
-                catalyst::logger.info("Forcefully refetching dependencies.");
-                fs::remove_all(fs::path{build_dir / "catalyst-libs"}); // cleanup
-                std::error_code ec;
-                fs::remove(build_dir / ".catalyst_fetched", ec);
-            }
-            catalyst::logger.info("Fetching dependencies.");
-            if (auto res =
-                    catalyst::fetch::action({.profiles = parse_args.profiles, .workspace = parse_args.workspace});
-                !res) {
-                catalyst::logger.error("Failed to fetch dependencies: {}", res.error());
-                result = std::unexpected(res.error());
-                return;
-            }
-            std::error_code ec;
-            fs::create_directories(build_dir, ec);
-            std::ofstream{fetch_sentinel}; // create sentinel file and close it via RAII
         }
 
         catalyst::logger.info("Building project.");
