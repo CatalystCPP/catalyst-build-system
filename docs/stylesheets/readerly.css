@@ -1,0 +1,37 @@
+@font-face {
+  font-family: "Readerly";
+  src: url("../assets/fonts/readerly/Readerly-Regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Readerly";
+  src: url("../assets/fonts/readerly/Readerly-Italic.woff2") format("woff2");
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Readerly";
+  src: url("../assets/fonts/readerly/Readerly-Bold.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Readerly";
+  src: url("../assets/fonts/readerly/Readerly-BoldItalic.woff2") format("woff2");
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+}
+
+/* Scope the reading face to article prose, not navigation or headings.
+   Material's explicit code font continues to apply inside these elements. */
+.md-content .md-typeset :where(p, li, dt, dd, blockquote, th, td) {
+  font-family: "Readerly", Georgia, serif;
+}

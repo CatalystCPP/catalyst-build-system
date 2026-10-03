@@ -1,0 +1,7 @@
+# Readerly webfonts
+
+Source: https://github.com/nicoverbruggen/readerly/releases/tag/v1.11
+
+The four WOFF2 files are from the release's `Readerly_Web.zip`, unmodified.
+`LICENSE` and `COPYRIGHT` are from the same repository's `v1.11` tag.
+Readerly is distributed under the SIL Open Font License 1.1.

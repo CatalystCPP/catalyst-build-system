@@ -1,0 +1,7 @@
+Santa Cruz Mono (sc-mono)
+
+Copied unmodified from ~/Projects/config/sc-mono/fonts/web/.
+Source checkout commit: 9808813da01d844f907b08f7f20622b2e8e9f79b
+
+Includes regular, bold, and italic WOFF2 fonts.
+Distributed under the SIL Open Font License 1.1; see LICENSE.
