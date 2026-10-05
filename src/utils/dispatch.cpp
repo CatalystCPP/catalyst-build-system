@@ -55,6 +55,13 @@ int dispatchSubcommand(const std::string_view &&subc_name, const ParseRes_T &par
         catalyst::logger.error("maximum hook dispatch depth ({}) exceeded", TUNABLE_MAX_HOOK_DEPTH);
         return 1;
     }
+    if (!g_call_chain.empty())
+        catalyst::logger.explain("In-process hook dispatch of '{}' from parent chain {} (depth {} of limit {}); "
+                                 "it inherits the active explanation session.",
+                                 subc_name,
+                                 g_call_chain,
+                                 g_call_chain.size() + 1,
+                                 TUNABLE_MAX_HOOK_DEPTH);
 
     struct Guard {
         std::vector<std::string> previous_features;
@@ -111,9 +118,45 @@ int dispatch(const catalyst::CliContext &ctx) {
         return 1;
     }
     if (*ctx.build_subc) {
+        auto &build_args = *ctx.build_res;
+        const bool forwarded_child = std::getenv(catalyst::EXPLAIN_SPOOL_ENV) != nullptr;
+        if ((build_args.explain || forwarded_child) && build_args.watch) {
+            catalyst::logger.error("--explain cannot be combined with --watch.");
+            return 1;
+        }
+        // An in-process hook dispatch inherits the active session instead of replacing its report.
+        const bool owns_session = (build_args.explain || forwarded_child) && !catalyst::logger.explainEnabled();
+        if (owns_session) {
+            std::string command;
+            for (const auto &argument : catalyst::utils::runtime::commandLine())
+                command += (command.empty() ? "" : " ") + argument;
+            catalyst::logger.beginExplainSession(command);
+        }
         checkRequiredTools();
-        injectCommon(ctx.build_res->profiles);
-        return dispatchSubcommand("build", *ctx.build_res, catalyst::build::action);
+        const auto supplied_profiles = build_args.profiles;
+        injectCommon(build_args.profiles);
+        if (catalyst::logger.explainEnabled()) {
+            if (supplied_profiles != build_args.profiles)
+                catalyst::logger.explain("Profile composition {} became {}: 'common' is always composed first.",
+                                         supplied_profiles,
+                                         build_args.profiles);
+            else if (std::getenv("CATALYST_MACHINE") != nullptr)
+                catalyst::logger.explain(
+                    "CATALYST_MACHINE is set: 'common' is not injected; the profiles {} are used exactly as given.",
+                    build_args.profiles);
+        }
+        std::string first_failure;
+        const int exit_code = dispatchSubcommand("build", build_args, [&](const auto &args) -> Result<void> {
+            auto result = catalyst::build::action(args);
+            if (!result)
+                first_failure = result.error();
+            return result;
+        });
+        if (owns_session)
+            catalyst::logger.endExplainSession(exit_code == 0 ? catalyst::ExplainStatus::Success
+                                                              : catalyst::ExplainStatus::Failure,
+                                               first_failure);
+        return exit_code;
     }
     if (*ctx.clean_subc) {
         checkRequiredTools();
