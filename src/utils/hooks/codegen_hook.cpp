@@ -34,6 +34,8 @@ std::vector<std::string> collectPathList(ryml::ConstNodeRef node) {
 
 } // namespace
 
+#include <chrono>
+
 Result<void>
 executeCodegenHook(ryml::ConstNodeRef item, std::string_view hook_name, const HookEnvironment &environment) {
     using utils::yaml::asString;
@@ -43,24 +45,60 @@ executeCodegenHook(ryml::ConstNodeRef item, std::string_view hook_name, const Ho
     if (!cmd_opt) {
         return std::unexpected(std::format("Hook '{}' codegen missing required 'cmd' field", hook_name));
     }
-    std::string cmd = *cmd_opt;
+    std::string orig_cmd = *cmd_opt;
 
     std::vector<std::string> inputs = collectPathList(child(item, "input"));
     std::vector<std::string> outputs = collectPathList(child(item, "output"));
 
-    auto sub_res = substituteCmdArgs(cmd, inputs, outputs, hook_name);
+    std::vector<std::string> abs_inputs;
+    abs_inputs.reserve(inputs.size());
+    for (const auto &in : inputs) {
+        std::error_code ec;
+        auto p = std::filesystem::absolute(in, ec);
+        abs_inputs.push_back(ec ? in : p.string());
+    }
+
+    std::vector<std::string> abs_outputs;
+    abs_outputs.reserve(outputs.size());
+    for (const auto &out : outputs) {
+        std::error_code ec;
+        auto p = std::filesystem::absolute(out, ec);
+        abs_outputs.push_back(ec ? out : p.string());
+    }
+
+    auto format_list = [](const std::vector<std::string> &list) -> std::string {
+        std::string res;
+        for (size_t i = 0; i < list.size(); ++i) {
+            if (i > 0)
+                res += ", ";
+            res += list[i];
+        }
+        return res;
+    };
+
+    catalyst::logger.explain("Codegen hook '{}' declared inputs ({}): [{}]", hook_name, abs_inputs.size(),
+                             format_list(abs_inputs));
+    catalyst::logger.explain("Codegen hook '{}' declared outputs ({}): [{}]", hook_name, abs_outputs.size(),
+                             format_list(abs_outputs));
+    catalyst::logger.explain("Codegen hook '{}' template command: '{}'", hook_name, orig_cmd);
+
+    auto sub_res = substituteCmdArgs(orig_cmd, inputs, outputs, hook_name);
     if (!sub_res) {
+        catalyst::logger.explain("Codegen hook '{}' argument substitution failed: {}", hook_name, sub_res.error());
         return std::unexpected(sub_res.error());
     }
-    cmd = sub_res.value();
+    std::string cmd = sub_res.value();
+    catalyst::logger.explain("Codegen hook '{}' substituted command: '{}'", hook_name, cmd);
 
     bool should_run = true;
+    std::string run_reason;
     if (!inputs.empty() && !outputs.empty()) {
         should_run = false;
         std::filesystem::file_time_type oldest_out = std::filesystem::file_time_type::max();
         for (const auto &out : outputs) {
             if (!std::filesystem::exists(out)) {
                 should_run = true;
+                run_reason = std::format("output '{}' does not exist", out);
                 break;
             }
             auto mtime = std::filesystem::last_write_time(out);
@@ -73,26 +111,47 @@ executeCodegenHook(ryml::ConstNodeRef item, std::string_view hook_name, const Ho
                 if (!std::filesystem::exists(in)) {
                     catalyst::logger.warn("[Catalyst Hook: {}] codegen input file not found: {}", hook_name, in);
                     should_run = true;
+                    run_reason = std::format("input '{}' not found", in);
                     break;
                 }
                 auto mtime = std::filesystem::last_write_time(in);
                 if (mtime > oldest_out) {
                     should_run = true;
+                    run_reason = std::format("input '{}' is newer than oldest output", in);
                     break;
                 }
             }
         }
+    } else {
+        run_reason = "declared input or output list is empty (cannot verify freshness)";
     }
 
     if (should_run) {
+        catalyst::logger.explain("Codegen hook '{}' running: {}", hook_name, run_reason);
         catalyst::logger.debug("[Catalyst Hook: {}] Running codegen: {}", hook_name, cmd);
+        auto start_time = std::chrono::steady_clock::now();
         auto process = catalyst::processExec(shellCmd(cmd), std::nullopt, environment);
-        if (!process)
+        auto elapsed_ms =
+            std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count();
+        if (!process) {
+            catalyst::logger.explain("Codegen hook '{}' execution failed: {}", hook_name, process.error());
             return std::unexpected(std::format("Hook '{}' codegen execution failed: {}", hook_name, process.error()));
+        }
         if (process->get() != 0) {
+            catalyst::logger.explain("Codegen hook '{}' exited with code {} (duration: {} ms)", hook_name,
+                                     process->get(), elapsed_ms);
             return std::unexpected(std::format("Hook '{}' codegen failed: {}", hook_name, cmd));
         }
+        catalyst::logger.explain("Codegen hook '{}' succeeded in {} ms (exit code: 0)", hook_name, elapsed_ms);
+
+        for (const auto &out : outputs) {
+            if (!std::filesystem::exists(out)) {
+                catalyst::logger.explain("Codegen hook '{}' warning: declared output '{}' was not found after execution",
+                                         hook_name, out);
+            }
+        }
     } else {
+        catalyst::logger.explain("Codegen hook '{}' skipped: all outputs are up-to-date relative to inputs", hook_name);
         catalyst::logger.debug("[Catalyst Hook: {}] Skipping codegen: {} (up-to-date)", hook_name, cmd);
     }
     return {};
