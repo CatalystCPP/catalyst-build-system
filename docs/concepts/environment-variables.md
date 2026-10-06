@@ -48,3 +48,22 @@ This ensures that debug-level log output propagates through the entire dependenc
 !!! warning
 
     This variable is intended for internal use. Setting it manually will enable verbose logging for that invocation.
+
+---
+
+## `CATALYST_EXPLAIN_SPOOL`
+
+Set by Catalyst when running an explanation session (`catalyst build --explain`) and spawning a child Catalyst process (such as a workspace member build or a recursive local dependency build).
+
+The variable contains the path to an ephemeral spool file (`.part`). When present:
+
+- The child process recognizes that an active explanation session is already owned by its parent.
+- Instead of creating an independent `catalyst_explain_[timestamp].md` report, the child streams its explanation records directly into the spool file.
+- The parent process collects the spooled records upon child completion, merges them into the top-level explanation report with package-level context tagging, and deletes the temporary spool file.
+
+Catalyst also passes `CATALYST_EXPLAIN_ROLE` alongside `CATALYST_EXPLAIN_SPOOL` to identify the child build's package name or role in the aggregated report.
+
+!!! warning
+
+    This variable is an internal transport mechanism for explanation aggregation. Setting it manually will divert explanation output into the specified file path instead of creating a standard report.
+

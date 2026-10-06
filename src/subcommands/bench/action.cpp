@@ -218,11 +218,14 @@ Result<void> action(const Parse &args) {
                 .force_refetch = false,
                 .workspace_build = args.workspace.has_value(),
                 .watch = false,
+                .explain = false,
                 .package = "",
                 .profiles = profiles,
                 .enabled_features = {},
                 .backend = "",
                 .workspace = std::nullopt, // Prevent build from recursing; bench handles workspace members
+                .executable_path = "catalyst",
+                .cli_options = {},
             });
             !build_res) {
             return build_res;

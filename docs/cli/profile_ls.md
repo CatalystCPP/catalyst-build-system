@@ -13,7 +13,7 @@ OPTIONS:
 
 ## Details
 
-The `profile-ls` subcommand identifies all available profiles in the current workspace. It searches for:
+The `profile-ls` subcommand identifies all available profiles in the current directory. Output is sorted and deduplicated. With `--json`, stdout contains an array of profile-name strings (or `[]` if none are found). An unreadable, malformed, or non-mapping `CATALYST.yaml` causes a nonzero exit instead of a partial listing. It searches for:
 
 1.  Profiles defined in the top-level of `CATALYST.yaml`.
 2.  Individual profile files matching the pattern `catalyst_*.yaml`.
@@ -24,4 +24,9 @@ The `profile-ls` subcommand identifies all available profiles in the current wor
 **List all available profiles:**
 ```bash
 catalyst profile-ls
+```
+
+**Use profiles in scripts:**
+```bash
+catalyst profile-ls --json | jq -r '.[]'
 ```

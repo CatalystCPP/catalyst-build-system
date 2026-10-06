@@ -1,5 +1,7 @@
 #include <algorithm>
+#include <array>
 #include <cstdint>
+#include <cstdlib>
 #include <expected>
 #include <filesystem>
 #include <format>
@@ -14,6 +16,7 @@
 #include <utility>
 #include <vector>
 
+#include "catalyst/globals.hpp"
 #include "catalyst/hooks.hpp"
 #include "catalyst/process_exec.hpp"
 #include "catalyst/subcommands/build.hpp"
@@ -44,11 +47,16 @@ struct BuildFailureGuard {
 
     ~BuildFailureGuard() {
         if (!result) {
+            catalyst::logger.explain("Build failed: '{}'. Invoking on-build-failure hook.", result.error());
             if (auto hook_res = hooks::onBuildFailure(config); !hook_res) {
+                catalyst::logger.explain("on-build-failure hook failed: '{}' (original error: '{}')", hook_res.error(),
+                                         result.error());
                 catalyst::logger.error("on_build_failure hook failed: {}", hook_res.error());
                 result =
                     std::unexpected(result.error() + "\nAdditionally, the on_build_failure hook failed with error: "
                                     + hook_res.error());
+            } else {
+                catalyst::logger.explain("on-build-failure hook succeeded.");
             }
         }
     }
@@ -73,6 +81,16 @@ std::vector<std::string> workspaceProfiles(const WorkspaceMember &member, const 
     return args.profiles;
 }
 
+auto join_vec = [](const auto &vec, std::string_view delim = ", ") -> std::string {
+    std::string res;
+    for (size_t i = 0; i < vec.size(); ++i) {
+        if (i > 0)
+            res += delim;
+        res += vec[i];
+    }
+    return res;
+};
+
 Result<WorkspaceBuildGraph> workspaceBuildGraph(const Workspace &ws, const Parse &args) {
     WorkspaceBuildGraph graph;
     for (const auto &[key, member] : ws.getMembers()) {
@@ -86,6 +104,8 @@ Result<WorkspaceBuildGraph> workspaceBuildGraph(const Workspace &ws, const Parse
                 continue;
             }
             const std::string &name = *name_opt;
+            catalyst::logger.explain("Discovered workspace member '{}' at '{}' (configured profiles: [{}]).",
+                                     name, member.path.string(), join_vec(profiles));
 
             PackageInfo info;
             info.name = name;
@@ -96,6 +116,8 @@ Result<WorkspaceBuildGraph> workspaceBuildGraph(const Workspace &ws, const Parse
                 deps.readable() && deps.is_seq()) {
                 for (ryml::ConstNodeRef dep : deps.children()) {
                     if (auto dep_name = yaml::asString(yaml::child(dep, "name"))) {
+                        catalyst::logger.explain("Workspace dependency edge: member '{}' declares dependency on '{}'.",
+                                                 name, *dep_name);
                         info.dependencies.push_back(std::move(*dep_name));
                     }
                 }
@@ -144,6 +166,7 @@ Result<WorkspaceBuildGraph> workspaceBuildGraph(const Workspace &ws, const Parse
             return std::unexpected(result.error());
     }
 
+    catalyst::logger.explain("Workspace topological build order: [{}]", join_vec(graph.build_order, " -> "));
     return graph;
 }
 
@@ -154,6 +177,7 @@ Result<std::unordered_set<std::string>> workspaceTargets(const WorkspaceBuildGra
         targets.reserve(graph.packages.size());
         for (const auto &package : graph.packages)
             targets.insert(package.first);
+        catalyst::logger.explain("Workspace target selection: all {} package(s) selected.", targets.size());
         return targets;
     }
     if (!graph.packages.contains(requested_package))
@@ -168,11 +192,29 @@ Result<std::unordered_set<std::string>> workspaceTargets(const WorkspaceBuildGra
                 add_with_dependencies(dependency);
     };
     add_with_dependencies(requested_package);
+
+    std::string target_names;
+    std::string excluded_names;
+    for (const auto &[name, _] : graph.packages) {
+        if (targets.contains(name)) {
+            if (!target_names.empty())
+                target_names += ", ";
+            target_names += name;
+        } else {
+            if (!excluded_names.empty())
+                excluded_names += ", ";
+            excluded_names += name;
+        }
+    }
+    catalyst::logger.explain("Workspace target selection: requested package '{}', dependency closure: [{}], excluded members: [{}]",
+                             requested_package, target_names, excluded_names);
     return targets;
 }
 
 std::vector<std::string> workspaceMemberBuildCommand(const Parse &args) {
     std::vector<std::string> command{args.executable_path.string(), "build"};
+    if (args.explain)
+        command.emplace_back("--explain");
     if (args.regen)
         command.emplace_back("--regen");
     if (args.force_rebuild)
@@ -197,13 +239,25 @@ Result<void> buildWorkspaceMember(const PackageInfo &package, Parse args) {
     std::unordered_map<std::string, std::string> environment{{"CATALYST_MACHINE", "1"}};
     if (catalyst::logger.getVerboseLogging())
         environment["CATALYST_VERBOSE"] = "1";
+    std::unordered_map<std::string, std::string> child_env;
+    if (catalyst::logger.explainEnabled()) {
+        child_env = catalyst::logger.explainChildEnvironment(package.name);
+        environment.insert(child_env.begin(), child_env.end());
+    }
 
     auto process =
         catalyst::processExec(workspaceMemberBuildCommand(args), package.member.path.string(), std::move(environment));
-    if (!process)
+    if (!process) {
+        if (catalyst::logger.explainEnabled()) {
+            catalyst::logger.collectExplainChild(child_env, package.name, std::nullopt);
+        }
         return std::unexpected(std::format("Failed to start workspace member '{}': {}", package.name, process.error()));
+    }
 
     const int exit_code = process->get();
+    if (catalyst::logger.explainEnabled()) {
+        catalyst::logger.collectExplainChild(child_env, package.name, exit_code);
+    }
     if (exit_code != 0)
         return std::unexpected(
             std::format("Workspace member '{}' build exited with code {}.", package.name, exit_code));
@@ -287,6 +341,23 @@ Result<void> buildWorkspace(const WorkspaceBuildGraph &graph,
     std::vector<std::string> dispatched;
     std::optional<std::string> dispatch_error;
 
+    std::vector<std::string> independent_pkgs;
+    for (const auto &pkg : graph.build_order) {
+        if (!targets.contains(pkg))
+            continue;
+        bool has_prereq = false;
+        for (const auto &dep : graph.packages.at(pkg).dependencies) {
+            if (targets.contains(dep)) {
+                has_prereq = true;
+                break;
+            }
+        }
+        if (!has_prereq)
+            independent_pkgs.push_back(pkg);
+    }
+    catalyst::logger.explain("Workspace concurrency planning: independent packages eligible to build concurrently: [{}]",
+                             join_vec(independent_pkgs));
+
     for (const auto &package_name : graph.build_order) {
         if (!targets.contains(package_name))
             continue;
@@ -309,6 +380,9 @@ Result<void> buildWorkspace(const WorkspaceBuildGraph &graph,
                             for (const auto &[dependency_name, dependency_future] : dependencies) {
                                 const Result<void> &dependency_result = dependency_future.get();
                                 if (!dependency_result) {
+                                    catalyst::logger.explain(
+                                        "Workspace member '{}' skipped because prerequisite '{}' failed.",
+                                        package.name, dependency_name);
                                     return std::unexpected(std::format(
                                         "Workspace member '{}' was not built because dependency '{}' failed: "
                                         "{}",
@@ -391,27 +465,38 @@ bool depMissing(const utils::yaml::Configuration &config) {
 Result<void> generateCompileCommands(const fs::path &build_dir, const std::string &generator) {
     if (generator == "cob") {
         catalyst::logger.info("Generating compile commands database.");
-        if (auto res = catalyst::processExec({"cob", "-C", build_dir, "-t", "compdb"}); !res)
+        if (auto res = catalyst::processExec({"cob", "-C", build_dir, "-t", "compdb"}); !res) {
+            catalyst::logger.explain("Failed to generate compile commands database via cob: {}", res.error());
             return std::unexpected(res.error());
+        }
+        catalyst::logger.explain("Compilation database generated via cob at: '{}'",
+                                 fs::absolute(build_dir / "compile_commands.json").string());
         return {};
     }
     if (generator == "ninja") {
         catalyst::logger.info("Generating compile commands database.");
         auto res = catalyst::processExecStdout(
             {"ninja", "-C", build_dir.string(), "-t", "compdb", "cc_compile", "cxx_compile"});
-        if (!res)
+        if (!res) {
+            catalyst::logger.explain("Failed to generate compile commands database via ninja: {}", res.error());
             return std::unexpected(res.error());
+        }
 
         fs::path real_compdb_path = build_dir / "compile_commands.json";
         std::ofstream compdb_file{real_compdb_path};
-        if (compdb_file.is_open())
+        if (compdb_file.is_open()) {
             compdb_file << *res << std::flush;
-        else
+            catalyst::logger.explain("Compilation database generated via ninja at: '{}'",
+                                     fs::absolute(real_compdb_path).string());
+        } else {
             return std::unexpected(std::format("Failed to open {} for writing", real_compdb_path.string()));
+        }
         return {};
     }
-    if (generator == "gmake" || generator == "make")
+    if (generator == "gmake" || generator == "make") {
+        catalyst::logger.explain("Compilation database was not created: automatic generation is not supported for Makefiles.");
         catalyst::logger.warn("Automatic compile commands generation is not supported for Makefiles. Skipping.");
+    }
     return {}; // don't fail if we don't know how to generate compile commands for this generator, it's not critical
 }
 
@@ -453,13 +538,42 @@ toolchainChanged(const utils::yaml::Configuration &config, const fs::path &store
 
 Result<void> action(const Parse &parse_args) {
     catalyst::logger.debug("Build subcommand invoked.");
+    catalyst::logger.setExplainContext(parse_args.package, parse_args.profiles);
+
+    if (catalyst::logger.explainEnabled()) {
+        catalyst::logger.explain("Catalyst build invoked (version: {}).", catalyst::CATALYST_VERSION);
+        catalyst::logger.explain("Working directory: '{}'.", fs::current_path().string());
+        catalyst::logger.explain("Invocation arguments: {}", catalyst::build::describe(parse_args));
+
+        static constexpr std::array<const char *, 9> s_allowlisted_env = {
+            "CATALYST_HOOK", "CATALYST_HOOK_NAME", "CATALYST_WORKSPACE_ROOT",
+            "CATALYST_PROFILES", "CATALYST_FEATURES", "CATALYST_BUILD_DIR",
+            "CATALYST_INTROSPECT_FILE", "CATALYST_MACHINE", "CATALYST_VERBOSE"
+        };
+        std::vector<std::string> env_entries;
+        for (const char *var : s_allowlisted_env) {
+            if (const char *val = std::getenv(var)) {
+                env_entries.push_back(std::format("{}='{}'", var, val));
+            }
+        }
+        if (env_entries.empty()) {
+            catalyst::logger.explain("Official environment variables: none set.");
+        } else {
+            catalyst::logger.explain("Official environment variables: [{}]", join_vec(env_entries));
+        }
+
+        if (parse_args.workspace) {
+            catalyst::logger.explain("Workspace root discovered: '{}'.", parse_args.workspace->getRoot().string());
+        } else {
+            catalyst::logger.explain("No workspace detected (single project mode).");
+        }
+    }
 
     if (parse_args.workspace) {
         bool is_root = false;
         try {
             is_root = fs::equivalent(parse_args.workspace->getRoot(), fs::current_path());
         } catch (...) {
-            std::ignore;
         }
 
         if (parse_args.workspace_build || is_root || !parse_args.package.empty()) {
@@ -475,17 +589,33 @@ Result<void> action(const Parse &parse_args) {
                 return std::unexpected(targets.error());
             if (auto validation = validateWorkspaceRequirements(*graph, *targets, parse_args); !validation)
                 return validation;
-            return buildWorkspace(*graph, *targets, parse_args);
+            auto build_res = buildWorkspace(*graph, *targets, parse_args);
+            if (catalyst::logger.explainEnabled()) {
+                if (build_res)
+                    catalyst::logger.explain("Workspace build finished successfully.");
+                else
+                    catalyst::logger.explain("Workspace build failed: {}", build_res.error());
+            }
+            return build_res;
         }
     }
 
     catalyst::logger.debug("Composing profiles.");
+    utils::yaml::ExplainCompositionGuard comp_guard(catalyst::logger.explainEnabled());
     utils::yaml::Configuration config{parse_args.profiles};
+
+    if (catalyst::logger.explainEnabled()) {
+        if (auto min_ver = config.getString("meta.min_ver")) {
+            catalyst::logger.explain("Manifest declared minimum Catalyst version: '{}' (current: '{}').", *min_ver,
+                                     catalyst::CATALYST_VERSION);
+        }
+    }
 
     Result<void> result;
 
     auto run_build = [&]() -> void {
         // Watch-mode iterations must not reuse stale composed feature values.
+        utils::yaml::ExplainCompositionGuard inner_guard(catalyst::logger.explainEnabled());
         config = utils::yaml::Configuration{parse_args.profiles};
         BuildFailureGuard guard{config, result};
 
@@ -506,13 +636,22 @@ Result<void> action(const Parse &parse_args) {
         fs::path build_dir = config.getBuildDir();
         std::string generator =
             parse_args.backend.empty() ? config.getString("meta.generator").value_or("cob") : parse_args.backend;
+        std::string generator_source = !parse_args.backend.empty() ? "CLI override (--backend)" :
+            (config.getString("meta.generator") ? "manifest (meta.generator)" : "default fallback");
         std::string build_filename = catalyst::generate::buildFilename(generator);
+        fs::path build_file_path = build_dir / build_filename;
+
+        catalyst::logger.explain("Build generator: '{}' (selected by {}).", generator, generator_source);
+        catalyst::logger.explain("Expected generated build file: '{}'.", fs::absolute(build_file_path).string());
 
         // Local dependencies need an incremental build check on every invocation.
         // Fetch first so generation never consumes missing/stale dependency metadata.
         const auto fetch_sentinel = build_dir / ".catalyst_fetched";
         const bool needs_fetch = !fs::exists(fetch_sentinel) || parse_args.force_refetch || depMissing(config);
         if (parse_args.force_refetch) {
+            catalyst::logger.explain("Forced refetch requested: removing '{}' and '{}'",
+                                     fs::absolute(build_dir / "catalyst-libs").string(),
+                                     fs::absolute(fetch_sentinel).string());
             fs::remove_all(build_dir / "catalyst-libs");
             fs::remove(fetch_sentinel);
         }
@@ -534,9 +673,26 @@ Result<void> action(const Parse &parse_args) {
         }
         std::ifstream state_file{build_dir / catalyst::generate::GENERATION_STATE_FILENAME, std::ios::binary};
         const std::string stored_state{std::istreambuf_iterator<char>{state_file}, std::istreambuf_iterator<char>{}};
-        bool needs_regen =
-            !fs::exists(build_dir / build_filename) || parse_args.regen || !state_file || stored_state != *state;
-        if (!needs_regen) {
+        bool needs_regen = false;
+        std::string regen_reason;
+
+        if (parse_args.regen) {
+            needs_regen = true;
+            regen_reason = "explicit '--regen' flag requested";
+            catalyst::logger.explain("Build file regeneration required: {}.", regen_reason);
+        } else if (!fs::exists(build_file_path)) {
+            needs_regen = true;
+            regen_reason = std::format("generated build file '{}' does not exist", build_file_path.string());
+            catalyst::logger.explain("Build file regeneration required: {}.", regen_reason);
+        } else if (!state_file) {
+            needs_regen = true;
+            regen_reason = "generation state file missing or unreadable";
+            catalyst::logger.explain("Build file regeneration required: {}.", regen_reason);
+        } else if (stored_state != *state) {
+            needs_regen = true;
+            regen_reason = "generation state differs from current configuration/source state";
+            catalyst::logger.explain("Build file regeneration required: {}.", regen_reason);
+        } else {
             const fs::path toolchain_store = build_dir / catalyst::toolchain::RESOLVED_TOOLCHAIN_STORE_FILENAME;
             auto toolchain_changed = toolchainChanged(config, toolchain_store, generator);
             if (!toolchain_changed) {
@@ -544,24 +700,33 @@ Result<void> action(const Parse &parse_args) {
                 result = std::unexpected(toolchain_changed.error());
                 return;
             }
-            needs_regen = *toolchain_changed;
-            if (needs_regen)
-                catalyst::logger.debug("Resolved toolchain changed; build files must be regenerated.");
-        }
-        if (!needs_regen) {
-            auto build_time = fs::last_write_time(build_dir / build_filename);
-            if (fs::exists("CATALYST.yaml") && fs::last_write_time("CATALYST.yaml") > build_time) {
+            if (*toolchain_changed) {
                 needs_regen = true;
+                regen_reason = "resolved toolchain store missing or changed";
+                catalyst::logger.explain("Build file regeneration required: {}.", regen_reason);
             } else {
-                for (const auto &profile : parse_args.profiles) {
-                    fs::path profile_path =
-                        (profile == "common") ? "catalyst.yaml" : std::format("catalyst_{}.yaml", profile);
-                    if (fs::exists(profile_path) && fs::last_write_time(profile_path) > build_time) {
-                        needs_regen = true;
-                        break;
+                auto build_time = fs::last_write_time(build_file_path);
+                if (fs::exists("CATALYST.yaml") && fs::last_write_time("CATALYST.yaml") > build_time) {
+                    needs_regen = true;
+                    regen_reason = "manifest 'CATALYST.yaml' is newer than build file";
+                    catalyst::logger.explain("Build file regeneration required: {}.", regen_reason);
+                } else {
+                    for (const auto &profile : parse_args.profiles) {
+                        fs::path profile_path =
+                            (profile == "common") ? "catalyst.yaml" : std::format("catalyst_{}.yaml", profile);
+                        if (fs::exists(profile_path) && fs::last_write_time(profile_path) > build_time) {
+                            needs_regen = true;
+                            regen_reason = std::format("profile manifest '{}' is newer than build file", profile_path.string());
+                            catalyst::logger.explain("Build file regeneration required: {}.", regen_reason);
+                            break;
+                        }
                     }
                 }
             }
+        }
+
+        if (!needs_regen) {
+            catalyst::logger.explain("Build file regeneration skipped: existing generated build file is up to date.");
         }
 
         if (needs_regen) {
@@ -608,6 +773,7 @@ Result<void> action(const Parse &parse_args) {
                     "Failed to publish compilation database to {}: {}", stable_compdb.string(), ec.message());
             } else {
                 catalyst::logger.debug("Published compilation database to {}", stable_compdb.string());
+                catalyst::logger.explain("Published compilation database to: '{}'", fs::absolute(stable_compdb).string());
             }
 
             // 2. Project root path (e.g. compile_commands.json)
@@ -621,6 +787,8 @@ Result<void> action(const Parse &parse_args) {
                     catalyst::logger.warn("Failed to publish compilation database to project root: {}", ec.message());
                 } else {
                     catalyst::logger.debug("Published compilation database to project root");
+                    catalyst::logger.explain("Published compilation database to project root: '{}'",
+                                             fs::absolute(root_compdb).string());
                 }
             }
         }
@@ -634,8 +802,10 @@ Result<void> action(const Parse &parse_args) {
     };
 
     run_build();
-    if (!result && !parse_args.watch)
+    if (!result && !parse_args.watch) {
+        catalyst::logger.explain("Build failed: {}", result.error());
         return result;
+    }
 
     if (parse_args.watch) {
         auto src_dirs = config.getStringVector("manifest.dirs.source").value_or(std::vector<std::string>{"src"});
@@ -674,6 +844,7 @@ Result<void> action(const Parse &parse_args) {
     }
 
     catalyst::logger.info("Build subcommand finished successfully.");
+    catalyst::logger.explain("Build finished successfully.");
     return {};
 }
 

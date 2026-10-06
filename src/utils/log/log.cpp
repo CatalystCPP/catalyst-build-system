@@ -3,8 +3,10 @@
 #include <algorithm>
 #include <cerrno>
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <iostream>
+#include <iterator>
 #include <limits>
 #include <memory>
 #include <print>
@@ -15,6 +17,7 @@
 #include <vector>
 
 #ifdef _WIN32
+#include <io.h>
 #include <windows.h>
 #else
 #include <fcntl.h>
@@ -349,6 +352,15 @@ LogT::LogT()
 }
 
 LogT::~LogT() {
+    if (explain_sink != nullptr) {
+        if (!explain_session_ended && !explain_is_child) {
+            std::fputs("\n## Result\n\n- **Status:** incomplete. The process exited without recording a completion "
+                       "status; explanations above may be partial.\n",
+                       explain_sink);
+        }
+        std::fclose(explain_sink);
+        explain_sink = nullptr;
+    }
     auto now = std::chrono::system_clock::now();
 #if FF_catalyst__uniform_logs
     log_file << generateJsonLogEvent(now, LogLevel::DBG, "end session") << "\n";
@@ -388,11 +400,24 @@ void LogT::close() const {
 
 void LogT::logImpl(LogLevel level, const std::string &message) const {
     std::lock_guard<std::mutex> lock(logging_mt);
+    auto now = std::chrono::system_clock::now();
+
+    if (level == LogLevel::EXP) {
+        if (!explain_enabled.load(std::memory_order_relaxed))
+            return;
+        // The JSONL session log is optional for explanations: stderr and the report do not depend on it.
+        if (log_file.is_open()) {
+            log_file << generateJsonLogEvent(now, level, message) << '\n';
+            log_file.flush();
+        }
+        explainImpl(now, message);
+        return;
+    }
+
     if (!log_file.is_open()) {
         return;
     }
 
-    auto now = std::chrono::system_clock::now();
     // Flush each record before children or concurrent processes append theirs.
     log_file << generateJsonLogEvent(now, level, message) << '\n';
     log_file.flush();
@@ -412,6 +437,9 @@ void LogT::logImpl(LogLevel level, const std::string &message) const {
             case LogLevel::ERROR:
                 color = RED;
                 break;
+            case LogLevel::EXP:
+                color = BOLD;
+                break;
         }
 
         std::ostream &sink = (level == LogLevel::ERROR) ? std::cerr : std::cout;
@@ -420,6 +448,340 @@ void LogT::logImpl(LogLevel level, const std::string &message) const {
         sink << time_str << " " << color << log_str << RESET << '\n';
         sink.flush();
     }
+}
+
+// ---- Explanation sessions -------------------------------------------------------------------
+
+namespace {
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+thread_local std::string g_explain_phase;
+
+std::vector<std::string_view> splitLines(std::string_view text) {
+    std::vector<std::string_view> lines;
+    std::size_t start = 0;
+    while (true) {
+        const std::size_t end = text.find('\n', start);
+        if (end == std::string_view::npos) {
+            lines.push_back(text.substr(start));
+            break;
+        }
+        lines.push_back(text.substr(start, end - start));
+        start = end + 1;
+    }
+    while (lines.size() > 1 && lines.back().empty())
+        lines.pop_back();
+    return lines;
+}
+
+std::string joinProfiles(const std::vector<std::string> &profiles) {
+    std::string out;
+    for (const auto &profile : profiles)
+        out += (out.empty() ? "" : ",") + profile;
+    return out;
+}
+
+std::string indentLines(std::string_view text, std::string_view indent) {
+    std::string out;
+    for (auto line : splitLines(text)) {
+        if (!line.empty())
+            out += indent;
+        out += line;
+        out += '\n';
+    }
+    return out;
+}
+
+bool stderrIsStyled() {
+    if (std::getenv("NO_COLOR") != nullptr)
+        return false;
+#ifdef _WIN32
+    return _isatty(_fileno(stderr)) != 0;
+#else
+    return isatty(STDERR_FILENO) != 0;
+#endif
+}
+
+void unsetEnvironment(const char *name) {
+#ifdef _WIN32
+    _putenv_s(name, "");
+#else
+    unsetenv(name);
+#endif
+}
+
+/// Reserves `candidate` through an exclusive `<candidate>.lock`, then creates the report exclusively.
+/// Returns nullptr when the candidate is taken (lock or report already present).
+std::FILE *tryCreateReport(const std::filesystem::path &candidate, std::string &error) {
+    namespace fs = std::filesystem;
+    const fs::path lock_path = fs::path(candidate.string() + ".lock");
+    errno = 0;
+    std::FILE *lock = std::fopen(lock_path.string().c_str(), "wx");
+    if (lock == nullptr) {
+        if (errno != EEXIST)
+            error = std::format("cannot create {}: {}", lock_path.string(), std::strerror(errno));
+        return nullptr; // another invocation owns this candidate, or a stale lock: skip it
+    }
+    std::fclose(lock);
+
+    std::FILE *report = nullptr;
+    std::error_code ec;
+    if (!fs::exists(candidate, ec)) {
+        errno = 0;
+        report = std::fopen(candidate.string().c_str(), "wx");
+        if (report == nullptr && errno != EEXIST)
+            error = std::format("cannot create {}: {}", candidate.string(), std::strerror(errno));
+    }
+    // Release only the lock this invocation created.
+    fs::remove(lock_path, ec);
+    return report;
+}
+} // namespace
+
+LogT::ExplainPhase::ExplainPhase(std::string_view phase) : previous(std::move(g_explain_phase)) {
+    g_explain_phase = phase;
+}
+
+LogT::ExplainPhase::~ExplainPhase() {
+    g_explain_phase = std::move(previous);
+}
+
+void LogT::setExplainContext(std::string package, std::vector<std::string> profiles) const {
+    std::lock_guard<std::mutex> lock(logging_mt);
+    explain_package = std::move(package);
+    explain_profiles = std::move(profiles);
+}
+
+void LogT::reportFailure(std::string_view what) const {
+    // Requires logging_mt. Warn once; stderr explanations and the build continue.
+    if (!explain_write_failed) {
+        explain_write_failed = true;
+        explain_report_note = std::string{what};
+        std::println(std::cerr,
+                     "{}[WARN] Explanation report unavailable: {}. Explanations continue on stderr only.{}",
+                     explain_styled ? ORANGE : "",
+                     what,
+                     explain_styled ? RESET : "");
+    }
+    if (explain_sink != nullptr) {
+        std::fclose(explain_sink);
+        explain_sink = nullptr;
+    }
+}
+
+void LogT::writeReport(std::string_view text) const {
+    // Requires logging_mt.
+    if (explain_sink == nullptr)
+        return;
+    if (std::fwrite(text.data(), 1, text.size(), explain_sink) != text.size() || std::fflush(explain_sink) != 0)
+        reportFailure(std::format("failed to write {}", explain_sink_path.string()));
+}
+
+void LogT::explainImpl(const std::chrono::system_clock::time_point &now, const std::string &message) const {
+    // Requires logging_mt.
+    std::string context;
+    if (!explain_package.empty())
+        context += explain_package + " ";
+    if (!explain_profiles.empty())
+        context += "[" + joinProfiles(explain_profiles) + "] ";
+
+    const auto lines = splitLines(message);
+    std::string terminal;
+    for (std::size_t i = 0; i < lines.size(); ++i) {
+        if (explain_styled)
+            terminal += BOLD;
+        terminal += "[EXPLAIN] ";
+        terminal += i == 0 ? context : std::string(2, ' ');
+        terminal += lines[i];
+        if (explain_styled)
+            terminal += RESET;
+        terminal += '\n';
+    }
+    std::cerr << terminal << std::flush;
+
+    if (explain_sink == nullptr)
+        return;
+    std::string record = std::format("- `{:%H:%M:%S}Z`", std::chrono::floor<std::chrono::seconds>(now));
+    if (!explain_package.empty())
+        record += std::format(" **{}**", explain_package);
+    if (!explain_profiles.empty())
+        record += std::format(" `[{}]`", joinProfiles(explain_profiles));
+    if (!g_explain_phase.empty())
+        record += std::format(" _{}_", g_explain_phase);
+    record += " — ";
+    record += lines.front();
+    record += '\n';
+    if (lines.size() > 1) {
+        record += "\n  ~~~~text\n";
+        for (std::size_t i = 1; i < lines.size(); ++i) {
+            record += "  ";
+            record += lines[i];
+            record += '\n';
+        }
+        record += "  ~~~~\n\n";
+    }
+    writeReport(record);
+}
+
+void LogT::beginExplainSession(std::string_view command_context) const {
+    namespace fs = std::filesystem;
+    std::optional<fs::path> announced;
+    std::string role;
+    {
+        std::lock_guard<std::mutex> lock(logging_mt);
+        if (explain_session_active)
+            return; // in-process hook dispatch inherits the active session
+        explain_session_active = true;
+        explain_styled = stderrIsStyled();
+
+        const char *spool_env = std::getenv(EXPLAIN_SPOOL_ENV);
+        if (spool_env != nullptr && *spool_env != '\0') {
+            // Child session: forward records through the parent's spool; the parent owns the report.
+            explain_is_child = true;
+            explain_sink_path = spool_env;
+            const char *role_env = std::getenv(EXPLAIN_ROLE_ENV);
+            role = role_env != nullptr ? role_env : "child build";
+            explain_sink = std::fopen(explain_sink_path.string().c_str(), "a");
+            if (explain_sink == nullptr)
+                reportFailure(std::format("cannot open forwarding spool {}", explain_sink_path.string()));
+            // Unrelated processes started from this child (hooks) must not share the spool.
+            unsetEnvironment(EXPLAIN_SPOOL_ENV);
+            unsetEnvironment(EXPLAIN_ROLE_ENV);
+        } else {
+            std::error_code ec;
+            const fs::path directory = fs::current_path(ec);
+            const auto started = std::chrono::floor<std::chrono::seconds>(std::chrono::system_clock::now());
+            const std::string stem = std::format("catalyst_explain_{:%Y-%m-%d_%H-%M-%S}", started);
+            std::string error;
+            constexpr unsigned MAX_SUFFIX = 10000;
+            for (unsigned suffix = 0; suffix < MAX_SUFFIX && explain_sink == nullptr && error.empty(); ++suffix) {
+                const fs::path candidate =
+                    directory / (suffix == 0 ? stem + ".md" : std::format("{}.{}.md", stem, suffix));
+                explain_sink = tryCreateReport(candidate, error);
+                if (explain_sink != nullptr) {
+                    explain_sink_path = candidate;
+                    explain_report = candidate;
+                    if (suffix != 0)
+                        explain_report_note =
+                            std::format("Filename collision: {}.md and earlier suffixes were taken; using suffix .{}.",
+                                        stem,
+                                        suffix);
+                }
+            }
+            if (explain_sink == nullptr) {
+                reportFailure(error.empty() ? std::string{"no free report filename"} : error);
+            } else {
+                std::string header = "# Catalyst build explanation\n\n";
+                header += std::format("- **Invocation time:** {:%Y-%m-%d %H:%M:%S} UTC\n", started);
+                header += std::format("- **Working directory:** `{}`\n", directory.string());
+                header += std::format("- **Command:** `{}`\n", command_context);
+                header += std::format("- **Report:** `{}`\n", explain_sink_path.string());
+                header += "\n> [!WARNING]\n"
+                          "> This report is not sanitized. Configuration snapshots, feature values, URLs and "
+                          "expanded hook commands may contain sensitive information. Do not publish it without "
+                          "review.\n\n## Explanations\n\n";
+                writeReport(header);
+                announced = explain_report;
+            }
+        }
+        explain_enabled.store(true, std::memory_order_relaxed);
+    }
+    if (announced)
+        explain("Report: {}", announced->string());
+    if (!role.empty())
+        explain("Child explanation session ({}); records are forwarded to the parent's report.", role);
+}
+
+void LogT::endExplainSession(ExplainStatus status, std::string_view first_failure) const {
+    std::lock_guard<std::mutex> lock(logging_mt);
+    if (!explain_session_active || explain_session_ended)
+        return;
+    explain_session_ended = true;
+    if (explain_is_child) {
+        if (explain_sink != nullptr) {
+            std::fclose(explain_sink);
+            explain_sink = nullptr;
+        }
+        return;
+    }
+    std::string footer = "\n## Result\n\n";
+    footer += std::format("- **Status:** {}\n", status == ExplainStatus::Success ? "success" : "failure");
+    if (!first_failure.empty())
+        footer += std::format("- **First failure:**\n\n{}\n", indentLines(first_failure, "      "));
+    if (explain_report)
+        footer += std::format("- **Report:** `{}`\n", explain_report->string());
+    if (!explain_report_note.empty())
+        footer += std::format("- **Report notes:** {}\n", explain_report_note);
+    writeReport(footer);
+    std::cerr << std::format("{}[EXPLAIN] Build {}. Report: {}{}\n",
+                             explain_styled ? BOLD : "",
+                             status == ExplainStatus::Success ? "succeeded" : "failed",
+                             explain_report ? explain_report->string() : std::string{"<not written>"},
+                             explain_styled ? RESET : "")
+              << std::flush;
+    if (explain_sink != nullptr) {
+        std::fclose(explain_sink);
+        explain_sink = nullptr;
+    }
+}
+
+std::optional<std::filesystem::path> LogT::explainReportPath() const {
+    std::lock_guard<std::mutex> lock(logging_mt);
+    return explain_report;
+}
+
+std::unordered_map<std::string, std::string> LogT::explainChildEnvironment(std::string_view role) const {
+    namespace fs = std::filesystem;
+    std::lock_guard<std::mutex> lock(logging_mt);
+    if (!explain_enabled.load(std::memory_order_relaxed))
+        return {};
+    fs::path base = explain_sink_path;
+    if (base.empty()) {
+        std::error_code ec;
+        base = fs::current_path(ec) / "catalyst_explain";
+    }
+#ifdef _WIN32
+    const unsigned long process = GetCurrentProcessId();
+#else
+    const unsigned long process = static_cast<unsigned long>(getpid());
+#endif
+    const auto spool = std::format("{}.child-{}-{}.part", base.string(), process, ++explain_child_counter);
+    std::error_code ignored;
+    fs::remove(spool, ignored);
+    return {{EXPLAIN_SPOOL_ENV, spool}, {EXPLAIN_ROLE_ENV, std::string{role}}};
+}
+
+void LogT::collectExplainChild(const std::unordered_map<std::string, std::string> &child_environment,
+                               std::string_view role,
+                               std::optional<int> exit_code) const {
+    namespace fs = std::filesystem;
+    const auto spool_it = child_environment.find(EXPLAIN_SPOOL_ENV);
+    if (spool_it == child_environment.end())
+        return;
+    const fs::path spool = spool_it->second;
+    std::string forwarded;
+    {
+        std::ifstream in(spool, std::ios::binary);
+        if (in)
+            forwarded.assign(std::istreambuf_iterator<char>{in}, std::istreambuf_iterator<char>{});
+    }
+    std::error_code ignored;
+    fs::remove(spool, ignored);
+
+    const std::string status = exit_code ? std::format("exit code {}", *exit_code) : std::string{"not started"};
+    std::lock_guard<std::mutex> lock(logging_mt);
+    std::string header = std::format("{}[EXPLAIN] {}{} explanation records from child {} ({}).{}\n",
+                                     explain_styled ? BOLD : "",
+                                     explain_package.empty() ? "" : explain_package + " ",
+                                     forwarded.empty() ? "No forwarded" : "Collected forwarded",
+                                     role,
+                                     status,
+                                     explain_styled ? RESET : "");
+    std::cerr << header << std::flush;
+    if (forwarded.empty()) {
+        writeReport(std::format("- **Child {}** ({}): no explanation records were forwarded.\n", role, status));
+        return;
+    }
+    writeReport(std::format("- **Child {}** ({}), forwarded records:\n\n{}\n", role, status, indentLines(forwarded, "  ")));
 }
 
 std::string LogT::generateJsonLogEvent(const std::chrono::system_clock::time_point &now,

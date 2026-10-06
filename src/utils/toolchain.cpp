@@ -6,6 +6,7 @@
 #include <sstream>
 #include <vector>
 
+#include "catalyst/utils/log/log.hpp"
 #include "catalyst/utils/result.hpp"
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
@@ -90,7 +91,7 @@ std::vector<std::string> splitTokens(std::string_view str) {
            | std::ranges::to<std::vector<std::string>>();
 }
 
-void modifyFlags(ryml::ConstNodeRef parent, std::string &flags) {
+void modifyFlags(ryml::ConstNodeRef parent, std::string &flags, std::string_view component = "") {
     namespace yaml = catalyst::utils::yaml;
 
     // because flags can be specified as either a string or a sequence of strings, we need to handle both cases and
@@ -108,27 +109,39 @@ void modifyFlags(ryml::ConstNodeRef parent, std::string &flags) {
         return yaml::asString(node);
     };
 
+    const std::string before = flags;
     // 1. Wholesale overwrite (if 'flags' is specified)
     if (auto val = get_flags_string(parent, "flags")) {
         flags = std::move(*val);
+        if (catalyst::logger.explainEnabled() && !component.empty()) {
+            catalyst::logger.explain("Toolchain {} flags replaced: '{}' -> '{}'.", component, before, flags);
+        }
     }
 
     // 2. Token-based removal (if 'flags_remove' is specified)
     if (auto val = get_flags_string(parent, "flags_remove")) {
         using namespace std::string_view_literals;
         auto to_remove = splitTokens(*val);
+        const std::string before_remove = flags;
         flags =
             splitTokens(flags)
             | std::views::filter([&to_remove](const std::string &t) { return !std::ranges::contains(to_remove, t); })
             | std::views::join_with(" "sv) | std::ranges::to<std::string>();
+        if (catalyst::logger.explainEnabled() && !component.empty()) {
+            catalyst::logger.explain("Toolchain {} flags removed tokens '{}': '{}' -> '{}'.", component, *val, before_remove, flags);
+        }
     }
 
     // 3. Append (if 'flags_append' is specified)
     if (auto val = get_flags_string(parent, "flags_append")) {
+        const std::string before_append = flags;
         if (!flags.empty() && !val->empty()) {
             flags += " ";
         }
         flags += *val;
+        if (catalyst::logger.explainEnabled() && !component.empty()) {
+            catalyst::logger.explain("Toolchain {} flags appended '{}': '{}' -> '{}'.", component, *val, before_append, flags);
+        }
     }
 }
 
@@ -175,6 +188,9 @@ parseToolchainImpl(const std::filesystem::path &path, ToolchainDef &tc, std::vec
     }
 
     visited.push_back(canonical_path);
+    if (catalyst::logger.explainEnabled()) {
+        catalyst::logger.explain("Parsing toolchain file: '{}'.", canonical_path.string());
+    }
 
     ryml::ConstNodeRef extends_node = yaml::child(node, "extends");
     if (extends_node.readable()) {
@@ -187,6 +203,13 @@ parseToolchainImpl(const std::filesystem::path &path, ToolchainDef &tc, std::vec
         std::filesystem::path extends_path = *val;
         std::filesystem::path base_path =
             extends_path.is_absolute() ? extends_path : canonical_path.parent_path() / extends_path;
+
+        if (catalyst::logger.explainEnabled()) {
+            catalyst::logger.explain("Toolchain '{}' extends '{}' (resolved to '{}').",
+                                     canonical_path.string(),
+                                     *val,
+                                     base_path.string());
+        }
 
         auto res = parseToolchainImpl(base_path, tc, visited);
         if (!res) {
@@ -237,16 +260,16 @@ parseToolchainImpl(const std::filesystem::path &path, ToolchainDef &tc, std::vec
     ryml::ConstNodeRef comp = yaml::child(node, "compiler");
     ryml::ConstNodeRef comp_c = yaml::child(comp, "c");
     set(comp_c, "executable", tc.compiler.c.executable);
-    modifyFlags(comp_c, tc.compiler.c.flags);
+    modifyFlags(comp_c, tc.compiler.c.flags, "compiler.c");
     set(comp_c, "command", tc.compiler.c.command);
     ryml::ConstNodeRef comp_cxx = yaml::child(comp, "cxx");
     set(comp_cxx, "executable", tc.compiler.cxx.executable);
-    modifyFlags(comp_cxx, tc.compiler.cxx.flags);
+    modifyFlags(comp_cxx, tc.compiler.cxx.flags, "compiler.cxx");
     set(comp_cxx, "command", tc.compiler.cxx.command);
 
     ryml::ConstNodeRef link = yaml::child(node, "linker");
     set(link, "executable", tc.linker.executable);
-    modifyFlags(link, tc.linker.flags);
+    modifyFlags(link, tc.linker.flags, "linker");
     set(link, "executable_command", tc.linker.executable_command);
     set(link, "shared_lib_command", tc.linker.shared_lib_command);
 
@@ -300,12 +323,36 @@ Result<ToolchainDef> resolveToolchain(const std::optional<std::filesystem::path>
     if (!path) {
         ToolchainDef toolchain;
         finalizeToolchain(toolchain);
+        if (catalyst::logger.explainEnabled()) {
+            catalyst::logger.explain(
+                "No manifest.toolchain configured; using built-in default toolchain '{}'.",
+                toolchain.name);
+        }
         return toolchain;
+    }
+
+    if (catalyst::logger.explainEnabled()) {
+        catalyst::logger.explain("Resolving toolchain from manifest path: '{}' (absolute: '{}').",
+                                 path->string(),
+                                 std::filesystem::absolute(*path).string());
     }
 
     auto toolchain = parseToolchain(*path);
     if (!toolchain) {
         return std::unexpected(std::format("Failed to load toolchain {}: {}", path->string(), toolchain.error()));
+    }
+
+    if (catalyst::logger.explainEnabled()) {
+        catalyst::logger.explain(
+            "Resolved toolchain '{}': cxx='{}', cc='{}', linker='{}', archiver='{}'.",
+            toolchain->name,
+            toolchain->compiler.cxx.executable,
+            toolchain->compiler.c.executable,
+            toolchain->linker.executable.empty() ? toolchain->compiler.cxx.executable : toolchain->linker.executable,
+            toolchain->archiver.executable);
+        catalyst::logger.explain(
+            "Toolchain tracking limits: Catalyst tracks command templates and serialized definitions; "
+            "binary changes at the same filesystem path without command changes are not tracked.");
     }
     return toolchain;
 }

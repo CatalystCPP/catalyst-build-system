@@ -9,7 +9,7 @@
 
 namespace catalyst::profile_ls {
 struct Parse {
-    /* void */
+    bool json{false};
 };
 
 std::pair<CLI::App *, std::unique_ptr<Parse>> parse(CLI::App &app);

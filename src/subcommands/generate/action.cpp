@@ -188,6 +188,9 @@ Result<void> action(const Parse &parse_args) {
     if (!buildfile) {
         return std::unexpected(std::format("Failed to write {}", buildfile_path.string()));
     }
+    if (catalyst::logger.explainEnabled()) {
+        catalyst::logger.explain("Generated build file: '{}'.", fs::absolute(buildfile_path).string());
+    }
 
     catalyst::logger.debug("Writing profile composition to: {}", (build_dir / "profile_composition.yaml").string());
     std::ofstream profile_comp_file{build_dir / "profile_composition.yaml"};
@@ -251,6 +254,11 @@ Result<std::vector<std::string>> intermediateTargets(catalyst::generate::buildwr
     std::vector<std::string> object_files;
     for (const auto &src : source_set) {
         object_files.push_back(objectFilePath(src, current_dir, tc));
+        if (catalyst::logger.explainEnabled()) {
+            catalyst::logger.explain("Source file '{}' maps to object output '{}'.",
+                                     fs::absolute(src).string(),
+                                     fs::absolute(current_dir / object_files.back()).string());
+        }
 
         // Module treatment: an interface unit gets a -fmodule-output, an
         // importer gets -fmodule-file= plus an ordering edge on the
@@ -264,7 +272,15 @@ Result<std::vector<std::string>> intermediateTargets(catalyst::generate::buildwr
                 if (modules::needsExplicitModuleType(src, tc)) {
                     extra_args.emplace_back("-x c++-module");
                 }
-                extra_args.push_back(std::format("-fmodule-output={}", modules::bmiPath(info.provides, tc)));
+                const std::string bmi = modules::bmiPath(info.provides, tc);
+                extra_args.push_back(std::format("-fmodule-output={}", bmi));
+                if (catalyst::logger.explainEnabled()) {
+                    catalyst::logger.explain(
+                        "Source '{}' provides module interface '{}'; output BMI: '{}'.",
+                        fs::absolute(src).string(),
+                        info.provides,
+                        fs::absolute(bmi).string());
+                }
             }
             for (const auto &req : info.required) {
                 auto provider = module_scan.providers.find(req);
@@ -272,8 +288,17 @@ Result<std::vector<std::string>> intermediateTargets(catalyst::generate::buildwr
                     return std::unexpected(
                         std::format("No provider for module '{}' required by {}", req, src.string()));
                 }
-                extra_args.push_back(std::format("-fmodule-file={}={}", req, modules::bmiPath(req, tc)));
+                const std::string bmi = modules::bmiPath(req, tc);
+                extra_args.push_back(std::format("-fmodule-file={}={}", req, bmi));
                 implicit_deps.push_back(objectFilePath(provider->second, current_dir, tc));
+                if (catalyst::logger.explainEnabled()) {
+                    catalyst::logger.explain(
+                        "Source '{}' requires module '{}' provided by '{}' (BMI: '{}').",
+                        fs::absolute(src).string(),
+                        req,
+                        fs::absolute(provider->second).string(),
+                        fs::absolute(bmi).string());
+                }
             }
         }
 
@@ -413,6 +438,17 @@ Result<GeneratedVariables> writeVariables(const catalyst::utils::yaml::Configura
         ccflags += flag;
     }
 
+    if (catalyst::logger.explainEnabled()) {
+        catalyst::logger.explain(
+            "Built-in preprocessor definitions: CATALYST_BUILD_SYS=1, CATALYST_PROJ_NAME=\"{}\", CATALYST_PROJ_VER=\"{}\".",
+            config.getString("manifest.name").value_or("name"),
+            config.getString("manifest.version").value_or("0.0.0"));
+        catalyst::logger.explain("Include directory search order: [{}].", inc_dirs);
+        for (const auto &[name, value] : definitions) {
+            catalyst::logger.explain("Emitting preprocessor definition: {}={}.", name, value);
+        }
+    }
+
     writer.addComment("Variables");
     std::string cc_cmd = tc.compiler.c.executable;
     if (auto cc_launcher = config.getString("manifest.tooling.CC_LAUNCHER")) {
@@ -496,7 +532,15 @@ void featureFilter(std::unordered_set<fs::path> &source_set, const std::vector<F
             continue;
 
         for (const auto &file : ff.files) {
-            files_to_remove.insert(fs::absolute(file));
+            fs::path abs_file = fs::absolute(file);
+            files_to_remove.insert(abs_file);
+            if (catalyst::logger.explainEnabled()) {
+                catalyst::logger.explain(
+                    "Excluding feature-gated file '{}' because controlling feature '{}' is disabled (effective value '{}').",
+                    abs_file.string(),
+                    ff.name,
+                    ff.resolved_val);
+            }
         }
     }
 
@@ -714,7 +758,27 @@ Result<std::vector<FeatureFlag>> resolveFeatureFlags(const utils::yaml::Configur
                              && ff.resolved_val != "none" && !ff.resolved_val.empty());
         }
 
+        if (catalyst::logger.explainEnabled()) {
+            const bool is_overridden = overrides.contains(ff.name);
+            catalyst::logger.explain(
+                "Feature '{}' (type: {}, default: '{}') resolved to '{}' (source: {}). Status: {}.",
+                ff.name,
+                ff.type,
+                ff.default_val,
+                ff.resolved_val,
+                is_overridden ? "CLI override" : "manifest default",
+                ff.is_enabled ? "enabled" : "disabled");
+        }
+
         resolved.push_back(std::move(ff));
+    }
+
+    if (catalyst::logger.explainEnabled()) {
+        for (const auto &[name, val] : overrides) {
+            if (!features_node.readable() || !catalyst::utils::yaml::child(features_node, name).readable()) {
+                catalyst::logger.explain("CLI override provided for undeclared feature '{}'='{}'.", name, val);
+            }
+        }
     }
 
     return resolved;

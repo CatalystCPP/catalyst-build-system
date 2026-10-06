@@ -14,39 +14,56 @@
 namespace fs = std::filesystem;
 
 namespace {
-void addCombinedProfiles(std::vector<std::string> &out_profiles);
+[[nodiscard]] catalyst::Result<std::vector<std::string>> loadCombinedProfiles();
 void addIndividualProfiles(std::vector<std::string> &out_profiles);
 void filterUnique(std::vector<std::string> &profiles);
 } // namespace
 
-catalyst::Result<void> catalyst::profile_ls::action([[maybe_unused]] const Parse &parse_res) {
+catalyst::Result<void> catalyst::profile_ls::action(const Parse &parse_res) {
     catalyst::logger.debug("profile-ls subcommand invoked.");
     std::vector<std::string> profiles;
     // load everything from CATALYST.yaml
     if (fs::exists("CATALYST.yaml")) {
-        addCombinedProfiles(profiles);
+        auto combined = loadCombinedProfiles();
+        if (!combined)
+            return std::unexpected(combined.error());
+        profiles = std::move(*combined);
     } else
-        catalyst::logger.debug("File: CATALYST.yaml not fond");
+        catalyst::logger.debug("File: CATALYST.yaml not found");
     addIndividualProfiles(profiles);
     filterUnique(profiles);
     // load everything from catalyst_*.yaml
     catalyst::logger.debug("profile-ls subcommand finished successfully.");
-    std::ranges::for_each(profiles, [](const auto &val) { std::println("{}", val); });
+    if (parse_res.json) {
+        ryml::Tree tree;
+        auto root = tree.rootref();
+        root |= ryml::SEQ;
+        for (const auto &profile : profiles) {
+            auto value = root.append_child();
+            value << profile;
+            value |= ryml::VALQUO;
+        }
+        std::println("{}", ryml::emitrs_json<std::string>(tree));
+    } else {
+        std::ranges::for_each(profiles, [](const auto &val) { std::println("{}", val); });
+    }
     return {};
 }
 
 namespace {
-void addCombinedProfiles(std::vector<std::string> &out_profiles) {
+catalyst::Result<std::vector<std::string>> loadCombinedProfiles() {
     auto tree = catalyst::utils::yaml::loadFile("CATALYST.yaml");
     if (!tree)
-        return;
+        return std::unexpected(tree.error());
     ryml::ConstNodeRef root = tree->crootref();
     if (!root.is_map())
-        return;
+        return std::unexpected("CATALYST.yaml must contain a mapping of profile names to configurations");
+    std::vector<std::string> profiles;
     for (ryml::ConstNodeRef profile : root.children()) {
         if (profile.has_key())
-            out_profiles.emplace_back(profile.key().str, profile.key().len);
+            profiles.emplace_back(profile.key().str, profile.key().len);
     }
+    return profiles;
 }
 
 void addIndividualProfiles(std::vector<std::string> &out_profiles) {

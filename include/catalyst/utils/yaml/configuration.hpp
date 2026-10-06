@@ -43,6 +43,9 @@ public:
     [[nodiscard]] std::optional<std::vector<std::string>> getStringVector(const std::string &key) const;
 
     [[nodiscard]] std::filesystem::path getBuildDir() const;
+    [[nodiscard]] const std::filesystem::path &getRootDir() const {
+        return root_dir;
+    }
 
     /** Synchronizes the read-only hook snapshot with the active lifecycle phase. */
     [[nodiscard]] Result<void> syncHookState(std::string_view hook_name) const;
@@ -63,4 +66,18 @@ private:
     std::filesystem::path root_dir;
     mutable std::unique_ptr<SnapshotFile> snapshot_file;
 };
+
+class ExplainCompositionGuard {
+public:
+    explicit ExplainCompositionGuard(bool enable = true);
+    ~ExplainCompositionGuard();
+    ExplainCompositionGuard(const ExplainCompositionGuard &) = delete;
+    ExplainCompositionGuard &operator=(const ExplainCompositionGuard &) = delete;
+    ExplainCompositionGuard(ExplainCompositionGuard &&) = delete;
+    ExplainCompositionGuard &operator=(ExplainCompositionGuard &&) = delete;
+
+private:
+    bool previous = false;
+};
+
 } // namespace catalyst::utils::yaml

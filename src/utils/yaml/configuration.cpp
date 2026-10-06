@@ -64,6 +64,23 @@ struct catalyst::utils::yaml::Configuration::SnapshotFile {
 
 namespace {
 
+// NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
+thread_local bool g_explain_composition = false;
+thread_local std::string g_profile_source;
+// NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
+
+bool explainingComposition() {
+    return g_explain_composition && catalyst::logger.explainEnabled();
+}
+
+std::string describeNode(std::optional<ryml::ConstNodeRef> node) {
+    if (!node || !node->readable())
+        return "<unset>";
+    if (node->has_val())
+        return std::format("'{}'", asString(*node).value_or(""));
+    return std::format("<{} with {} entries>", node->is_seq() ? "sequence" : "map", node->num_children());
+}
+
 // The default configuration every composition starts from. Parsing a literal
 // (instead of building the tree programmatically) keeps the quoted-empty
 // scalars ('' is an empty string, not null) and saves rapidyaml's verbose
@@ -312,6 +329,13 @@ void validateProfileKeys(ryml::ConstNodeRef profile, const std::string &profile_
                 std::string key{item.key().str, item.key().len};
                 if (std::ranges::find(allowed_keys, key) == allowed_keys.end()) {
                     catalyst::logger.warn("Invalid key '{}' found at '{}' in profile '{}'.", key, path, profile_name);
+                    if (explainingComposition())
+                        catalyst::logger.explain("Unknown key '{}' at '{}' in profile '{}' ({}) is rejected: "
+                                                 "configuration loading fails instead of ignoring it.",
+                                                 key,
+                                                 path,
+                                                 profile_name,
+                                                 g_profile_source);
                     throw std::runtime_error(
                         std::format("Invalid key '{}' found at '{}' in profile '{}'.", key, path, profile_name));
                 }
@@ -428,15 +452,43 @@ void mergeHelper(ryml::Tree &composite, const std::string &new_profile_name, rym
         }
     };
 
+    const bool explaining = explainingComposition();
+    auto explain_set = [&](const std::string &dotpath, std::string_view incoming) {
+        if (!explaining)
+            return;
+        const auto current = traverse(dotpath, composite.crootref());
+        const auto default_node = traverse(dotpath, defaults);
+        const std::string previous = describeNode(current);
+        const bool was_default = current && default_node && current->has_val() && default_node->has_val()
+                                 && asString(*current) == asString(*default_node);
+        catalyst::logger.explain("'{}' = '{}' from profile '{}' ({}); {} {}.",
+                                 dotpath,
+                                 incoming,
+                                 new_profile_name,
+                                 g_profile_source,
+                                 previous == std::format("'{}'", incoming) ? "unchanged from" : "replaces",
+                                 was_default ? previous + " (built-in default)" : previous);
+    };
+    auto explain_unset = [&](const std::string &dotpath) {
+        if (explaining)
+            catalyst::logger.explain("'{}' is unset with null by profile '{}' ({}), replacing {}.",
+                                     dotpath,
+                                     new_profile_name,
+                                     g_profile_source,
+                                     describeNode(traverse(dotpath, composite.crootref())));
+    };
+
     auto merge_scalar =
         [&](ryml::NodeRef dst_parent, std::string_view key, ryml::ConstNodeRef src_parent, const std::string &dotpath) {
             ryml::ConstNodeRef src_child = child(src_parent, key);
             if (!src_child.readable())
                 return;
             if (isNullValue(src_child)) {
+                explain_unset(dotpath);
                 removeChild(dst_parent, key);
             } else {
                 check_conflict(dotpath, asString(src_child).value_or(""));
+                explain_set(dotpath, asString(src_child).value_or(""));
                 // Replace wholesale (appendCopy keeps the quote flags, so a
                 // quoted-empty '' survives as an empty string, not null).
                 removeChild(dst_parent, key);
@@ -454,18 +506,34 @@ void mergeHelper(ryml::Tree &composite, const std::string &new_profile_name, rym
         if (!src_child.readable())
             return;
         if (isNullValue(src_child)) {
-            if (!fallback_on_null.empty())
+            if (!fallback_on_null.empty()) {
+                if (explaining)
+                    catalyst::logger.explain("'{}' is null in profile '{}' ({}); it falls back to '{}'.",
+                                             dotpath,
+                                             new_profile_name,
+                                             g_profile_source,
+                                             fallback_on_null);
                 setScalarChild(dst_parent, key, fallback_on_null);
-            else
+            } else {
+                explain_unset(dotpath);
                 removeChild(dst_parent, key);
+            }
         } else {
             auto val = asString(src_child).value_or("");
             if (validator(val)) {
                 check_conflict(dotpath, val);
+                explain_set(dotpath, val);
                 setScalarChild(dst_parent, key, val);
             } else {
                 catalyst::logger.warn(
                     "Invalid value '{}' for '{}' in profile '{}'. Ignoring.", val, dotpath, new_profile_name);
+                if (explaining)
+                    catalyst::logger.explain("Invalid value '{}' for '{}' in profile '{}' ({}) is ignored; {} is kept.",
+                                             val,
+                                             dotpath,
+                                             new_profile_name,
+                                             g_profile_source,
+                                             describeNode(traverse(dotpath, composite.crootref())));
             }
         }
     };
@@ -474,9 +542,23 @@ void mergeHelper(ryml::Tree &composite, const std::string &new_profile_name, rym
         ryml::ConstNodeRef src_child = child(src_parent, key);
         if (!src_child.readable())
             return;
+        const std::string dotpath = std::format("manifest.dirs.{}", key);
         if (isNullValue(src_child)) {
+            explain_unset(dotpath);
             removeChild(dst_parent, key);
         } else if (src_child.is_seq()) {
+            if (explaining) {
+                std::vector<std::string> items;
+                for (ryml::ConstNodeRef item : src_child.children())
+                    items.push_back(asString(item).value_or(""));
+                catalyst::logger.explain("'{}' appends {} from profile '{}' ({}) to {} (sequences accumulate; "
+                                         "duplicates are kept).",
+                                         dotpath,
+                                         items,
+                                         new_profile_name,
+                                         g_profile_source,
+                                         describeNode(traverse(dotpath, composite.crootref())));
+            }
             ryml::NodeRef dst_seq = childOrCreate(dst_parent, key);
             dst_seq |= ryml::SEQ;
             for (ryml::ConstNodeRef item : src_child.children())
@@ -489,21 +571,33 @@ void mergeHelper(ryml::Tree &composite, const std::string &new_profile_name, rym
         if (!src_child.readable())
             return;
         if (isNullValue(src_child)) {
+            explain_unset("dependencies");
             removeChild(dst_parent, "dependencies");
         } else if (src_child.is_seq()) {
             ryml::NodeRef dst_seq = childOrCreate(dst_parent, "dependencies");
             dst_seq |= ryml::SEQ;
             for (ryml::ConstNodeRef item : src_child.children()) {
                 auto name = asString(child(item, "name"));
+                bool replaced = false;
                 if (name && !name->empty()) {
                     for (ryml::ConstNodeRef existing_item : dst_seq.children()) {
                         auto existing_name = asString(child(existing_item, "name"));
                         if (existing_name && *existing_name == *name) {
                             dst_seq.tree()->remove(existing_item.id());
+                            replaced = true;
                             break;
                         }
                     }
                 }
+                if (explaining)
+                    catalyst::logger.explain(
+                        "Dependency '{}' (source '{}') from profile '{}' ({}) {}.",
+                        name.value_or("<unnamed>"),
+                        asString(child(item, "source")).value_or("<none>"),
+                        new_profile_name,
+                        g_profile_source,
+                        replaced ? "replaces the earlier declaration with the same name (whole entry, no field merge)"
+                                 : "is appended");
                 appendCopy(dst_seq, item);
             }
         }
@@ -621,15 +715,34 @@ void mergeHelper(ryml::Tree &composite, const std::string &new_profile_name, rym
 }
 
 void merge(ryml::Tree &composite, const std::string &profile_name, const fs::path &root_dir) {
-    if (fs::exists(root_dir / "CATALYST.yaml")) {
-        auto catalyst_yaml = catalyst::utils::yaml::loadFile(root_dir / "CATALYST.yaml");
+    const fs::path centralized = root_dir / "CATALYST.yaml";
+    if (fs::exists(centralized)) {
+        if (explainingComposition())
+            catalyst::logger.explain(
+                "Searching for profile '{}' in centralized manifest '{}' (precedence over split manifests).",
+                profile_name,
+                fs::absolute(centralized).string());
+        auto catalyst_yaml = catalyst::utils::yaml::loadFile(centralized);
         if (!catalyst_yaml)
             throw std::runtime_error(catalyst_yaml.error());
         if (ryml::ConstNodeRef profile = child(catalyst_yaml->crootref(), profile_name); profile.readable()) {
             catalyst::logger.debug("Found profile '{}' in CATALYST.yaml", profile_name);
+            g_profile_source = fs::absolute(centralized).string();
+            if (explainingComposition())
+                catalyst::logger.explain("Loaded profile '{}' from centralized manifest '{}'.",
+                                         profile_name,
+                                         g_profile_source);
             mergeHelper(composite, profile_name, profile);
             return;
+        } else if (explainingComposition()) {
+            catalyst::logger.explain(
+                "Centralized manifest '{}' does not define profile '{}'; checking split-manifest fallback.",
+                fs::absolute(centralized).string(),
+                profile_name);
         }
+    } else if (explainingComposition()) {
+        catalyst::logger.explain("Centralized manifest '{}' not found; searching for split-manifest file.",
+                                 fs::absolute(centralized).string());
     }
 
     // fallback
@@ -639,14 +752,29 @@ void merge(ryml::Tree &composite, const std::string &profile_name, const fs::pat
     else
         profile_path /= std::format("catalyst_{}.yaml", profile_name);
 
+    if (explainingComposition())
+        catalyst::logger.explain("Searching for split-manifest file '{}' for profile '{}'.",
+                                 fs::absolute(profile_path).string(),
+                                 profile_name);
+
     if (!fs::exists(profile_path)) {
         catalyst::logger.error("Profile {} not found in {} or CATALYST.yaml", profile_name, profile_path.string());
+        if (explainingComposition())
+            catalyst::logger.explain(
+                "Missing profile '{}': file '{}' does not exist and profile is not defined in CATALYST.yaml.",
+                profile_name,
+                fs::absolute(profile_path).string());
         throw std::runtime_error(
             std::format("Profile {} not found in {} or CATALYST.yaml", profile_name, profile_path.string()));
     }
     auto profile_yaml = catalyst::utils::yaml::loadFile(profile_path);
     if (!profile_yaml)
         throw std::runtime_error(profile_yaml.error());
+    g_profile_source = fs::absolute(profile_path).string();
+    if (explainingComposition())
+        catalyst::logger.explain("Loaded split manifest '{}' for profile '{}'.",
+                                 g_profile_source,
+                                 profile_name);
     mergeHelper(composite, profile_name, profile_yaml->crootref());
 }
 
@@ -663,11 +791,17 @@ Configuration::Configuration(const std::vector<std::string> &profiles, const std
     for (const auto &p : profiles) {
         if (!profile_names.empty() && profile_names.back() == p) {
             catalyst::logger.warn("Adjacent duplicate profile '{}' ignored during composition.", p);
+            if (explainingComposition())
+                catalyst::logger.explain("Adjacent duplicate profile '{}' ignored during composition.", p);
         } else {
             profile_names.push_back(p);
         }
     }
     catalyst::logger.debug("Composing profiles: {}.", profile_names);
+    if (explainingComposition()) {
+        catalyst::logger.explain("Profile composition order: [{}].", profile_names);
+        catalyst::logger.explain("Initialized configuration with built-in default values.");
+    }
 
     for (const auto &profile_name : profile_names) {
         merge(composition, profile_name, root_dir);
@@ -675,7 +809,33 @@ Configuration::Configuration(const std::vector<std::string> &profiles, const std
 
     this->profile_names = profile_names;
     catalyst::logger.debug("Profile composition finished.");
+
+    if (explainingComposition()) {
+        const std::string artifact_type = getString("manifest.type").value_or("BINARY");
+        if (artifact_type == "BINARY") {
+            catalyst::logger.explain(
+                "Resolved artifact type is BINARY: compiles source files into objects and links an executable.");
+        } else if (artifact_type == "STATICLIB") {
+            catalyst::logger.explain(
+                "Resolved artifact type is STATICLIB: compiles source files into objects and packages them into an archive.");
+        } else if (artifact_type == "SHAREDLIB") {
+            catalyst::logger.explain(
+                "Resolved artifact type is SHAREDLIB: compiles source files into objects and links a shared library.");
+        } else if (artifact_type == "INTERFACE") {
+            catalyst::logger.explain(
+                "Resolved artifact type is INTERFACE: header-only library target; skips compilation and linking.");
+        }
+    }
 }
+
+catalyst::utils::yaml::ExplainCompositionGuard::ExplainCompositionGuard(bool enable) : previous(g_explain_composition) {
+    g_explain_composition = enable;
+}
+
+catalyst::utils::yaml::ExplainCompositionGuard::~ExplainCompositionGuard() {
+    g_explain_composition = previous;
+}
+
 
 Configuration::Configuration(Configuration &&) noexcept = default;
 

@@ -58,33 +58,51 @@ Result<std::unordered_set<fs::path>> buildSourceSet(const fs::path &dir, const s
     logger.debug("Processing source directory: {}", dir.string());
 
     if (!fs::exists(dir) || !fs::is_directory(dir)) {
+        if (logger.explainEnabled()) {
+            logger.explain("Source directory '{}' does not exist or is not a directory.", fs::absolute(dir).string());
+        }
         return std::unexpected(std::format("Source directory not found or is not a directory: {}", dir.string()));
+    }
+
+    if (logger.explainEnabled()) {
+        logger.explain("Scanning source root directory: '{}'.", fs::absolute(dir).string());
     }
 
     auto ignore_patterns_opt = createIgnorePatterns(dir, profiles);
     std::unordered_set<std::string> ignore_patterns;
     if (ignore_patterns_opt) {
         ignore_patterns = std::move(*ignore_patterns_opt);
+        if (logger.explainEnabled()) {
+            logger.explain("Loaded .catalystignore with {} active rule(s) for profiles {}.",
+                           ignore_patterns.size(),
+                           profiles);
+        }
     }
 
     std::unordered_set<fs::path> source_set;
 
-    const std::vector<std::regex> ignore_regexes = [&ignore_patterns]() {
-        std::vector<std::regex> ret_vec;
-        ret_vec.reserve(ignore_patterns.size());
-        for (const auto &ignore_pattern : ignore_patterns) {
-            logger.debug("Compiled ignore pattern: {}", ignore_pattern);
-            ret_vec.emplace_back(ignore_pattern);
-        }
-        return ret_vec;
-    }();
+    struct CompiledIgnore {
+        std::string pattern;
+        std::regex regex;
+    };
+    std::vector<CompiledIgnore> ignore_regexes;
+    ignore_regexes.reserve(ignore_patterns.size());
+    for (const auto &ignore_pattern : ignore_patterns) {
+        logger.debug("Compiled ignore pattern: {}", ignore_pattern);
+        ignore_regexes.push_back({ignore_pattern, std::regex(ignore_pattern)});
+    }
 
     for (const auto &entry : fs::recursive_directory_iterator(dir)) {
         if (entry.is_regular_file()) {
             bool ignored = false;
-            for (const auto &ignore_regex : ignore_regexes) {
-                if (std::regex_match(entry.path().filename().string(), ignore_regex)) {
+            for (const auto &rule : ignore_regexes) {
+                if (std::regex_match(entry.path().filename().string(), rule.regex)) {
                     logger.debug("Ignoring file: {}", entry.path().string());
+                    if (logger.explainEnabled()) {
+                        logger.explain("File '{}' excluded by .catalystignore rule '{}'.",
+                                       fs::absolute(entry.path()).string(),
+                                       rule.pattern);
+                    }
                     ignored = true;
                     break;
                 }
@@ -92,13 +110,28 @@ Result<std::unordered_set<fs::path>> buildSourceSet(const fs::path &dir, const s
             if (!ignored) {
                 const auto &path = entry.path();
                 const std::string extension = path.extension().string();
-                if (
-                    std::ranges::contains(tc.extensions.cpp_sources, extension)
-                    || std::ranges::contains(tc.extensions.c_sources, extension)
-                    || std::ranges::contains(tc.extensions.module_interfaces, extension)
-                ) {
-                    logger.debug("Adding file to source set: {}", path.string());
+                if (std::ranges::contains(tc.extensions.cpp_sources, extension)) {
+                    if (logger.explainEnabled()) {
+                        logger.explain("Source file '{}' accepted (C++ source).", fs::absolute(path).string());
+                    }
                     source_set.insert(path);
+                } else if (std::ranges::contains(tc.extensions.c_sources, extension)) {
+                    if (logger.explainEnabled()) {
+                        logger.explain("Source file '{}' accepted (C source).", fs::absolute(path).string());
+                    }
+                    source_set.insert(path);
+                } else if (std::ranges::contains(tc.extensions.module_interfaces, extension)) {
+                    if (logger.explainEnabled()) {
+                        logger.explain("Source file '{}' accepted (C++ module interface).",
+                                       fs::absolute(path).string());
+                    }
+                    source_set.insert(path);
+                } else {
+                    if (logger.explainEnabled()) {
+                        logger.explain("File '{}' skipped: extension '{}' is not recognized by active toolchain.",
+                                       fs::absolute(path).string(),
+                                       extension);
+                    }
                 }
             }
         }

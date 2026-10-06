@@ -1,0 +1,32 @@
+@font-face {
+  font-family: "Santa Cruz Mono";
+  src: url("../assets/fonts/sc-mono/SantaCruzMono-Regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Santa Cruz Mono";
+  src: url("../assets/fonts/sc-mono/SantaCruzMono-Bold.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Santa Cruz Mono";
+  src: url("../assets/fonts/sc-mono/SantaCruzMono-Italic.woff2") format("woff2");
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+}
+
+/* Use the face for both code blocks and inline code; leave the rest of the
+   theme unchanged. Material sets "kern" on code, so keep it alongside the
+   slashed zero and slug ligature features. */
+.md-typeset code,
+.md-typeset pre {
+  font-family: "Santa Cruz Mono", monospace;
+  font-feature-settings: "kern", "zero", "dlig";
+}
