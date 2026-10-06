@@ -95,6 +95,21 @@ public:
         return verbose_logging;
     }
 
+    /// Routes console logs on this thread to stderr without changing the JSONL log.
+    /// Nested guards restore the previous routing when they leave scope.
+    class ConsoleToStderr {
+    public:
+        ConsoleToStderr();
+        ~ConsoleToStderr();
+        ConsoleToStderr(const ConsoleToStderr &) = delete;
+        ConsoleToStderr &operator=(const ConsoleToStderr &) = delete;
+        ConsoleToStderr(ConsoleToStderr &&) = delete;
+        ConsoleToStderr &operator=(ConsoleToStderr &&) = delete;
+
+    private:
+        bool previous;
+    };
+
     // ---- Explanation sessions -------------------------------------------------------------
 
     [[nodiscard]] bool explainEnabled() const {

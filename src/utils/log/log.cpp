@@ -300,6 +300,8 @@ std::string escapeJsonString(const std::string &input) {
 namespace catalyst {
 
 namespace {
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+thread_local bool g_console_to_stderr = false;
 #if FF_catalyst__log_machine_info
 std::string getHostnameImpl() {
     constexpr size_t BUFFER_SIZE = std::numeric_limits<char>::max() + 1;
@@ -381,6 +383,14 @@ LogT::~LogT() {
 #endif
 }
 
+LogT::ConsoleToStderr::ConsoleToStderr() : previous(g_console_to_stderr) {
+    g_console_to_stderr = true;
+}
+
+LogT::ConsoleToStderr::~ConsoleToStderr() {
+    g_console_to_stderr = previous;
+}
+
 bool LogT::isOpen() const {
     std::lock_guard<std::mutex> lock(logging_mt);
     return log_file.is_open();
@@ -442,7 +452,7 @@ void LogT::logImpl(LogLevel level, const std::string &message) const {
                 break;
         }
 
-        std::ostream &sink = (level == LogLevel::ERROR) ? std::cerr : std::cout;
+        std::ostream &sink = (g_console_to_stderr || level == LogLevel::ERROR) ? std::cerr : std::cout;
         std::string time_str = std::format("{:%Y-%m-%d %H:%M:%S}", now);
         std::string log_str = std::format("[{}] {}", level, message);
         sink << time_str << " " << color << log_str << RESET << '\n';
