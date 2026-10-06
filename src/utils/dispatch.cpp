@@ -224,6 +224,11 @@ int dispatch(const catalyst::CliContext &ctx) {
         injectCommon(ctx.pack_res->profiles);
         return dispatchSubcommand("pack", *ctx.pack_res, catalyst::pack::action);
     }
+    if (*ctx.doctor_subc) {
+        const LogT::ConsoleToStderr console_guard;
+        injectCommon(ctx.doctor_res->profiles);
+        return dispatchSubcommand("doctor", *ctx.doctor_res, catalyst::doctor::action);
+    }
     if (*ctx.doc_subc) {
         checkRequiredTools();
         return dispatchSubcommand("doc", *ctx.doc_res, catalyst::doc::action);

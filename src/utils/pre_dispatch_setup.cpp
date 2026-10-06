@@ -55,6 +55,7 @@ void setupCli(catalyst::CliContext &ctx) {
     tie(ctx.tidy_subc, ctx.tidy_res) = catalyst::tidy::parse(ctx.app);
     tie(ctx.pack_subc, ctx.pack_res) = catalyst::pack::parse(ctx.app);
     tie(ctx.doc_subc, ctx.doc_res) = catalyst::doc::parse(ctx.app);
+    tie(ctx.doctor_subc, ctx.doctor_res) = catalyst::doctor::parse(ctx.app);
     tie(ctx.profiles_ls_subc, ctx.profile_ls_res) = catalyst::profile_ls::parse(ctx.app);
     tie(ctx.feature_ls_subc, ctx.feature_ls_res) = catalyst::feature_ls::parse(ctx.app);
     tie(ctx.completion_subc, ctx.completion_res) = catalyst::completion::parse(ctx.app);

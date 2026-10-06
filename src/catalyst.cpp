@@ -1,4 +1,5 @@
 #include <filesystem>
+#include <optional>
 #include <print>
 #include <string>
 #include <utility>
@@ -23,9 +24,15 @@ int main(int argc, char **argv) {
         command_line.emplace_back(argv[index]);
     catalyst::utils::runtime::setCommandLine(command_line);
 
-    catalyst::CliContext ctx{.workspace = catalyst::Workspace::findRoot()};
+    catalyst::CliContext ctx;
     if (auto [exit_code, should_return] = catalyst::parseCli(argc, argv, ctx); should_return)
         return exit_code;
+
+    // Keep workspace discovery logs out of doctor's report as well as action logs.
+    std::optional<catalyst::LogT::ConsoleToStderr> console_guard;
+    if (*ctx.doctor_subc)
+        console_guard.emplace();
+    ctx.workspace = catalyst::Workspace::findRoot();
 
     std::filesystem::path executable_path{argv[0]};
     if (executable_path.has_parent_path())

@@ -40,6 +40,7 @@ subcommands: List[Subcommand] = [
     Subcommand("tidy", "tidy", "tidy.hpp", brief="tidy"),
     Subcommand("pack", "pack", "pack.hpp", brief="pack"),
     Subcommand("doc", "doc", "doc.hpp", brief="doc"),
+    Subcommand("doctor", "doctor", "doctor.hpp", brief="doctor"),
     Subcommand("profile_ls", "profile_ls", "profile_ls.hpp", app_member="profiles_ls_subc", brief="profile-ls"),
     Subcommand("feature_ls", "feature_ls", "feature_ls.hpp", brief="feature-ls"),
     Subcommand("completion", "completion", "completion.hpp", brief="completion"),
