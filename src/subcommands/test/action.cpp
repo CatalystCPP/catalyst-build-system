@@ -197,12 +197,15 @@ Result<void> action(const Parse &args) {
             .force_refetch = false,
             .workspace_build = args.workspace.has_value(),
             .watch = false,
+            .explain = false,
             .package = "",
             .profiles = profiles,
             .enabled_features = {},
             .backend = "",
             .workspace =
                 std::nullopt, // Prevent build from recursing into workspace members, we'll handle that in test logic
+            .executable_path = "catalyst",
+            .cli_options = {},
         });
         if (!res) {
             logger.warn("Error in rebuilding before test execution: {}\n"

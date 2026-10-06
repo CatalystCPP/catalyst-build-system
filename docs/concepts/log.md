@@ -15,8 +15,9 @@ Each log level has a corresponding color to make scanning the console output eas
 * **INFO:** Blue
 * **WARN:** Orange
 * **ERROR:** Red
+* **EXPLAIN:** Bold default terminal color on `std::cerr` (Prefixed with `[EXPLAIN]`; enabled via `--explain`)
 
-*Note: Errors are always routed to `std::cerr`, while other levels go to `std::cout`.*
+*Note: Errors and explanations are always routed to `std::cerr`, while other levels go to `std::cout`.*
 
 ## File Output (`.catalyst.log`)
 
@@ -81,3 +82,17 @@ When built with the `log_machine_info` feature flag, Catalyst will include the s
 {"event":"begin_session","timestamp":"2026-04-08 21:10:58.527000000","hostname":"dev-workstation","pid":10425}
 {"timestamp":"2026-04-08 21:10:58.527553448","level":"INFO","message":"Test subcommand invoked.","hostname":"dev-workstation","pid":10425}
 ```
+
+## Explanation Logging (`catalyst build --explain`)
+
+When invoked with `--explain`, Catalyst logs high-resolution build decision logic. Explanation logging operates independently of standard log verbosity.
+
+### Dual Sink Architecture
+
+1. **Terminal (`stderr`):** Real-time streamed messages with bold styling and `[EXPLAIN]` prefix on every line.
+2. **Markdown Report (`catalyst_explain_[timestamp].md`):** A standalone report saved directly into the project directory. The file name collision handling uses an exclusive file lock (`<report>.lock`) and auto-increments suffix (e.g. `.1.md`) if another invocation is running or a report already exists.
+3. **Structured Log (`.catalyst.log`):** Formatted as standard JSONL with `"level":"EXPLAIN"`.
+
+### Child Session Aggregation
+
+During workspace or recursive dependency builds, child `catalyst` invocations inherit a spooling environment (`CATALYST_EXPLAIN_SPOOL`) and write explanation events directly to a temporary spool file. The parent session collects and merges these child records into the unified report, tagged by package name.

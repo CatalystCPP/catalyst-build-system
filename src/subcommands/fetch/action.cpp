@@ -262,10 +262,13 @@ Result<void> fetchLocal(const FetchLocalArgs &fn_args) {
 
     std::string new_visited = visited_env.empty() ? local_path_str : visited_env + ":" + local_path_str;
 
+    catalyst::logger.explain("Recursively building local dependency '{}' at '{}'.", name, local_path.string());
     catalyst::logger.debug("Recursively building local dependency: {} at {}", name, local_path.string());
     std::println(std::cout, "Building local dependency: {} at {}", name, local_path.string());
 
     std::vector<std::string> args = {"catalyst", "build"};
+    if (catalyst::logger.explainEnabled())
+        args.emplace_back("--explain");
     // Bind each value to its option: names such as "test" are also CLI subcommands.
     for (const auto &profile : profiles)
         args.push_back("--profiles=" + profile);
@@ -277,15 +280,28 @@ Result<void> fetchLocal(const FetchLocalArgs &fn_args) {
     env_map["CATALYST_MACHINE"] = "1";
     if (catalyst::logger.getVerboseLogging())
         env_map["CATALYST_VERBOSE"] = "1";
+    std::unordered_map<std::string, std::string> child_env;
+    if (catalyst::logger.explainEnabled()) {
+        child_env = catalyst::logger.explainChildEnvironment(name);
+        env_map.insert(child_env.begin(), child_env.end());
+    }
 
     auto res = catalyst::processExec(std::move(args), local_path.string(), env_map);
+    if (catalyst::logger.explainEnabled()) {
+        catalyst::logger.collectExplainChild(child_env, name,
+                                             res ? std::optional<int>(res.value().get()) : std::nullopt);
+    }
     if (!res) {
+        catalyst::logger.explain("Failed to execute build for local dependency '{}': {}", name, res.error());
         return std::unexpected(res.error());
     }
 
     if (res.value().get() != 0) {
+        catalyst::logger.explain("Local dependency '{}' build exited with non-zero status code: {}", name,
+                                 res.value().get());
         return std::unexpected(std::format("Failed to build local dependency: {}", name));
     }
+    catalyst::logger.explain("Local dependency '{}' build completed successfully.", name);
 
     return {};
 }
@@ -309,6 +325,7 @@ Result<void> fetchDependency(ryml::ConstNodeRef dep,
 
     if (parse_args.workspace) {
         if (auto member = parse_args.workspace->findPackage(name)) {
+            catalyst::logger.explain("Dependency '{}' resolved to workspace member at '{}'", name, member->path.string());
             catalyst::logger.info(
                 "Dependency '{}' found in workspace at '{}'. Linking...", name, member->path.string());
             fs::path lib_path = fs::path(build_dir) / "catalyst-libs" / name;
@@ -347,13 +364,19 @@ Result<void> fetchDependency(ryml::ConstNodeRef dep,
         locked_url = lockfile_deps.at(name).url;
         locked_version = lockfile_deps.at(name).version;
         locked_path = lockfile_deps.at(name).path;
+        catalyst::logger.explain("Dependency '{}' is locked: version='{}', hash='{}', url='{}', path='{}'",
+                                 name, locked_version, locked_hash, locked_url, locked_path);
         catalyst::logger.debug("Dependency '{}' is locked.", name);
+    } else {
+        catalyst::logger.explain("Dependency '{}' is unpinned (no matching entry in lockfile)", name);
     }
 
     if (source == "system") {
+        catalyst::logger.explain("Dependency '{}': selected source 'system' (discovery via pkg-config)", name);
         if (auto res = fetchSystem(name); !res)
             return std::unexpected(res.error());
     } else if (source == "custom") {
+        catalyst::logger.explain("Dependency '{}': selected source 'custom'", name);
         if (auto res = fetchCustom(name); !res)
             return std::unexpected(res.error());
     } else if (source == "local") {
@@ -365,6 +388,7 @@ Result<void> fetchDependency(ryml::ConstNodeRef dep,
         else
             return std::unexpected(std::format("Local dependency '{}' is missing path.", name));
 
+        catalyst::logger.explain("Dependency '{}': selected source 'local' at path '{}'", name, path);
         std::vector<std::string> profiles_vec =
             yaml::asStringVector(yaml::child(dep, "profiles")).value_or(std::vector<std::string>{});
         auto features = yaml::asStringVector(yaml::child(dep, "using")).value_or(std::vector<std::string>{});
@@ -373,6 +397,8 @@ Result<void> fetchDependency(ryml::ConstNodeRef dep,
     } else {
         fs::path dep_path = fs::path(build_dir) / "catalyst-libs" / name;
         if (fs::exists(dep_path)) {
+            catalyst::logger.explain("Dependency '{}': selected source 'git' (reusing cached checkout at '{}')",
+                                     name, dep_path.string());
             std::println(std::cout, "Skipping fetch for existing git dependency: {}", name);
         } else {
             std::string version;
@@ -391,6 +417,8 @@ Result<void> fetchDependency(ryml::ConstNodeRef dep,
             else
                 url = source;
 
+            catalyst::logger.explain("Dependency '{}': selected source 'git' (cloning from url='{}', ref/version='{}')",
+                                     name, url, version);
             if (auto res = fetchGit(build_dir, name, url, version, locked_hash); !res)
                 return std::unexpected(res.error());
         }
@@ -405,7 +433,10 @@ Result<void> action(const Parse &parse_args) {
     catalyst::logger.debug("Composing profiles.");
     utils::yaml::Configuration config{parse_args.profiles};
 
-    if (!parse_args.local_only) {
+    if (parse_args.local_only) {
+        catalyst::logger.explain("Dependency fetch mode: local-only incremental check");
+    } else {
+        catalyst::logger.explain("Dependency fetch mode: full dependency fetch");
         catalyst::logger.debug("Running pre-fetch hooks.");
         if (auto res = hooks::preFetch(config); !res)
             return res;
@@ -443,6 +474,10 @@ Result<void> action(const Parse &parse_args) {
                 lockfile_deps[*dep_name] = ld;
             }
         }
+        catalyst::logger.explain("Lockfile discovered at '{}' ({} pinned dependencies loaded)",
+                                 fs::absolute(lockfile_path).string(), lockfile_deps.size());
+    } else {
+        catalyst::logger.explain("No lockfile found at '{}'", fs::absolute(lockfile_path).string());
     }
 
     namespace yaml = utils::yaml;

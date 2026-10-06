@@ -68,11 +68,14 @@ Result<void> action(const Parse &args) {
         .force_refetch = false,
         .workspace_build = false,
         .watch = false,
+        .explain = false,
         .package = "",
         .profiles = args.profiles,
         .enabled_features = args.enabled_features,
         .backend = args.backend,
         .workspace = std::nullopt,
+        .executable_path = "catalyst",
+        .cli_options = {},
     };
 
     if (auto res = catalyst::build::action(build_args); !res) {
