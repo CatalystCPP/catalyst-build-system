@@ -44,6 +44,7 @@ nav:
     - clean: cli/clean.md
     - completion: cli/completion.md
     - doc: cli/doc.md
+    - doctor: cli/doctor.md
     - download: cli/download.md
     - feature_ls: cli/feature_ls.md
     - fetch: cli/fetch.md
