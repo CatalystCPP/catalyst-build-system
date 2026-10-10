@@ -259,6 +259,30 @@ def test_invalid_section_shapes(project, section):
     assert checks(data, "profiles.shape", "error")
 
 
+def test_invalid_declarations_are_reported_once(project):
+    append(project, """\
+        meta:
+          generator: invalid-backend
+    """)
+    text = (project / "catalyst.yaml").read_text().replace("type: BINARY", "type: NOT_A_TYPE")
+    (project / "catalyst.yaml").write_text(text)
+    result, data = report(project)
+    assert result.returncode == 1
+    # Each bad declaration yields one error naming its profile, and no conflicting verdict.
+    for id in ["build.backend", "manifest.type"]:
+        assert len(checks(data, id, "error")) == 1, data
+        assert "Profile 'common'" in checks(data, id, "error")[0]["message"]
+        assert not checks(data, id, "ok"), data
+    assert "cob, ninja, gmake, or make" in checks(data, "build.backend", "error")[0]["hint"]
+
+
+def test_invalid_backend_override_is_reported(project):
+    result, data = report(project, "--backend", "bogus")
+    assert result.returncode == 1
+    [error] = checks(data, "build.backend", "error")
+    assert "--backend override 'bogus'" in error["message"]
+
+
 def test_backend_override_and_path_lookup(project):
     bin_dir = project / "bin"
     bin_dir.mkdir()

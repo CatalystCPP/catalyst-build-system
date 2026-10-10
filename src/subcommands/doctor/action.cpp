@@ -5,6 +5,8 @@
 #endif
 
 #include <algorithm>
+#include <array>
+#include <cstdint>
 #include <cstdlib>
 #include <exception>
 #include <expected>
@@ -18,6 +20,7 @@
 #include <string_view>
 #include <system_error>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include <ryml/ryml.hpp>
@@ -34,9 +37,26 @@ namespace {
 namespace fs = std::filesystem;
 namespace yaml = catalyst::utils::yaml;
 
+enum class Status : std::uint8_t { Ok, Warning, Error };
+
+inline constexpr std::array ALL_STATUSES{Status::Ok, Status::Warning, Status::Error};
+
+/** Spelling used in both the text report and the versioned JSON contract. */
+[[nodiscard]] constexpr std::string_view toString(Status status) {
+    switch (status) {
+        case Status::Ok:
+            return "ok";
+        case Status::Warning:
+            return "warning";
+        case Status::Error:
+            return "error";
+    }
+    std::unreachable();
+}
+
 struct Check {
     std::string id;
-    std::string status;
+    Status status;
     std::string message;
     std::string hint;
 };
@@ -44,14 +64,30 @@ struct Check {
 struct Report {
     std::vector<Check> checks;
 
-    void add(std::string_view id, std::string_view status, std::string_view message, std::string_view hint = {}) {
-        checks.push_back({std::string{id}, std::string{status}, std::string{message}, std::string{hint}});
+    void add(std::string_view id, Status status, std::string_view message, std::string_view hint = {}) {
+        checks.push_back({std::string{id}, status, std::string{message}, std::string{hint}});
     }
 
-    [[nodiscard]] std::size_t count(std::string_view status) const {
+    [[nodiscard]] std::size_t count(Status status) const {
         return std::ranges::count_if(checks, [status](const Check &check) { return check.status == status; });
     }
+
+    [[nodiscard]] bool has(std::string_view id, Status status) const {
+        return std::ranges::any_of(
+            checks, [id, status](const Check &check) { return check.id == id && check.status == status; });
+    }
 };
+
+/** Renders accepted values for a hint, e.g. "cob, ninja, gmake, or make". */
+[[nodiscard]] std::string oneOf(std::span<const std::string_view> values) {
+    std::string joined;
+    for (std::size_t index = 0; index < values.size(); ++index) {
+        if (index != 0)
+            joined += index + 1 == values.size() ? ", or " : ", ";
+        joined += values[index];
+    }
+    return joined;
+}
 
 // Look up literal executable names, never interpolate manifest values into a shell.
 bool executableFile(const fs::path &path) {
@@ -97,10 +133,10 @@ bool executableFile(const fs::path &path) {
 
 void checkTool(Report &report, std::string_view id, std::string_view executable) {
     if (auto found = findExecutable(executable)) {
-        report.add(id, "ok", std::format("{}: {}", executable, found->string()));
+        report.add(id, Status::Ok, std::format("{}: {}", executable, found->string()));
     } else {
         report.add(id,
-                   "error",
+                   Status::Error,
                    std::format("Executable '{}' is unavailable or not executable", executable),
                    "Install the tool, add it to PATH, or correct the configured executable path.");
     }
@@ -116,28 +152,29 @@ bool checkProfileShape(Report &report, ryml::ConstNodeRef profile, std::string_v
         const bool flexible = std::string_view{key} == "features";
         if ((sequence && !section.is_seq()) || (!sequence && !section.is_map() && !(flexible && section.is_seq()))) {
             report.add("profiles.shape",
-                       "error",
+                       Status::Error,
                        std::format("Profile '{}': '{}' has the wrong structure", name, key),
                        sequence ? "Use a sequence of dependency mappings."
                                 : "Use a mapping (features also accepts a sequence of mappings).");
             valid = false;
         }
     }
+    // Declared values are checked per profile so each error names its source. These do not
+    // block composition: checkConfiguration still runs and avoids repeating the same problem.
     const auto meta = yaml::child(profile, "meta");
     if (auto generator = yaml::asString(yaml::child(meta, "generator"));
-        generator && *generator != "cob" && *generator != "ninja" && *generator != "make" && *generator != "gmake")
+        generator && !yaml::isSupportedGenerator(*generator))
         report.add("build.backend",
-                   "error",
+                   Status::Error,
                    std::format("Profile '{}': unsupported backend '{}'", name, *generator),
-                   "Use cob, ninja, gmake, or make. Invalid declarations are ignored during composition.");
+                   std::format("Use {}. Composition ignores this declaration and keeps the inherited backend.",
+                               oneOf(yaml::SUPPORTED_GENERATORS)));
     const auto manifest = yaml::child(profile, "manifest");
-    if (auto type = yaml::asString(yaml::child(manifest, "type"));
-        type && *type != "BINARY" && *type != "STATICLIB" && *type != "SHAREDLIB" && *type != "INTERFACE")
-        report.add(
-            "manifest.type",
-            "error",
-            std::format("Profile '{}': unsupported artifact type '{}'", name, *type),
-            "Use BINARY, STATICLIB, SHAREDLIB, or INTERFACE. Invalid declarations are ignored during composition.");
+    if (auto type = yaml::asString(yaml::child(manifest, "type")); type && !yaml::isArtifactType(*type))
+        report.add("manifest.type",
+                   Status::Error,
+                   std::format("Profile '{}': unsupported artifact type '{}'", name, *type),
+                   std::format("Use {}.", oneOf(yaml::ARTIFACT_TYPES)));
     return valid;
 }
 
@@ -148,7 +185,7 @@ bool checkProfiles(Report &report, std::span<const std::string> profiles) {
         auto loaded = yaml::loadFile("CATALYST.yaml");
         if (!loaded || !loaded->crootref().is_map()) {
             report.add("profiles.manifest",
-                       "error",
+                       Status::Error,
                        loaded ? "CATALYST.yaml must be a mapping" : loaded.error(),
                        "Fix the centralized manifest before composing profiles.");
             return false;
@@ -161,15 +198,15 @@ bool checkProfiles(Report &report, std::span<const std::string> profiles) {
         const fs::path split = name == "common" ? "catalyst.yaml" : std::format("catalyst_{}.yaml", name);
         if (selected.readable()) {
             if (!selected.is_map()) {
-                report.add("profiles.shape", "error", std::format("Profile '{}' must be a mapping", name));
+                report.add("profiles.shape", Status::Error, std::format("Profile '{}' must be a mapping", name));
                 valid = false;
             } else {
                 if (!checkProfileShape(report, selected, name))
                     valid = false;
-                report.add("profiles.selected", "ok", std::format("Profile '{}' from CATALYST.yaml", name));
+                report.add("profiles.selected", Status::Ok, std::format("Profile '{}' from CATALYST.yaml", name));
                 if (fs::exists(split))
                     report.add("profiles.shadowed",
-                               "warning",
+                               Status::Warning,
                                std::format("{} is shadowed by CATALYST.yaml", split.string()),
                                "Edit the centralized profile; the split file is not used for this composition.");
             }
@@ -178,40 +215,43 @@ bool checkProfiles(Report &report, std::span<const std::string> profiles) {
         auto loaded = yaml::loadFile(split);
         if (!loaded || !loaded->crootref().is_map()) {
             report.add("profiles.selected",
-                       "error",
+                       Status::Error,
                        loaded ? std::format("{} must be a mapping", split.string()) : loaded.error(),
                        "Create the requested profile or correct its YAML.");
             valid = false;
         } else {
             if (!checkProfileShape(report, loaded->crootref(), name))
                 valid = false;
-            report.add("profiles.selected", "ok", std::format("Profile '{}' from {}", name, split.string()));
+            report.add("profiles.selected", Status::Ok, std::format("Profile '{}' from {}", name, split.string()));
         }
     }
     return valid;
 }
 
-void checkDirectories(Report &report, const yaml::Configuration &config, std::string_view kind) {
+void checkDirectories(Report &report,
+                      const yaml::Configuration &config,
+                      std::string_view kind,
+                      std::string_view artifact_type) {
     const std::string key = std::format("manifest.dirs.{}", kind);
     auto directories = config.getStringVector(key);
     if (!directories) {
-        report.add(key, "error", key + " must be a sequence of directory names");
+        report.add(key, Status::Error, key + " must be a sequence of directory names");
         return;
     }
-    const bool required = kind == "source" && config.getString("manifest.type").value_or("BINARY") != "INTERFACE";
+    const bool required = kind == "source" && artifact_type != "INTERFACE";
     if (directories->empty() && required)
         report.add(key,
-                   "warning",
+                   Status::Warning,
                    "No source directories are configured",
                    "Set manifest.dirs.source, or use type INTERFACE for a header-only target.");
     for (const auto &directory : *directories) {
         std::error_code error;
         if (fs::is_directory(directory, error))
-            report.add(key, "ok", std::format("Directory exists: {}", directory));
+            report.add(key, Status::Ok, std::format("Directory exists: {}", directory));
         else
             report.add(
                 key,
-                required ? "error" : "warning",
+                required ? Status::Error : Status::Warning,
                 std::format("Directory unavailable: {}{}", directory, error ? ": " + error.message() : ""),
                 "Correct the path, create the directory, or ensure a generation hook creates it before building.");
     }
@@ -225,7 +265,7 @@ void checkBuildDirectory(Report &report, const yaml::Configuration &config) {
         ancestor = ancestor.parent_path();
     if (!fs::is_directory(ancestor)) {
         report.add("build.directory",
-                   "error",
+                   Status::Error,
                    std::format("Build path is blocked by a non-directory: {}", ancestor.string()),
                    "Choose a different manifest.dirs.build or remove the blocking file.");
         return;
@@ -233,20 +273,20 @@ void checkBuildDirectory(Report &report, const yaml::Configuration &config) {
 #ifndef _WIN32
     if (::access(ancestor.c_str(), W_OK | X_OK) != 0) {
         report.add("build.directory",
-                   "error",
+                   Status::Error,
                    std::format("Build directory ancestor is not writable: {}", ancestor.string()),
                    "Choose a writable build directory or correct directory permissions.");
         return;
     }
 #endif
-    report.add("build.directory", "ok", std::format("Build destination: {}", build.string()));
+    report.add("build.directory", Status::Ok, std::format("Build destination: {}", build.string()));
     if (!fs::exists(build / "compile_commands.json"))
         report.add("build.compile_commands",
-                   "warning",
+                   Status::Warning,
                    "No compilation database for this composition yet",
                    "Run catalyst build with these profiles to generate compile_commands.json for IDE tooling.");
     else
-        report.add("build.compile_commands", "ok", "Compilation database is present (freshness not checked)");
+        report.add("build.compile_commands", Status::Ok, "Compilation database is present (freshness not checked)");
 }
 
 void checkLocalDependency(Report &report, ryml::ConstNodeRef dependency, std::string_view name) {
@@ -255,14 +295,15 @@ void checkLocalDependency(Report &report, ryml::ConstNodeRef dependency, std::st
         return; // The caller reports missing required fields.
     if (!fs::is_directory(*path))
         report.add("dependencies.local",
-                   "error",
+                   Status::Error,
                    std::format("Local dependency '{}' directory is unavailable: {}", name, *path),
                    "Correct the path or check out the local dependency.");
     else if (!fs::exists(fs::path{*path} / "CATALYST.yaml") && !fs::exists(fs::path{*path} / "catalyst.yaml"))
-        report.add("dependencies.local", "error", std::format("Local dependency '{}' has no Catalyst manifest", name));
+        report.add(
+            "dependencies.local", Status::Error, std::format("Local dependency '{}' has no Catalyst manifest", name));
     else
         report.add("dependencies.local",
-                   "ok",
+                   Status::Ok,
                    std::format("Local dependency '{}' is present (not recursively validated)", name));
 }
 
@@ -271,7 +312,7 @@ void checkDependencies(Report &report, const yaml::Configuration &config) {
     if (!dependencies.readable())
         return;
     if (!dependencies.is_seq()) {
-        report.add("dependencies.shape", "error", "dependencies must be a sequence");
+        report.add("dependencies.shape", Status::Error, "dependencies must be a sequence");
         return;
     }
     std::unordered_set<std::string> tools;
@@ -280,14 +321,16 @@ void checkDependencies(Report &report, const yaml::Configuration &config) {
         const auto name = yaml::asString(yaml::child(dependency, "name"));
         const auto source = yaml::asString(yaml::child(dependency, "source"));
         if (!dependency.is_map() || !name || name->empty() || !source) {
-            report.add("dependencies.declaration", "error", "Each dependency requires a nonempty name and a source");
+            report.add(
+                "dependencies.declaration", Status::Error, "Each dependency requires a nonempty name and a source");
             continue;
         }
         auto require_field = [&report, dependency, &name](std::string_view field) {
             auto value = yaml::asString(yaml::child(dependency, field));
             if (!value || value->empty())
-                report.add(
-                    "dependencies.declaration", "error", std::format("Dependency '{}' requires '{}'", *name, field));
+                report.add("dependencies.declaration",
+                           Status::Error,
+                           std::format("Dependency '{}' requires '{}'", *name, field));
         };
         if (*source == "local") {
             require_field("path");
@@ -311,11 +354,11 @@ void checkDependencies(Report &report, const yaml::Configuration &config) {
             const auto include = yaml::asString(yaml::child(dependency, "include"));
             if (lib && !fs::exists(*lib))
                 report.add("dependencies.system",
-                           "error",
+                           Status::Error,
                            std::format("System library path '{}' is missing: {}", *name, *lib));
             if (include && !fs::is_directory(*include))
                 report.add("dependencies.system",
-                           "error",
+                           Status::Error,
                            std::format("System include path '{}' is missing: {}", *name, *include));
             if (!lib || !include)
                 tools.insert("pkg-config");
@@ -323,16 +366,16 @@ void checkDependencies(Report &report, const yaml::Configuration &config) {
             if (!yaml::asString(yaml::child(dependency, "command"))
                 && !yaml::asString(yaml::child(dependency, "script")))
                 report.add("dependencies.custom",
-                           "error",
+                           Status::Error,
                            std::format("Custom dependency '{}' requires command or script", *name));
             else
                 report.add("dependencies.custom",
-                           "warning",
+                           Status::Warning,
                            std::format("Custom dependency '{}' is not executed by doctor", *name),
                            "Verify its command or script separately; doctor never runs project code.");
         } else {
             report.add("dependencies.source",
-                       "error",
+                       Status::Error,
                        std::format("Dependency '{}' has unsupported source '{}'", *name, *source),
                        "Use git, vcpkg, conan, local, system, or custom.");
         }
@@ -346,52 +389,62 @@ void checkDependencies(Report &report, const yaml::Configuration &config) {
         const fs::path lock = workspace ? workspace->getRoot() / "catalyst.lock" : fs::path{"catalyst.lock"};
         if (!fs::is_regular_file(lock))
             report.add("dependencies.lock",
-                       "warning",
+                       Status::Warning,
                        std::format("No lockfile at {}", lock.string()),
                        "Run catalyst lock to pin dependencies; doctor does not resolve or fetch them.");
         else
-            report.add(
-                "dependencies.lock", "ok", std::format("Lockfile present: {} (contents not verified)", lock.string()));
+            report.add("dependencies.lock",
+                       Status::Ok,
+                       std::format("Lockfile present: {} (contents not verified)", lock.string()));
     }
 }
 
-void checkConfiguration(Report &report, const yaml::Configuration &config, const Parse &args) {
-    const auto type = config.getString("manifest.type").value_or("BINARY");
-    if (type != "BINARY" && type != "STATICLIB" && type != "SHAREDLIB" && type != "INTERFACE")
-        report.add("manifest.type",
-                   "error",
-                   std::format("Unsupported artifact type '{}'", type),
-                   "Use BINARY, STATICLIB, SHAREDLIB, or INTERFACE.");
-    else
-        report.add("manifest.type",
-                   "ok",
-                   std::format("{} target '{}'", type, config.getString("manifest.name").value_or("<unnamed>")));
-
-    checkDirectories(report, config, "source");
-    checkDirectories(report, config, "include");
-    checkBuildDirectory(report, config);
-
-    const std::string backend =
-        args.backend.empty() ? config.getString("meta.generator").value_or("cob") : args.backend;
-    if (backend == "ninja" || backend == "make" || backend == "gmake")
-        checkTool(report, "build.backend", backend == "ninja" ? "ninja" : "make");
-    else if (backend == "cob")
-        report.add("build.backend", "ok", "COB backend is bundled with Catalyst");
-    else
+// Checks the backend the build would actually use. Composition drops unsupported
+// meta.generator declarations, which checkProfileShape has already reported by profile.
+void checkBackend(Report &report, const yaml::Configuration &config, const Parse &args) {
+    if (args.backend.empty() && report.has("build.backend", Status::Error))
+        return; // The fallback backend is not what the profile asked for, so judging it would mislead.
+    const std::string backend = args.backend.empty()
+                                    ? config.getString("meta.generator").value_or(std::string{yaml::DEFAULT_GENERATOR})
+                                    : args.backend;
+    if (!yaml::isSupportedGenerator(backend))
         report.add("build.backend",
-                   "error",
-                   std::format("Unsupported backend '{}'", backend),
-                   "Use cob, ninja, gmake, or make.");
+                   Status::Error,
+                   std::format("Unsupported --backend override '{}'", backend),
+                   std::format("Use {}.", oneOf(yaml::SUPPORTED_GENERATORS)));
+    else if (backend == "cob")
+        report.add("build.backend", Status::Ok, "COB backend is bundled with Catalyst");
+    else
+        checkTool(report, "build.backend", backend == "ninja" ? "ninja" : "make");
+}
+
+void checkConfiguration(Report &report, const yaml::Configuration &config, const Parse &args) {
+    const auto type = config.getString("manifest.type").value_or(std::string{yaml::DEFAULT_ARTIFACT_TYPE});
+    if (yaml::isArtifactType(type))
+        report.add("manifest.type",
+                   Status::Ok,
+                   std::format("{} target '{}'", type, config.getString("manifest.name").value_or("<unnamed>")));
+    else if (!report.has("manifest.type", Status::Error)) // Otherwise already reported against its profile.
+        report.add("manifest.type",
+                   Status::Error,
+                   std::format("Unsupported artifact type '{}'", type),
+                   std::format("Use {}.", oneOf(yaml::ARTIFACT_TYPES)));
+
+    checkDirectories(report, config, "source", type);
+    checkDirectories(report, config, "include", type);
+    checkBuildDirectory(report, config);
+    checkBackend(report, config, args);
 
     std::optional<fs::path> toolchain_path;
     if (auto path = config.getString("manifest.toolchain"))
         toolchain_path = *path;
     auto resolved = catalyst::toolchain::resolveToolchain(toolchain_path);
     if (!resolved) {
-        report.add("toolchain.resolve", "error", resolved.error(), "Correct the toolchain file and its extends chain.");
+        report.add(
+            "toolchain.resolve", Status::Error, resolved.error(), "Correct the toolchain file and its extends chain.");
     } else {
         report.add("toolchain.resolve",
-                   "ok",
+                   Status::Ok,
                    std::format("Resolved toolchain '{}'{}",
                                resolved->name,
                                toolchain_path ? " from " + toolchain_path->string() : " (built-in defaults)"));
@@ -412,9 +465,10 @@ void checkConfiguration(Report &report, const yaml::Configuration &config, const
     }
     auto features = catalyst::generate::resolveFeatureFlags(config, args.enabled_features);
     if (!features)
-        report.add("features.resolve", "error", features.error(), "Correct feature declarations or -f overrides.");
+        report.add(
+            "features.resolve", Status::Error, features.error(), "Correct feature declarations or -f overrides.");
     else
-        report.add("features.resolve", "ok", std::format("Validated {} feature flags", features->size()));
+        report.add("features.resolve", Status::Ok, std::format("Validated {} feature flags", features->size()));
     checkDependencies(report, config);
 }
 
@@ -429,14 +483,14 @@ void printReport(const Report &report, const Parse &args, bool healthy) {
     if (!args.json) {
         std::println("Catalyst doctor");
         for (const auto &check : report.checks) {
-            std::println("[{}] {}: {}", check.status, check.id, check.message);
+            std::println("[{}] {}: {}", toString(check.status), check.id, check.message);
             if (!check.hint.empty())
                 std::println("  Fix: {}", check.hint);
         }
         std::println("\n{} ok, {} warnings, {} errors — {}{}",
-                     report.count("ok"),
-                     report.count("warning"),
-                     report.count("error"),
+                     report.count(Status::Ok),
+                     report.count(Status::Warning),
+                     report.count(Status::Error),
                      healthy ? "PASS" : "FAIL",
                      args.strict ? " (strict)" : "");
         return;
@@ -457,15 +511,15 @@ void printReport(const Report &report, const Parse &args, bool healthy) {
     root["healthy"].set_val(healthy ? "true" : "false");
     auto summary = root["summary"];
     summary |= ryml::MAP;
-    for (const auto *status : {"ok", "warning", "error"})
-        summary[yaml::toSubstr(status)] << report.count(status);
+    for (const auto status : ALL_STATUSES)
+        summary[yaml::toSubstr(toString(status))] << report.count(status);
     auto checks = root["checks"];
     checks |= ryml::SEQ;
     for (const auto &check : report.checks) {
         auto item = checks.append_child();
         item |= ryml::MAP;
         setString(item, "id", check.id);
-        setString(item, "status", check.status);
+        setString(item, "status", toString(check.status));
         setString(item, "message", check.message);
         setString(item, "hint", check.hint);
     }
@@ -482,11 +536,11 @@ Result<void> action(const Parse &args) {
         }
     } catch (const std::exception &error) {
         report.add("configuration.inspect",
-                   "error",
+                   Status::Error,
                    error.what(),
                    "Correct the configuration or filesystem problem and rerun doctor.");
     }
-    const bool healthy = report.count("error") == 0 && (!args.strict || report.count("warning") == 0);
+    const bool healthy = report.count(Status::Error) == 0 && (!args.strict || report.count(Status::Warning) == 0);
     printReport(report, args, healthy);
     if (!healthy)
         return std::unexpected("Doctor found readiness problems; see the diagnostic report.");
