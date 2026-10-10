@@ -38,7 +38,10 @@ using catalyst::utils::yaml::asStringVector;
 using catalyst::utils::yaml::child;
 using catalyst::utils::yaml::childOrCreate;
 using catalyst::utils::yaml::Configuration;
+using catalyst::utils::yaml::DEFAULT_ARTIFACT_TYPE;
+using catalyst::utils::yaml::DEFAULT_GENERATOR;
 using catalyst::utils::yaml::emitYaml;
+using catalyst::utils::yaml::isSupportedGenerator;
 using catalyst::utils::yaml::removeChild;
 using catalyst::utils::yaml::toSubstr;
 namespace fs = std::filesystem;
@@ -636,8 +639,8 @@ void mergeHelper(ryml::Tree &composite, const std::string &new_profile_name, rym
             "generator",
             src,
             "meta.generator",
-            [](const std::string &v) { return v == "ninja" || v == "cob" || v == "gmake" || v == "make"; },
-            /*fallback_on_null=*/"cob");
+            [](const std::string &v) { return isSupportedGenerator(v); },
+            /*fallback_on_null=*/std::string{DEFAULT_GENERATOR});
     });
 
     merge_section(composite_root, "manifest", new_profile, [&](ryml::NodeRef dst, ryml::ConstNodeRef src) {
@@ -811,7 +814,7 @@ Configuration::Configuration(const std::vector<std::string> &profiles, const std
     catalyst::logger.debug("Profile composition finished.");
 
     if (explainingComposition()) {
-        const std::string artifact_type = getString("manifest.type").value_or("BINARY");
+        const std::string artifact_type = getString("manifest.type").value_or(std::string{DEFAULT_ARTIFACT_TYPE});
         if (artifact_type == "BINARY") {
             catalyst::logger.explain(
                 "Resolved artifact type is BINARY: compiles source files into objects and links an executable.");

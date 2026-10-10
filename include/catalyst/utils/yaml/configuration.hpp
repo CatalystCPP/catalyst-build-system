@@ -1,4 +1,6 @@
 #pragma once
+#include <algorithm>
+#include <array>
 #include <filesystem>
 #include <memory>
 #include <optional>
@@ -11,6 +13,24 @@
 #include "catalyst/utils/yaml/ryml_utils.hpp"
 
 namespace catalyst::utils::yaml {
+
+/** Build backends accepted for meta.generator. Composition ignores any other declared value. */
+inline constexpr std::array<std::string_view, 4> SUPPORTED_GENERATORS{"cob", "ninja", "gmake", "make"};
+/** Backend used when no profile declares one, or a profile sets meta.generator to null. */
+inline constexpr std::string_view DEFAULT_GENERATOR = "cob";
+
+/** Artifact kinds accepted for manifest.type. */
+inline constexpr std::array<std::string_view, 4> ARTIFACT_TYPES{"BINARY", "STATICLIB", "SHAREDLIB", "INTERFACE"};
+/** Artifact kind assumed when no profile declares manifest.type. */
+inline constexpr std::string_view DEFAULT_ARTIFACT_TYPE = "BINARY";
+
+[[nodiscard]] constexpr bool isSupportedGenerator(std::string_view generator) {
+    return std::ranges::contains(SUPPORTED_GENERATORS, generator);
+}
+
+[[nodiscard]] constexpr bool isArtifactType(std::string_view type) {
+    return std::ranges::contains(ARTIFACT_TYPES, type);
+}
 
 inline std::filesystem::path multiplexedBuildDir(const std::string &base, const std::vector<std::string> &profiles) {
     std::string suffix;
