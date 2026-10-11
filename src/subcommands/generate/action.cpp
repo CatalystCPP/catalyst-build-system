@@ -5,7 +5,9 @@
 #include <expected>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <optional>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <unordered_set>
@@ -30,6 +32,24 @@ std::string buildFilename(std::string_view generator) {
 }
 
 namespace {
+
+Result<void> writeIfChanged(const fs::path &path, const std::string &contents) {
+    if (std::ifstream existing{path}) {
+        const std::string current{std::istreambuf_iterator<char>{existing}, std::istreambuf_iterator<char>{}};
+        if (current == contents)
+            return {};
+    }
+    std::ofstream out{path};
+    if (!out) {
+        return std::unexpected(std::format("Failed to open {} for writing", path.string()));
+    }
+    out << contents;
+    out.close();
+    if (!out) {
+        return std::unexpected(std::format("Failed to write {}", path.string()));
+    }
+    return {};
+}
 
 bool isEnabled(bool default_enabled,
                const std::string &feature,
@@ -144,10 +164,9 @@ Result<void> action(const Parse &parse_args) {
     fs::remove(build_dir / GENERATION_STATE_FILENAME);
 
     catalyst::logger.debug("Writing build file to: {}", buildfile_path.string());
-    std::ofstream buildfile{buildfile_path};
-    if (!buildfile) {
-        return std::unexpected(std::format("Failed to open {} for writing", buildfile_path.string()));
-    }
+    // Rendered in memory so an unchanged build file keeps its mtime; cob treats a newer
+    // build file as invalidating every step.
+    std::ostringstream buildfile;
 
     const bool uses_cob_writer = generator != "ninja" && generator != "gmake" && generator != "make";
     auto generate_build = [&](buildwriters::BaseWriter &writer) -> Result<void> {
@@ -184,9 +203,8 @@ Result<void> action(const Parse &parse_args) {
     if (!generate_res) {
         return generate_res;
     }
-    buildfile.close();
-    if (!buildfile) {
-        return std::unexpected(std::format("Failed to write {}", buildfile_path.string()));
+    if (auto res = writeIfChanged(buildfile_path, std::move(buildfile).str()); !res) {
+        return res;
     }
     if (catalyst::logger.explainEnabled()) {
         catalyst::logger.explain("Generated build file: '{}'.", fs::absolute(buildfile_path).string());

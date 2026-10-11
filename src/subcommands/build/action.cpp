@@ -705,7 +705,9 @@ Result<void> action(const Parse &parse_args) {
                 regen_reason = "resolved toolchain store missing or changed";
                 catalyst::logger.explain("Build file regeneration required: {}.", regen_reason);
             } else {
-                auto build_time = fs::last_write_time(build_file_path);
+                // generate leaves an unchanged build file untouched but always rewrites the state file.
+                auto build_time = std::max(fs::last_write_time(build_file_path),
+                                           fs::last_write_time(build_dir / catalyst::generate::GENERATION_STATE_FILENAME));
                 if (fs::exists("CATALYST.yaml") && fs::last_write_time("CATALYST.yaml") > build_time) {
                     needs_regen = true;
                     regen_reason = "manifest 'CATALYST.yaml' is newer than build file";
