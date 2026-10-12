@@ -11,7 +11,7 @@ OPTIONS:
   -h,     --help              Print this help message and exit
   -p,     --profiles TEXT [[common]]  ... 
                               Profile composition to run.
-  -P,     --params TEXT ...   
+  -P,     --params TEXT ...   Params to pass to the executable.
 ```
 
 ## Examples

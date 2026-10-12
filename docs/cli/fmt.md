@@ -10,7 +10,8 @@ catalyst fmt [OPTIONS]
 OPTIONS:
   -h,     --help              Print this help message and exit
   -p,     --profiles TEXT [[common]]  ... 
-                              Profile composition to build.
+                              Profile composition whose source and include directories are
+                              formatted.
 ```
 
 ## Details

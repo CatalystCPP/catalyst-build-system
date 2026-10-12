@@ -5,7 +5,7 @@ auto catalyst::run::parse(CLI::App &app) -> std::pair<CLI::App *, std::unique_pt
     auto ret = std::make_unique<Parse>();
     run->add_option("-p,--profiles", ret->profiles, "Profile composition to run.")
         ->default_val(std::vector<std::string>{"common"});
-    run->add_option("-P,--params", ret->params);
+    run->add_option("-P,--params", ret->params, "Params to pass to the executable.");
     run->prefix_command(CLI::PrefixCommandMode::SeparatorOnly);
     run->parse_complete_callback([run, parse_result = ret.get()]() -> void {
         std::vector<std::string> passthrough = run->remaining();
