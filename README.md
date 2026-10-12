@@ -42,10 +42,10 @@ Full details: [Installation Guide](https://catalystcpp.github.io/catalyst-build-
 
 ```bash
 # Debian / Ubuntu
-sudo dpkg -i catalyst_1.7.0_amd64.deb
+sudo dpkg -i catalyst_2.1.0_amd64.deb
 
 # Fedora / RHEL / CentOS
-sudo rpm -i catalyst-1.7.0-1.x86_64.rpm
+sudo rpm -i catalyst-2.1.0-1.x86_64.rpm
 ```
 
 ## Quick Start
@@ -75,12 +75,12 @@ with a catalyst.yaml that looks like this:
 
 ```yaml
 meta:
-  min_ver: 1.9.0
+  min_ver: 2.1.0
 manifest:
   name: my-app
   type: BINARY
   version: 0.0.1
-  description: Your description goes here.
+  description: Your Description Goes Here.
   provides: ''
   toolchain: tc_catalyst.yaml
   dirs:
