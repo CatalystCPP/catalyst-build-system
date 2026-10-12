@@ -12,7 +12,7 @@ Catalyst supports four types of hooks:
 
 1. **`command`**: Executes a standard shell command (via `sh -c` or `cmd /c`).
 2. **`script`**: Executes a script file (via `sh -c` or `cmd /c`).
-3. **`catalyst`**: Dispatches a Catalyst subcommand internally. This is preferred for invoking other Catalyst commands (like `test` after a `build`) because it avoids shelling out to a new process, shares the current configuration context, and enforces recursion protection (depth limit of 8).
+3. **`catalyst`**: Dispatches a Catalyst subcommand internally. This is preferred for invoking other Catalyst commands (like `test` after a `build`) because it runs in-process (no child process), shares the log, any active `--explain` session, and recursion protection (depth limit of 8). It parses its own arguments and composes its own configuration; the workspace is rediscovered.
 4. **`codegen`**: Executes a command for code generation with optional dependency tracking. When `input` and `output` fields are both specified, the command only runs if any output file is missing or any input file is newer than the oldest output file. This enables incremental builds by skipping generation when outputs are already up-to-date.
 
 **Example `catalyst.yaml`:**
@@ -35,7 +35,7 @@ hooks:
 
 ### Catalyst Hooks
 
-The `catalyst` hook type dispatches a Catalyst subcommand internally without spawning a child process. This means the hook shares the current configuration context and workspace state with the parent invocation. Recursive invocation is protected by a maximum dispatch depth of 8, and direct recursion (e.g. a `pre-build` hook that triggers `build`) is always rejected.
+The `catalyst` hook type dispatches a Catalyst subcommand internally, in-process, without spawning a child process. The hook shares the log, any active `--explain` session, and recursion protection with the parent invocation, but it parses its own arguments and composes its own configuration (the workspace is rediscovered). Recursive invocation is protected by a maximum dispatch depth of 8, and direct recursion (e.g. a `pre-build` hook that triggers `build`) is always rejected.
 
 The `catalyst` hook type supports both a short string form and a structured map form.
 
@@ -79,7 +79,7 @@ hooks:
 
 !!! note
 
-    A `catalyst` hook does **not** inherit the parent invocation's global flags or profiles. Each hook invocation is independent.
+    A `catalyst` hook does **not** inherit the parent invocation's global flags or profiles. Each hook invocation parses its own arguments and composes its own configuration independently.
 
 ### Reading resolved build state
 
