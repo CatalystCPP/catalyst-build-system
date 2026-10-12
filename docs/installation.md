@@ -24,8 +24,8 @@ Based on your build backend, catalyst will want one of the following:
 Out of the box Catalyst works with any gnu-compatible compiler, namely
 `gcc`, `g++`, `clang`, and `clang++`.
 
-Catalyst can be made to work with other compilers via [Toolchain Definitions](concepts/toolchains.md). A standard Windows
-toolchain definition is made available.
+Catalyst can be made to work with other compilers via [Toolchain Definitions](concepts/toolchains.md). An example
+MSVC toolchain definition is provided in the [Toolchains](concepts/toolchains.md#example) docs.
 
 ### Dependency Managers
 
@@ -36,6 +36,8 @@ toolchain definition is made available.
         - Follow the [Windows](https://learn.microsoft.com/en-us/vcpkg/get_started/get-started?pivots=shell-powershell) or [UNIX](https://learn.microsoft.com/en-us/vcpkg/get_started/get-started?pivots=shell-bash) instructions.
     - `pkg-config`
         - Available on most package managers.
+    - `conan` (Conan 2.x)
+        - Used for `source: conan` dependencies. Catalyst warns if it is not installed or not in `PATH`.
 
 ### Optional Tools
 

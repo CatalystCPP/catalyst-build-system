@@ -18,7 +18,7 @@ configuration, reproducibility, and developer experience.
 
 - Declarative Configuration: Define your project with simple YAML files. No more complex CMake scripting.
 - Profile Composition: Mix and match build configurations (e.g., `debug`, `release`, `asan`) easily.
-- Dependency Management: Built-in support for `vcpkg`, `git` repositories, local packages, and system libraries.
+- Dependency Management: Built-in support for `vcpkg`, Conan 2.x, `git` repositories, local packages, system libraries, and custom command/script resolvers.
 - Reproducible Builds: Designed for determinism and isolation.
 
 ## Documentation
