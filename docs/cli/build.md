@@ -57,7 +57,7 @@ Overrides are validated at configure time:
 - An `int` value must be a valid integer.
 - Bare `-f <name>` and `-f no-<name>` apply **only** to boolean flags. Using them on a valued flag is an error — a valued flag must be set with `<name>=<value>` (there is no "on"/"off" for a value).
 
-Changing a flag value is picked up automatically on the next build (the value is part of each affected step's command hash); you do **not** need `-r`/`--regen` unless the flag toggles a `files:` source set.
+Changing a flag value is picked up automatically on the next build (the value is part of each affected step's command hash); you do **not** need `-r`/`--regen` for flag changes. Flags that gate `files:` source sets are also picked up automatically, because the resolved source set is part of the generation state.
 
 ### Build explanations (`--explain`)
 
