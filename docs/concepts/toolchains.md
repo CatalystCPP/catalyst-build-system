@@ -27,7 +27,7 @@ A Catalyst toolchain definition consists of one top-level section:
 ```yaml
 toolchain:
   name:        # Toolchain identifier
-  extensions:  # Output file extensions and prefixes
+  extensions:  # Source, header, and output file extensions and library prefixes
   flags:       # Include/lib/define formatting templates
   compiler:    # C and C++ compilation commands
   linker:      # Executable and shared library link commands
@@ -44,7 +44,7 @@ Defines the metadata and command templates Catalyst will use during generation.
 |---|---|---|---|
 | `name` | String | `gcc` | Toolchain identifier. |
 | `extends` | String | - | Optional path to a base toolchain file to inherit settings from. |
-| `extensions` | Object | - | Output file extensions and library prefixes. |
+| `extensions` | Object | - | Source, header, and output file extensions and library prefixes. |
 | `flags` | Object | - | Templates for include paths, library paths, library names, runtime library paths, and preprocessor defines. |
 | `compiler` | Object | - | C and C++ compiler executables, base flags, and command templates. |
 | `linker` | Object | - | Executable and shared library linker executable, base flags, and templates. |
@@ -64,7 +64,7 @@ Defines the metadata and command templates Catalyst will use during generation.
 | `object` | String | `.o` | Object file extension. |
 | `executable` | String | `""` | Executable file extension. |
 | `static_lib` | String | `.a` | Static library extension. |
-| `shared_lib` | String | `.so` | Shared library extension. |
+| `shared_lib` | String | `.so` (`.dylib` on macOS) | Shared library extension. |
 | `static_lib_prefix` | String | `lib` | Prefix used for static library filenames. |
 | `shared_lib_prefix` | String | `lib` | Prefix used for shared library filenames. |
 | `cpp_sources` | List of Strings | `[".cpp", ".cxx", ".cc", ".cupp"]` | List of C++ source file extensions. |
@@ -132,7 +132,7 @@ Defines the metadata and command templates Catalyst will use during generation.
 | `flags_append` | String or List | `""` | Appends flags to the inherited linker flags. |
 | `flags_remove` | String or List | `""` | Removes matching flag tokens from the inherited linker flags. |
 | `executable_command` | String | `{linker} {objects} -o {output} {ldflags} {lib_dirs} {rpaths} {libs}` | Command template for building executables. |
-| `shared_lib_command` | String | `{linker} -shared {objects} -o {output} {ldflags} {lib_dirs} {rpaths} {libs}` | Command template for building shared libraries. |
+| `shared_lib_command` | String | `{linker} -shared {objects} -o {output} {ldflags} {lib_dirs} {rpaths} {libs}` (`-dynamiclib` instead of `-shared` on macOS) | Command template for building shared libraries. |
 
 !!! note
 
@@ -217,10 +217,8 @@ toolchain:
 A toolchain configuration is resolved by folding from the base of the inheritance chain toward the leaf:
 
 1. Start from the built-in default `gcc`-style defaults.
-2. If `extends` is specified, resolve the base toolchain recursively first.
+2. If `extends` is specified, resolve the base toolchain recursively first: the root of the `extends` chain is applied first, then each base toward the leaf.
 3. Apply the current file's own keys on top, overriding per leaf scalar.
-
-Precedence order (lowest to highest):
 
 Every unspecified key inherits from its parent base toolchain.
 
