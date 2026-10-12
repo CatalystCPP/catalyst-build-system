@@ -9,6 +9,7 @@ catalyst profile-ls [OPTIONS]
 
 OPTIONS:
   -h,     --help              Print this help message and exit
+          --json              Output a sorted JSON array for scripts and editor integrations.
 ```
 
 ## Details
