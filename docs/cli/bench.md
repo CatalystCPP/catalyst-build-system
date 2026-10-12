@@ -18,6 +18,7 @@ OPTIONS:
 
 ## Options
 - `-P, --params TEXT ...`: Params to pass to the bench executable.
+- `-r, --rebuild`: Rebuild before benchmarking.
 - `-h, --help`: Print help message.
 
 ## Examples
