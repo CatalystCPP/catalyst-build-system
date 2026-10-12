@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <format>
 #include <random>
+#include <system_error>
 
 #include "catalyst/dir_guard.hpp"
 #include "catalyst/process_exec.hpp"
@@ -31,6 +32,24 @@ std::string randomString(size_t length) {
     }
     return str;
 }
+
+/// Removes the temporary clone directory when it goes out of scope, on both success and failure paths.
+class TempDirCleanup {
+public:
+    explicit TempDirCleanup(std::filesystem::path dir) : path(std::move(dir)) {}
+    ~TempDirCleanup() {
+        std::error_code ec;
+        std::filesystem::remove_all(path, ec);
+    }
+
+    TempDirCleanup(const TempDirCleanup &) = delete;
+    TempDirCleanup &operator=(const TempDirCleanup &) = delete;
+    TempDirCleanup(TempDirCleanup &&) = delete;
+    TempDirCleanup &operator=(TempDirCleanup &&) = delete;
+
+private:
+    std::filesystem::path path;
+};
 } // namespace
 
 Result<void> action(const Parse &args) {
@@ -39,6 +58,9 @@ Result<void> action(const Parse &args) {
     constexpr size_t TEMP_DIR_NAME_LEN = 8UZ;
     auto absolute_target_path = fs::absolute(args.target_path);
     auto temp_dir = fs::temp_directory_path() / std::format("catalyst_dl_{}", randomString(TEMP_DIR_NAME_LEN));
+    // Declared before the clone so a partial clone is also removed; declared before scoped_dir so the
+    // directory change is undone before removal.
+    TempDirCleanup temp_dir_cleanup(temp_dir);
 
     catalyst::logger.info("Cloning {} into temporary directory {}", args.git_remote, temp_dir.string());
 
@@ -93,7 +115,6 @@ Result<void> action(const Parse &args) {
     }
 
     catalyst::logger.info("Successfully downloaded and installed {}.", args.git_remote);
-    std::filesystem::remove_all(temp_dir);
     return {};
 }
 } // namespace catalyst::download

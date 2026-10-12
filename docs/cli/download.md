@@ -28,7 +28,7 @@ The `download` command automates the process of fetching a Catalyst-based projec
 1.  **Clone**: Clones the specified git repository to a temporary directory.
 2.  **Build**: Runs `catalyst build` on the cloned project with the specified profiles and features.
 3.  **Install**: Installs the build artifacts to the target directory.
-4.  **Cleanup**: Removes the temporary directory.
+4.  **Cleanup**: Removes the temporary directory, whether or not the build succeeds.
 
 ## Examples
 
