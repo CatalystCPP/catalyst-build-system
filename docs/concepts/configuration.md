@@ -24,7 +24,7 @@ Defines constraints for the Catalyst tool itself.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `min_ver` | String | `0.0.0` | Minimum Catalyst version required to build the project. |
+| `min_ver` | String | `0.0.1` | Minimum Catalyst version required to build the project. `catalyst init` writes the running Catalyst version. Across composed profiles, the highest `min_ver` wins. |
 | `generator` | String | `cob` | The generator to use. Supported: `cob` (default/recommended), `ninja`, `gmake` (or `make`). |
 
 ---
@@ -34,7 +34,7 @@ Defines the project's identity, build settings, and directory structure.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `name` | String | (Current Dir) | Project name. Must be unique in a workspace. |
+| `name` | String | `name` (built-in); `catalyst init` uses the current directory name | Project name. Must be unique in a workspace. |
 | `type` | String | `BINARY` | Artifact type: `BINARY`, `STATICLIB`, `SHAREDLIB`, `INTERFACE`. |
 | `version` | String | `0.0.1` | Project version string. |
 | `description`| String | ... | Human-readable description. |
@@ -58,6 +58,7 @@ Defines the project's identity, build settings, and directory structure.
 |---|---|---|
 | `FMT` | Formatter invoked by `catalyst fmt`. | `clang-format` |
 | `LINTER` | Linter invoked by `catalyst tidy`. | `clang-tidy` |
+| `doc` | `catalyst doc` settings: `engine`, `config`, `out_dir`. | `engine: doxygen`, `config: Doxyfile`, `out_dir: docs/` |
 | `CC_LAUNCHER` | C compiler launcher (e.g., ccache), prepended to the toolchain's C compiler. | "" |
 | `CXX_LAUNCHER`| C++ compiler launcher (e.g., ccache), prepended to the toolchain's C++ compiler. | "" |
 
@@ -91,9 +92,9 @@ Defines the project's identity, build settings, and directory structure.
 
 | Field | Description | Default |
 |---|---|---|
-| `include` | List of include directories | `[include]` |
-| `source` | List of source directories | `[src]` |
-| `build` | Output directory | `build` |
+| `include` | List of include directories. Accumulates across composed profiles. | `[]` (`catalyst init` writes `[include]`) |
+| `source` | List of source directories. Accumulates across composed profiles. | `[]` (`catalyst init` writes `[src]`) |
+| `build` | Output directory. | `build` |
 
 !!! note
 
