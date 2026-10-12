@@ -61,7 +61,7 @@ hooks:
     - catalyst:
         subcommand: test
         profiles: [release]
-        args: ["--verbose"]
+        global_args: ["-V"]
   pre-build:
     - catalyst:
         subcommand: generate
