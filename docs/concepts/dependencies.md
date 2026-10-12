@@ -14,7 +14,8 @@ Fetches a library from a remote Git repository.
 | `name` | Yes | Name of the dependency. |
 | `source` | Yes | Must be `git`. |
 | `url` | Yes | Git repository URL. |
-| `version` | Yes | Tag, branch, or commit hash. |
+| `version` | No | Tag, branch, commit hash, or `latest` (default) — the remote's default branch head. |
+| `hash` | No | Exact commit to check out; written to the lockfile by `catalyst lock` and read from there by `catalyst fetch`, not from the profile. |
 | `using` | No | List of features to enable. |
 
 ```yaml
