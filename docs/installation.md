@@ -71,10 +71,12 @@ the [latest GitHub release](https://github.com/CatalystCPP/catalyst-build-system
 
 ```bash
 git clone https://github.com/CatalystCPP/catalyst-build-system.git
-cd catalyst
+cd catalyst-build-system
 ```
 
-2.  **Build the Bootstrap version using CMake:**
+2.  **Build the bootstrap version using CMake:**
+
+The `1.0.0` tag is the oldest release that still ships a CMake build:
 
 ```bash
 git checkout tags/1.0.0
@@ -84,16 +86,24 @@ cmake --build build-bootstrap --config Release
 
 3.  **Build Catalyst:**
 
+Catalyst 2.1.0 requires `min_ver: 1.8.0`, so the bootstrap cannot build the default branch directly. Build the `v1.8.0` tag first, then build the default branch with that binary:
+
 ```bash
-git checkout dev-1.1.0
-mkdir build
+git checkout tags/v1.8.0
 ./build-bootstrap/catalyst build
+cp build/common/catalyst build-bootstrap/catalyst-1.8.0
+git checkout master
+./build-bootstrap/catalyst-1.8.0 build
 ```
 
-4. Verify
+Alternatively, if Catalyst 1.8.0 or later is already installed, skip step 2 and the `v1.8.0` build, and run `catalyst build` on `master`.
 
-```
-./build/catalyst -v
+4.  **Verify:**
+
+The build artifact is at `./build/common/catalyst`. The build directory is split by profile, and the `common` profile writes to `build/common/`.
+
+```bash
+./build/common/catalyst -v
 ```
 
 ## Verifying Installation
@@ -101,7 +111,7 @@ mkdir build
 Run the following command to verify that Catalyst is installed correctly:
 
 ```bash
-catalyst -v # should be 1.1.0 or later
+catalyst -v # should be 2.1.0 or later
 ```
 
 ## Next Steps
