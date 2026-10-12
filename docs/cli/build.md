@@ -69,7 +69,7 @@ catalyst build --explain
 #### Output Sinks
 
 1. **Standard Error (`stderr`):** Real-time, highlighted terminal output where every explanation line is prefixed with `[EXPLAIN]`. In color-enabled terminals, the messages are rendered in bold default terminal color for visual distinction from standard log levels.
-2. **Markdown Report:** A comprehensive Markdown report saved to the project directory named `catalyst_explain_[YYYY-MM-DD_HH-MM-SS].md`. If a report with the same timestamp already exists or is locked by another build, a numeric suffix is appended (e.g. `catalyst_explain_2026-10-03_18-40-00.1.md`). The report contains no ANSI escapes and formats multiline entries clearly.
+2. **Markdown Report:** A comprehensive Markdown report saved in the current working directory named `catalyst_explain_[YYYY-MM-DD_HH-MM-SS].md`, where the timestamp is the UTC invocation start time. If a report with the same timestamp already exists or is locked by another build, a numeric suffix is appended (e.g. `catalyst_explain_2026-10-03_18-40-00.1.md`). The report contains no ANSI escapes and formats multiline entries clearly.
 3. **Structured Log Stream:** When enabled, explanation records are also recorded into `.catalyst.log` with level `EXPLAIN`.
 
 #### Scope of explanation

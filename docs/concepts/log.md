@@ -90,7 +90,7 @@ When invoked with `--explain`, Catalyst logs high-resolution build decision logi
 ### Dual Sink Architecture
 
 1. **Terminal (`stderr`):** Real-time streamed messages with bold styling and `[EXPLAIN]` prefix on every line.
-2. **Markdown Report (`catalyst_explain_[timestamp].md`):** A standalone report saved directly into the project directory. The file name collision handling uses an exclusive file lock (`<report>.lock`) and auto-increments suffix (e.g. `.1.md`) if another invocation is running or a report already exists.
+2. **Markdown Report (`catalyst_explain_[timestamp].md`):** A standalone report saved directly into the current working directory, with the timestamp taken from the UTC invocation start time. The file name collision handling uses an exclusive file lock (`<report>.lock`) and auto-increments suffix (e.g. `.1.md`) if another invocation is running or a report already exists.
 3. **Structured Log (`.catalyst.log`):** Formatted as standard JSONL with `"level":"EXPLAIN"`.
 
 ### Child Session Aggregation
