@@ -161,7 +161,7 @@ You can use the [`catalyst add`](../cli/add.md) command to append dependencies t
 
 ```bash
 catalyst add git https://github.com/fmtlib/fmt.git -v 10.0.0
-catalyst add vcpkg nlohmann-json -t x64-linux
+catalyst add vcpkg -n nlohmann-json -t x64-linux
 ```
 
 ## Reproducible Builds with Lockfiles

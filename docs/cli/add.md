@@ -123,11 +123,11 @@ OPTIONS:
 catalyst add git https://github.com/fmtlib/fmt.git -v 10.1.0
 
 # Add fmt from vcpkg
-catalyst add vcpkg fmt -t x64-linux
+catalyst add vcpkg -n fmt -t x64-linux
 
 # Add fmt from conan
 catalyst add conan -n fmt -v 10.1.1
 
 # Add a local library to the debug profile
-catalyst add local my-lib ../libs/my-lib -p debug
+catalyst add local -n my-lib ../libs/my-lib -p debug
 ```
