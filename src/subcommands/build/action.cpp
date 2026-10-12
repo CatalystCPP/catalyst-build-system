@@ -666,7 +666,7 @@ Result<void> action(const Parse &parse_args) {
             std::ofstream{fetch_sentinel};
         }
 
-        auto state = catalyst::generate::generationState(config, parse_args.enabled_features);
+        auto state = catalyst::generate::generationState(config, parse_args.profiles, parse_args.enabled_features);
         if (!state) {
             result = std::unexpected(state.error());
             return;

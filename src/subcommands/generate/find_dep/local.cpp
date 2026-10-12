@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <expected>
 #include <format>
 #include <string>
@@ -138,11 +139,31 @@ Result<FindRes> findLocal(ryml::ConstNodeRef dep, const catalyst::toolchain::Too
     }
 }
 Result<std::string> generationState(const utils::yaml::Configuration &config,
+                                    const std::vector<std::string> &profiles,
                                     std::span<const std::string> enabled_features) {
     namespace yaml = utils::yaml;
     std::string state = yaml::emitYaml(config.rootRef());
     for (const auto &feature : enabled_features)
         state += std::format("\n{}:{}", feature.size(), feature);
+
+    // Added, removed and renamed sources change the build graph without touching any manifest.
+    auto source_dirs = config.getStringVector("manifest.dirs.source");
+    if (!source_dirs)
+        return std::unexpected("Unable to get value for manifest.dirs.source");
+    const fs::path current_dir = fs::current_path();
+    for (auto &dir : *source_dirs)
+        dir = (current_dir / dir).string();
+    auto source_set = buildSourceSet(*source_dirs, profiles);
+    if (!source_set)
+        return std::unexpected(source_set.error());
+    std::vector<std::string> sources;
+    sources.reserve(source_set->size());
+    for (const auto &source : *source_set)
+        sources.push_back(source.string());
+    std::ranges::sort(sources);
+    state += std::format("\nsources:{}", sources.size());
+    for (const auto &source : sources)
+        state += std::format("\n{}:{}", source.size(), source);
     if (auto deps = yaml::child(config.rootRef(), "dependencies"); deps.readable() && deps.is_seq()) {
         for (auto dep : deps.children()) {
             if (yaml::asString(yaml::child(dep, "source")) != "local")

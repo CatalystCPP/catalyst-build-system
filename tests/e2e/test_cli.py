@@ -232,6 +232,38 @@ def test_init_path_places_catalystignore_in_project(tmp_path):
     assert (project_dir / "src" / ".catalystignore").exists()
     assert not (tmp_path / "src").exists()
 
+def test_source_set_change_regenerates_build_files(tmp_path):
+    project_dir = tmp_path / "source_regeneration"
+    project_dir.mkdir()
+    env = os.environ.copy()
+    run = lambda *args: subprocess.run([str(CATALYST_BIN), *args], cwd=project_dir, capture_output=True, text=True, env=env)
+    assert run("init").returncode == 0
+    result = run("build")
+    assert result.returncode == 0, f"Build failed: {result.stderr}\nStdout: {result.stdout}"
+
+    src = project_dir / "src"
+    (src / "foo.cpp").write_text("int foo() { return 42; }\n")
+    (src / "source_regeneration.cpp").write_text("int foo();\nint main() { return foo() == 42 ? 0 : 1; }\n")
+    result = run("build", "--explain")
+    assert result.returncode == 0, f"Build after adding a source failed: {result.stderr}\nStdout: {result.stdout}"
+    assert "regeneration required" in result.stdout + result.stderr
+    assert subprocess.run([str(project_dir / "build" / "common" / "source_regeneration")]).returncode == 0
+
+    result = run("build", "--explain")
+    assert "regeneration skipped" in result.stdout + result.stderr
+
+    (src / "foo.cpp").rename(src / "bar.cpp")
+    result = run("build", "--explain")
+    assert result.returncode == 0, f"Build after renaming a source failed: {result.stderr}\nStdout: {result.stdout}"
+    assert "regeneration required" in result.stdout + result.stderr
+
+    (src / "bar.cpp").unlink()
+    (src / "source_regeneration.cpp").write_text("int main() { return 0; }\n")
+    result = run("build", "--explain")
+    assert result.returncode == 0, f"Build after deleting a source failed: {result.stderr}\nStdout: {result.stdout}"
+    assert "regeneration required" in result.stdout + result.stderr
+
+
 def test_inherited_toolchain_change_regenerates_build_files(tmp_path):
     project_dir = tmp_path / "toolchain_regeneration"
     project_dir.mkdir()

@@ -137,7 +137,7 @@ Result<void> action(const Parse &parse_args) {
         return std::unexpected(resolved_toolchain.error());
     catalyst::toolchain::ToolchainDef tc = std::move(*resolved_toolchain);
 
-    auto state = generationState(config, parse_args.enabled_features);
+    auto state = generationState(config, parse_args.profiles, parse_args.enabled_features);
     if (!state)
         return std::unexpected(state.error());
     // Never treat a partially written build file as current after a failed generation.

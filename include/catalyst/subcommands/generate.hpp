@@ -39,8 +39,10 @@ struct FindRes {
     std::vector<std::string> link_inputs{}; ///< Local library artifacts that invalidate consumers' link steps.
 };
 
-/// Snapshot composed configuration, CLI overrides and transitive local manifests for regeneration.
+/// Snapshot composed configuration, CLI overrides, the resolved source set and transitive local manifests for
+/// regeneration.
 [[nodiscard]] Result<std::string> generationState(const utils::yaml::Configuration &config,
+                                                  const std::vector<std::string> &profiles,
                                                   std::span<const std::string> enabled_features);
 inline constexpr std::string_view GENERATION_STATE_FILENAME = ".catalyst_generation_state";
 
