@@ -33,7 +33,7 @@ manifest:
 ## Composition
 
 Catalyst allows you to compose profiles by listing them. Settings are merged from left to right, with later profiles
-overriding earlier ones.
+overriding earlier ones for scalar values (see [Merge rules](#merge-rules)).
 
 ```bash
 catalyst build --profiles debug release
@@ -45,6 +45,22 @@ In this example:
 3.  Merge `release` settings, overriding where conflicts occur, and yielding `common-debug-release`.
 
 This allows for combinations like `linux + debug + asan`.
+
+### Merge rules
+
+Scalars are replaced by later profiles, but not every key merges the same way:
+
+| Key | Rule |
+|-----|------|
+| scalars (`manifest.name`, `type`, `version`, `toolchain`, `dirs.build`, `tooling.*`, `meta.generator`) | later profile replaces |
+| `meta.min_ver` | highest version wins |
+| `meta.generator: null` | falls back to `cob` |
+| `manifest.dirs.include` / `dirs.source` | appended in order; duplicates kept |
+| `dependencies` | appended; an entry with the same `name` replaces the earlier one entirely (no field merge), and the replacement moves to the end of the list; `dependencies: null` clears the list |
+| `features` | merged per flag name; a later definition replaces that flag; a flag set to `null` is kept but treated as off |
+| `hooks` | each phase's actions are appended; a phase set to `null` is removed |
+| any other key set to `null` | removes the inherited value |
+| adjacent duplicate profiles (e.g. `debug debug`) | the repeat is ignored with a warning |
 
 ## Nulling Fields
 
