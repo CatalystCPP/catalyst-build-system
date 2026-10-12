@@ -17,6 +17,8 @@ OPTIONS:
           --workspace, --all [0]  
                               Build all members in the workspace.
   -w,     --watch [0]         Continuous build mode. Rebuilds on source file changes.
+          --explain [0]       Explain build decisions on stderr and in catalyst_explain_<UTC
+                              datetime>.md. Incompatible with --watch.
   -P,     --package TEXT      Build a specific package from the root.
   -p,     --profiles TEXT [[common]]  ... 
                               Profile composition to build.
