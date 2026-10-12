@@ -191,6 +191,47 @@ def test_init_and_build(tmp_path):
     assert run_result.returncode == 0
     assert "Hello, Catalyst!" in run_result.stdout
 
+def test_init_does_not_clobber_existing_files(tmp_path):
+    project_dir = tmp_path / "existing_project"
+    project_dir.mkdir()
+    env = os.environ.copy()
+    result = subprocess.run([str(CATALYST_BIN), "init"], cwd=project_dir, capture_output=True, text=True, env=env)
+    assert result.returncode == 0, f"Init failed: {result.stderr}"
+
+    edited = {
+        project_dir / "src" / "existing_project.cpp": "int main() { return 0; }\n",
+        project_dir / "catalyst.yaml": (project_dir / "catalyst.yaml").read_text() + "# edited\n",
+        project_dir / "tc_catalyst.yaml": (project_dir / "tc_catalyst.yaml").read_text() + "# edited\n",
+    }
+    for path, content in edited.items():
+        path.write_text(content)
+
+    for args in (["init"], ["init", "-p", "test"]):
+        result = subprocess.run([str(CATALYST_BIN), *args], cwd=project_dir, capture_output=True, text=True, env=env)
+        assert result.returncode == 0, f"{args} failed: {result.stderr}"
+        for path, content in edited.items():
+            assert path.read_text() == content, f"{args} clobbered {path.name}"
+
+    # A non-common profile is an overlay: composing it must not duplicate common's sequences.
+    test_profile = project_dir / "catalyst_test.yaml"
+    test_profile.write_text(test_profile.read_text() + "# edited\n")
+    edited_test_profile = test_profile.read_text()
+    result = subprocess.run([str(CATALYST_BIN), "init", "-p", "test"], cwd=project_dir, capture_output=True, text=True, env=env)
+    assert result.returncode == 0
+    assert test_profile.read_text() == edited_test_profile
+
+    result = subprocess.run([str(CATALYST_BIN), "build", "-p", "common", "test"], cwd=project_dir, capture_output=True, text=True, env=env)
+    assert result.returncode == 0, f"Build failed: {result.stderr}\nStdout: {result.stdout}"
+
+
+def test_init_path_places_catalystignore_in_project(tmp_path):
+    project_dir = tmp_path / "elsewhere"
+    env = os.environ.copy()
+    result = subprocess.run([str(CATALYST_BIN), "init", "--path", str(project_dir), "-n", "elsewhere"], cwd=tmp_path, capture_output=True, text=True, env=env)
+    assert result.returncode == 0, f"Init failed: {result.stderr}"
+    assert (project_dir / "src" / ".catalystignore").exists()
+    assert not (tmp_path / "src").exists()
+
 def test_inherited_toolchain_change_regenerates_build_files(tmp_path):
     project_dir = tmp_path / "toolchain_regeneration"
     project_dir.mkdir()

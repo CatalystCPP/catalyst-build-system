@@ -16,10 +16,50 @@ namespace catalyst::init {
 
 namespace fs = std::filesystem;
 
+namespace {
+/// Returns true (and warns) when `path` already exists, so init never clobbers a user's file.
+bool skipExisting(const fs::path &path) {
+    if (!fs::exists(path))
+        return false;
+    catalyst::logger.warn("{} already exists; leaving it untouched.", path.string());
+    return true;
+}
+
+fs::path profilePath(const Parse &parse_args) {
+    if (parse_args.profile == "common")
+        return parse_args.path / "catalyst.yaml";
+    return parse_args.path / std::format("catalyst_{}.yaml", parse_args.profile);
+}
+
+/// A non-common profile is composed on top of common, and sequences accumulate during composition, so it starts out
+/// as an empty overlay rather than a copy of the common manifest.
+Result<void> writeOverlayProfile(const Parse &parse_args, const fs::path &profile_path) {
+    std::ofstream profile_file{profile_path};
+    profile_file << std::format("# Overlay for the '{}' profile, composed on top of catalyst.yaml (common).\n"
+                                "# Only list the fields this profile changes.\n"
+                                "{{}}\n",
+                                parse_args.profile)
+                 << std::flush;
+    if (!profile_file)
+        return std::unexpected(std::format("Failed to write profile file {}.", profile_path.string()));
+    return {};
+}
+} // namespace
+
 Result<void> action(const Parse &parse_args) {
     catalyst::logger.debug("Init subcommand invoked.");
     namespace yaml = catalyst::utils::yaml;
-    // TODO: change directory to parse_args->path;
+
+    const fs::path profile_path = profilePath(parse_args);
+    if (parse_args.profile != "common") {
+        if (!skipExisting(profile_path)) {
+            catalyst::logger.debug("Creating new profile file: {}", profile_path.string());
+            if (auto res = writeOverlayProfile(parse_args, profile_path); !res)
+                return res;
+        }
+        return invokeIDEConfigEmitters(parse_args);
+    }
+
     ryml::Tree tree;
     ryml::NodeRef root = tree.rootref();
     root |= ryml::MAP;
@@ -77,16 +117,16 @@ Result<void> action(const Parse &parse_args) {
             catalyst::logger.info("Creating source directory: {}", (parse_args.path / dir).string());
             fs::create_directories(parse_args.path / dir);
         }
-        auto ignore_path = fs::path(dir) / ".catalystignore";
+        auto ignore_path = parse_args.path / dir / ".catalystignore";
         if (!fs::exists(ignore_path)) {
-            catalyst::logger.info("Creating .catalystignore file in: {}", dir);
+            catalyst::logger.info("Creating .catalystignore file in: {}", (parse_args.path / dir).string());
             std::ofstream{ignore_path};
         }
     }
 
-    if (parse_args.type == Parse::Type::BINARY) {
-        fs::path entry_cpp_path =
+    if (fs::path entry_cpp_path =
             parse_args.path / fs::path{parse_args.dirs.source[0]} / std::format("{}.cpp", parse_args.name);
+        parse_args.type == Parse::Type::BINARY && !skipExisting(entry_cpp_path)) {
         std::ofstream entry_cpp{entry_cpp_path};
 
         if (!entry_cpp) {
@@ -106,35 +146,32 @@ int main(int argc, char **argv) {
         fs::create_directories(parse_args.path / parse_args.dirs.build);
     }
 
-    fs::path profile_path;
-    if (parse_args.profile == "common")
-        profile_path = parse_args.path / std::format("catalyst.yaml");
-    else
-        profile_path = parse_args.path / std::format("catalyst_{}.yaml", parse_args.profile);
-
-    if (!fs::exists(profile_path)) {
+    if (!skipExisting(profile_path)) {
         catalyst::logger.debug("Creating new profile file: {}", profile_path.string());
+        std::ofstream profile_file{profile_path};
+        profile_file << yaml::emitYaml(tree) << std::flush;
+        if (!profile_file)
+            return std::unexpected(std::format("Failed to write profile file {}.", profile_path.string()));
     }
 
-    std::ofstream profile_file = std::ofstream(profile_path);
-    profile_file << yaml::emitYaml(tree) << std::flush;
-    catalyst::logger.debug("Init subcommand finished successfully.");
-
-    catalyst::logger.debug("Creating toolchain file: {}", (parse_args.path / "tc_catalyst.yaml").string());
-    std::ofstream toolchain_file{parse_args.path / "tc_catalyst.yaml"};
-    auto defaults = catalyst::toolchain::resolveToolchain(std::nullopt);
-    if (!defaults)
-        return std::unexpected(defaults.error());
-    defaults->name = "Catalyst Default Toolchain";
-    defaults->extensions.shell_scripts = {".sh"};
-    toolchain_file << "# Catalyst Default Toolchain; feel free to modify this file to suit your needs.\n"
-                   << catalyst::toolchain::serializeToolchain(*defaults);
-    if (!toolchain_file)
-        return std::unexpected("Failed to write default toolchain file.");
+    if (const fs::path toolchain_path = parse_args.path / "tc_catalyst.yaml"; !skipExisting(toolchain_path)) {
+        catalyst::logger.debug("Creating toolchain file: {}", toolchain_path.string());
+        auto defaults = catalyst::toolchain::resolveToolchain(std::nullopt);
+        if (!defaults)
+            return std::unexpected(defaults.error());
+        defaults->name = "Catalyst Default Toolchain";
+        defaults->extensions.shell_scripts = {".sh"};
+        std::ofstream toolchain_file{toolchain_path};
+        toolchain_file << "# Catalyst Default Toolchain; feel free to modify this file to suit your needs.\n"
+                       << catalyst::toolchain::serializeToolchain(*defaults);
+        if (!toolchain_file)
+            return std::unexpected("Failed to write default toolchain file.");
+    }
 
     if (auto res = invokeIDEConfigEmitters(parse_args); !res) {
         return std::unexpected(res.error());
     }
+    catalyst::logger.debug("Init subcommand finished successfully.");
     return {};
 }
 
