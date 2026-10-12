@@ -14,6 +14,9 @@ OPTIONS:
   -i,     --intermediates     Clean intermediate files only.
 ```
 
+## Details
+`-i/--intermediates` is supported only by the `cob` and `ninja` backends; with `gmake` it fails with an error.
+
 ## Examples
 
 ```bash

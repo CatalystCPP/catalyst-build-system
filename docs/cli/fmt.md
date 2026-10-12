@@ -16,4 +16,6 @@ OPTIONS:
 
 ## Details
 
-Expects a `.clang-format` file in the project root. It will recursively format all C/C++ files in the source directories.
+Recursively formats all C/C++ files in both the source and include directories, honouring
+`.catalystignore` patterns. The formatter is taken from `manifest.tooling.FMT` (default
+`clang-format`), which expects a `.clang-format` file in the project root.
