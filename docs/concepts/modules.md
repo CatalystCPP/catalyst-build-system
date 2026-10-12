@@ -90,9 +90,11 @@ Two sources exporting the same module name is likewise a hard error.
 
 !!! tip
 
-    Adding or removing an `import` changes the build graph, so it requires a
-    regenerate (`catalyst build -r`), exactly like adding a new source file.
-    Editing a file *without* changing its imports needs no regenerate.
+    Changing an `import` alters the build graph and requires a regenerate
+    (`catalyst build -r`). Unlike adding, removing or renaming a source file,
+    which is detected automatically, import edits are not part of the
+    generation state. Editing a file *without* changing its imports needs no
+    regenerate.
 
 Staleness propagates in the import direction only: touching an interface unit
 rebuilds it and everything that (transitively) imports it, in topological
