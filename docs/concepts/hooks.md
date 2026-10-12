@@ -27,7 +27,7 @@ hooks:
     - script: "scripts/notify.sh"
     - catalyst:               # Structured map form
         subcommand: clean
-        args: ["--workspace"]
+        args: ["--intermediates"]
   on-build-failure:
     - command: "echo 'Build failed!'"
 
