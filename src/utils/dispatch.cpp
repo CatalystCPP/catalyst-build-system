@@ -175,6 +175,7 @@ int dispatch(const catalyst::CliContext &ctx) {
     }
     if (*ctx.fmt_subc) {
         checkRequiredTools();
+        injectCommon(ctx.fmt_res->profiles);
         return dispatchSubcommand("fmt", *ctx.fmt_res, catalyst::fmt::action);
     }
     if (*ctx.generate_subc) {
@@ -204,10 +205,12 @@ int dispatch(const catalyst::CliContext &ctx) {
     }
     if (*ctx.run_subc) {
         checkRequiredTools();
+        injectCommon(ctx.run_res->profiles);
         return dispatchSubcommand("run", *ctx.run_res, catalyst::run::action);
     }
     if (*ctx.test_subc) {
         checkRequiredTools();
+        injectCommon(ctx.test_res->profiles);
         return dispatchSubcommand("test", *ctx.test_res, catalyst::test::action);
     }
     if (*ctx.bench_subc) {

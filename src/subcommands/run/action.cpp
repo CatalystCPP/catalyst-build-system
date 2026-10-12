@@ -32,13 +32,7 @@ std::string commandStr(const fs::path &executable, const std::vector<std::string
 
 Result<void> action(const Parse &args) {
     catalyst::logger.debug("Run subcommand invoked.");
-    std::vector<std::string> profiles;
-    if (!std::ranges::contains(args.profiles, "common")) {
-        profiles.emplace_back("common");
-        profiles.insert(profiles.end(), args.profiles.begin(), args.profiles.end());
-    } else {
-        profiles = args.profiles;
-    }
+    const std::vector<std::string> &profiles = args.profiles;
 
     catalyst::logger.debug("Composing profiles.");
     auto res = generate::profileComposition(profiles);

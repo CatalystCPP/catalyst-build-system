@@ -40,7 +40,7 @@ catalyst build --profiles debug release
 ```
 
 In this example:
-1.  Start with `common`.
+1.  Start with `common`. Every subcommand that takes `-p` composes `common` first, unless the `CATALYST_MACHINE` environment variable is set.
 2.  Merge `debug` settings (overriding `common` where conflicts occur) yielding `common-debug`
 3.  Merge `release` settings, overriding where conflicts occur, and yielding `common-debug-release`.
 
@@ -74,7 +74,7 @@ meta: null  # Removes 'meta' section entirely
 ## Reserved Profiles
 
 - **`common`**: The base profile (`catalyst.yaml`).
-- **`test`**: Default test profile used by `catalyst test` (`catalyst_test.yaml`). Composed by default as `common test`, but can be customized or overridden via `catalyst test -p, --profiles <profiles...>`.
+- **`test`**: Default test profile used by `catalyst test` (`catalyst_test.yaml`). Composed by default as `common test`, but can be customized or overridden via `catalyst test -p, --profiles <profiles...>`. For example, `catalyst test -p release` composes `common release`.
 - **`bench`**: Automatically used by `catalyst bench` (`catalyst_bench.yaml`).
 
 ## Centralized Definition

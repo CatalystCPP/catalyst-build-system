@@ -93,12 +93,9 @@ Result<void> action(const Parse &parse_args) {
             regexes, [&path](const std::regex &reg) { return std::regex_match(path.filename().string(), reg); });
     };
 
-    std::vector<std::string> common_prepended_profiles = {"common"};
-    common_prepended_profiles.insert(common_prepended_profiles.end(), profiles.begin(), profiles.end());
-
     std::vector<std::filesystem::path> files_to_format;
     for (const auto &dir : source_dirs) {
-        auto ignore_regexes = get_ignore_regexes(dir, common_prepended_profiles);
+        auto ignore_regexes = get_ignore_regexes(dir, profiles);
         for (const auto &entry : std::filesystem::recursive_directory_iterator(dir)) {
             if (entry.is_regular_file()) {
                 if (is_ignored(entry.path(), ignore_regexes)) {
@@ -114,7 +111,7 @@ Result<void> action(const Parse &parse_args) {
     }
 
     for (const auto &dir : include_dirs) {
-        auto ignore_regexes = get_ignore_regexes(dir, common_prepended_profiles);
+        auto ignore_regexes = get_ignore_regexes(dir, profiles);
         for (const auto &entry : std::filesystem::recursive_directory_iterator(dir)) {
             if (entry.is_regular_file()) {
                 if (is_ignored(entry.path(), ignore_regexes)) {
