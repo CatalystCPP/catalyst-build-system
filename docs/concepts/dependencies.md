@@ -171,6 +171,8 @@ By running [`catalyst lock`](../cli/lock.md), you generate a `catalyst.lock` fil
 - **Git** dependencies to specific 40-character commit hashes.
 - **Vcpkg** dependencies to their resolved versions, port revisions, triplets,
   and builtin registry baseline.
-- **Local/System** dependencies to their paths.
+- **Local** dependencies to their paths.
+
+System, Conan, and Custom dependencies are recorded by name and source only; nothing is pinned.
 
 When a `catalyst.lock` is present, `catalyst fetch` and `catalyst build` will prioritize its contents over the loose version constraints in `catalyst.yaml`.
