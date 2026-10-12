@@ -17,6 +17,13 @@ OPTIONS:
 
 ## Examples
 
+The script is written to stdout, so redirect it to a file.
+
 ```bash
-catalyst completion
+# zsh: write to a directory on $fpath
+catalyst completion zsh > "${fpath[1]}/_catalyst"
+
+# bash
+mkdir -p ~/.local/share/bash-completion/completions
+catalyst completion bash > ~/.local/share/bash-completion/completions/catalyst
 ```
