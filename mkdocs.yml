@@ -46,16 +46,17 @@ nav:
     - doc: cli/doc.md
     - doctor: cli/doctor.md
     - download: cli/download.md
-    - feature_ls: cli/feature_ls.md
+    - feature-ls: cli/feature_ls.md
     - fetch: cli/fetch.md
     - fmt: cli/fmt.md
     - generate: cli/generate.md
     - ide-sync: cli/ide-sync.md
     - init: cli/init.md
     - install: cli/install.md
+    - introspect: cli/introspect.md
     - lock: cli/lock.md
     - pack: cli/pack.md
-    - profile_ls: cli/profile_ls.md
+    - profile-ls: cli/profile_ls.md
     - run: cli/run.md
     - test: cli/test.md
     - tidy: cli/tidy.md
