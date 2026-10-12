@@ -19,4 +19,14 @@ OPTIONS:
 `catalyst doc [OPTIONS]`
 
 ## Options
+- `-e, --engine TEXT`: Override the documentation engine (doxygen, clang-doc, jocasta).
+- `--open`: Open the generated documentation in the default browser upon completion.
+- `--clean`: Clean the existing output directory before generation.
 - `-h, --help`: Print help message
+
+## Configuration
+Defaults come from `manifest.tooling.doc` in the profile configuration:
+
+- `engine`: Documentation engine (default `doxygen`).
+- `config`: Engine configuration file (default `Doxyfile`).
+- `out_dir`: Output directory (default `docs/`).
