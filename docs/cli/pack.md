@@ -34,7 +34,7 @@ OPTIONS:
   - **Supported values:**
     - `TGZ` (Tar GZip Archive)
     - `ZIP` (Zip Archive)
-    - `DEB` (Debian Package - *requires a valid contact/author field in `catalyst.yaml`*)
+    - `DEB` (Debian Package - *contact comes from `manifest.maintainer`, falling back to `manifest.author`; set one before publishing*)
     - `RPM` (Red Hat Package Manager)
     - `NSIS` (Windows Installer)
     - `WIX` (Windows Installer Toolset)
@@ -50,8 +50,8 @@ OPTIONS:
 The `pack` subcommand uses several fields from the `manifest` section of your `catalyst.yaml` to populate package metadata:
 
 - `author`: The project author.
-- `maintainer`: The project maintainer/contact (essential for `DEB` and `RPM`).
-- `vendor`: The project vendor.
+- `maintainer`: The DEB/RPM contact (`CPACK_PACKAGE_CONTACT`). Falls back to `author`; if neither is set, a placeholder (`Unknown <unknown@example.com>`) is written, so set one before publishing.
+- `vendor`: The package vendor. Defaults to `Catalyst`.
 - `license_file`: Path to the license file to be included in the package.
 - `readme_file`: Path to the readme file to be included in the package.
 
