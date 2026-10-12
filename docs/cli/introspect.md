@@ -12,7 +12,7 @@ POSITIONALS:
 
 OPTIONS:
   -h,     --help              Print this help message and exit
-  -p,     --pretty            Pretty-print object and array values.
+          --pretty            Pretty-print object and array values.
 ```
 
 ## Details
@@ -20,7 +20,7 @@ OPTIONS:
 `introspect` reads the ephemeral state snapshot created for a running lifecycle hook.
 
 Catalyst automatically creates and injects `CATALYST_HOOK=1` and `CATALYST_INTROSPECT_FILE` environment variables when
-it spawns the hook process; users and hook scripts may chose to override the environment variables to "spoof" this
+it spawns the hook process; users and hook scripts may choose to override the environment variables to "spoof" this
 subcommand at the cost of correct behavior.
 
 - Scalars are written as raw, unquoted text.
